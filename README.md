@@ -1,6 +1,6 @@
 # Database Workbench
 
-一款现代化的数据库管理工具，基于 Tauri + React + TypeScript 构建，当前测试阶段仅仅支持 MySQL 数据库，提供直观的用户界面，帮助开发者高效地管理数据库。
+一款现代化的数据库管理工具，基于 Tauri + React + TypeScript 构建，当前测试阶段暂时支持 MySQL 数据库，提供直观的用户界面，帮助开发者高效地管理数据库。
 
 ## 功能特性
 
