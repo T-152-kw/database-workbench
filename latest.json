@@ -1,0 +1,11 @@
+{
+  "version": "0.1.0",
+  "notes": "初始版本 基础数据库管理功能 测试阶段支持 MySQL 连接",
+  "pub_date": "2026-02-27T10:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdHRVRkExTUNVdGs5ZlhLOG1GK0FXL2J4NVUzdHZCSnZNVzN0NkIxTW1sMUhBVnRsVjhTYTZ1K1RWSnJRVDRmZUl0Vmx0Q0RYK2hJSUw1VU5BcVQ3RUMxSUJuSDZIVkEwPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcyMTczMDE3CWZpbGU6RGF0YWJhc2UgV29ya2JlbmNoXzAuMS4wX3g2NC1zZXR1cC5leGUKa2FMajJXZ2lBYldWRjhHVWFiSGFFY1p4YXduTC9RRm5POFE3aHhmM2FZWGxoemlHbWNRZXZ5YzhUczFzcnF3LzhaMmw4d1IySWY1NEsyZVU0WEZrQWc9PQo=",
+      "url": "https://github.com/T-152-kw/database-workbench/releases/download/v0.1.0/Database.Workbench_0.1.0_x64-setup.exe"
+    }
+  }
+}
