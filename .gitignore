@@ -22,9 +22,11 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+*.exe
 
 # Rust 构建产物
 src-tauri/target/
+release/
 
 # 环境变量文件
 .env
