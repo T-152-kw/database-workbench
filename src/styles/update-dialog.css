@@ -1,0 +1,72 @@
+.update-dialog {
+  .update-checking {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 40px 20px;
+    gap: 16px;
+
+    p {
+      margin: 0;
+      color: var(--text-muted);
+    }
+  }
+
+  .update-not-available,
+  .update-error,
+  .update-ready {
+    padding: 8px 0;
+  }
+
+  .update-available {
+    .update-version-info {
+      margin: 0 0 8px 0;
+      font-weight: 600;
+    }
+
+    .update-date {
+      margin: 0;
+      font-size: 12px;
+      opacity: 0.8;
+    }
+
+    .update-notes {
+      margin-top: 16px;
+      padding: 12px;
+      background: var(--bg-subtle);
+      border-radius: 6px;
+      max-height: 200px;
+      overflow-y: auto;
+
+      h4 {
+        margin: 0 0 8px 0;
+        font-size: 13px;
+        font-weight: 600;
+      }
+
+      .update-notes-content {
+        p {
+          margin: 4px 0;
+          font-size: 12px;
+          line-height: 1.5;
+        }
+      }
+    }
+  }
+
+  .update-downloading {
+    padding: 16px 0;
+
+    p {
+      margin: 0 0 12px 0;
+    }
+
+    .update-progress-text {
+      margin-top: 8px;
+      font-size: 12px;
+      color: var(--text-muted);
+      text-align: center;
+    }
+  }
+}

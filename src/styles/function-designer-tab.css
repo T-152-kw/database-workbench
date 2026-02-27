@@ -1,0 +1,389 @@
+.function-designer-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  background-color: var(--background-color, #ffffff);
+}
+
+.function-designer-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+  background-color: var(--toolbar-background, #f8f9fa);
+}
+
+.function-designer-message {
+  margin: 8px 12px;
+}
+
+.function-designer-content {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+}
+
+.function-designer-properties {
+  width: 280px;
+  min-width: 250px;
+  padding: 16px;
+  border-right: 1px solid var(--border-color, #e0e0e0);
+  background-color: var(--panel-background, #fafafa);
+  overflow-y: auto;
+}
+
+.function-property {
+  margin-bottom: 16px;
+}
+
+.function-property label {
+  display: block;
+  margin-bottom: 6px;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-color-secondary, #666);
+}
+
+.function-property .bp4-input-group,
+.function-property .bp4-html-select,
+.function-property .bp4-text-area {
+  width: 100%;
+}
+
+.function-designer-editor {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.function-designer-editor > label {
+  padding: 8px 12px;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-color-secondary, #666);
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.function-designer-monaco {
+  flex: 1;
+  min-height: 300px;
+}
+
+.function-designer-status {
+  padding: 6px 12px;
+  border-top: 1px solid var(--border-color, #e0e0e0);
+  background-color: var(--status-background, #f0f0f0);
+  font-size: 12px;
+  color: var(--text-color-secondary, #666);
+}
+
+.function-designer-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 12px;
+  color: var(--text-color-secondary, #666);
+}
+
+/* Execute Dialog Styles */
+.function-execute-dialog {
+  width: 700px;
+  max-width: 90vw;
+}
+
+.function-execute-params {
+  margin-bottom: 16px;
+}
+
+.function-execute-params-label,
+.function-execute-result-label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.function-execute-loading {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 16px;
+  color: var(--text-color-secondary, #666);
+}
+
+.function-execute-no-params {
+  padding: 12px;
+  color: #28a745;
+  font-style: italic;
+  background-color: rgba(40, 167, 69, 0.1);
+  border-radius: 4px;
+}
+
+.function-execute-params-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 8px;
+  background-color: var(--panel-background, #f8f9fa);
+  border-radius: 4px;
+}
+
+.function-execute-param-row {
+  display: grid;
+  grid-template-columns: 100px 60px 120px 1fr;
+  gap: 8px;
+  align-items: center;
+  padding: 6px 8px;
+  background-color: var(--background-color, #ffffff);
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #e0e0e0);
+}
+
+.function-execute-param-name {
+  font-weight: 500;
+  font-size: 13px;
+}
+
+.function-execute-param-mode {
+  font-weight: 600;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.function-execute-param-type {
+  font-size: 11px;
+  color: var(--text-color-secondary, #666);
+}
+
+.function-execute-result {
+  margin-top: 16px;
+}
+
+.function-execute-message {
+  padding: 12px;
+  background-color: var(--panel-background, #f8f9fa);
+  border-radius: 4px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'Consolas', monospace;
+  font-size: 13px;
+  min-height: 100px;
+  white-space: pre-wrap;
+}
+
+.function-execute-data {
+  max-height: 300px;
+  overflow: auto;
+}
+
+.function-execute-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.function-execute-table th,
+.function-execute-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--border-color, #e0e0e0);
+}
+
+.function-execute-table th {
+  background-color: var(--panel-background, #f8f9fa);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+}
+
+.function-execute-table tr:hover td {
+  background-color: var(--hover-background, #f0f0f0);
+}
+
+.function-execute-no-data {
+  padding: 24px;
+  text-align: center;
+  color: var(--text-color-secondary, #666);
+}
+
+.function-execute-result-set-selector {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 8px;
+  background-color: var(--panel-background, #f8f9fa);
+  border-radius: 4px;
+  border: 1px solid var(--border-color, #e0e0e0);
+}
+
+.function-execute-result-set-selector label {
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--text-color-secondary, #666);
+  white-space: nowrap;
+}
+
+.function-execute-result-set-selector .bp4-html-select select {
+  min-width: 150px;
+}
+
+/* Dark Theme - Blueprint 6 (优先) */
+.bp6-dark .function-designer-tab {
+  --background-color: #1e1e1e;
+  --border-color: #3c3c3c;
+  --toolbar-background: #252526;
+  --panel-background: #252526;
+  --status-background: #252526;
+  --hover-background: #2a2d2e;
+  --text-color-secondary: #a0a0a0;
+}
+
+/* Dark Theme - Blueprint 5 (兜底) */
+.bp5-dark .function-designer-tab {
+  --background-color: #1e1e1e;
+  --border-color: #3c3c3c;
+  --toolbar-background: #252526;
+  --panel-background: #252526;
+  --status-background: #252526;
+  --hover-background: #2a2d2e;
+  --text-color-secondary: #a0a0a0;
+}
+
+/* Dark Theme - Blueprint 4 (backward compatibility) */
+.bp4-dark .function-designer-tab,
+.vs-dark .function-designer-tab {
+  --background-color: #1e1e1e;
+  --border-color: #3c3c3c;
+  --toolbar-background: #252526;
+  --panel-background: #252526;
+  --status-background: #252526;
+  --hover-background: #2a2d2e;
+  --text-color-secondary: #a0a0a0;
+}
+
+/* Toolbar button styles for dark theme - bp6优先，bp5兜底 */
+.bp6-dark .function-designer-toolbar button,
+.bp5-dark .function-designer-toolbar button,
+.bp6-dark .function-designer-toolbar .bp6-button,
+.bp5-dark .function-designer-toolbar .bp5-button {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: transparent !important;
+}
+
+.bp6-dark .function-designer-toolbar button svg,
+.bp5-dark .function-designer-toolbar button svg,
+.bp6-dark .function-designer-toolbar .bp6-button svg,
+.bp5-dark .function-designer-toolbar .bp5-button svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+.bp6-dark .function-designer-toolbar button:hover,
+.bp5-dark .function-designer-toolbar button:hover,
+.bp6-dark .function-designer-toolbar .bp6-button:hover,
+.bp5-dark .function-designer-toolbar .bp5-button:hover {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: var(--bp6-menu-background-color-hover, var(--bp5-menu-background-color-hover)) !important;
+}
+
+.bp6-dark .function-designer-toolbar button:hover svg,
+.bp5-dark .function-designer-toolbar button:hover svg,
+.bp6-dark .function-designer-toolbar .bp6-button:hover svg,
+.bp5-dark .function-designer-toolbar .bp5-button:hover svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+.bp6-dark .function-designer-toolbar button:disabled,
+.bp6-dark .function-designer-toolbar button.bp6-disabled,
+.bp5-dark .function-designer-toolbar button:disabled,
+.bp5-dark .function-designer-toolbar button.bp5-disabled,
+.bp6-dark .function-designer-toolbar .bp6-button:disabled,
+.bp6-dark .function-designer-toolbar .bp6-button.bp6-disabled,
+.bp5-dark .function-designer-toolbar .bp5-button:disabled,
+.bp5-dark .function-designer-toolbar .bp5-button.bp5-disabled {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+  opacity: 0.6 !important;
+}
+
+.bp6-dark .function-designer-toolbar button:disabled svg,
+.bp6-dark .function-designer-toolbar button.bp6-disabled svg,
+.bp5-dark .function-designer-toolbar button:disabled svg,
+.bp5-dark .function-designer-toolbar button.bp5-disabled svg,
+.bp6-dark .function-designer-toolbar .bp6-button:disabled svg,
+.bp6-dark .function-designer-toolbar .bp6-button.bp6-disabled svg,
+.bp5-dark .function-designer-toolbar .bp5-button:disabled svg,
+.bp5-dark .function-designer-toolbar .bp5-button.bp5-disabled svg {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+/* Input fields dark theme - 覆盖所有可能的Blueprint输入框类名 */
+.bp6-dark .function-designer-properties input,
+.bp5-dark .function-designer-properties input,
+.bp6-dark .function-designer-properties .bp6-input,
+.bp5-dark .function-designer-properties .bp5-input,
+.bp6-dark .function-designer-properties .bp6-input-group input,
+.bp5-dark .function-designer-properties .bp5-input-group input {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+.bp6-dark .function-designer-properties input::placeholder,
+.bp5-dark .function-designer-properties input::placeholder,
+.bp6-dark .function-designer-properties .bp6-input::placeholder,
+.bp5-dark .function-designer-properties .bp5-input::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+.bp6-dark .function-designer-properties select,
+.bp5-dark .function-designer-properties select,
+.bp6-dark .function-designer-properties .bp6-html-select select,
+.bp5-dark .function-designer-properties .bp6-html-select select,
+.bp6-dark .function-designer-properties .bp5-html-select select,
+.bp5-dark .function-designer-properties .bp5-html-select select {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+.bp6-dark .function-designer-properties textarea,
+.bp5-dark .function-designer-properties textarea,
+.bp6-dark .function-designer-properties .bp6-text-area,
+.bp5-dark .function-designer-properties .bp6-text-area,
+.bp6-dark .function-designer-properties .bp5-text-area,
+.bp5-dark .function-designer-properties .bp5-text-area {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+.bp6-dark .function-designer-properties label,
+.bp5-dark .function-designer-properties label {
+  color: var(--bp6-text-color-secondary, var(--bp5-text-color-secondary, #a0a0a0)) !important;
+}
+
+.bp6-dark .function-execute-param-row,
+.bp5-dark .function-execute-param-row,
+.bp4-dark .function-execute-param-row,
+.vs-dark .function-execute-param-row {
+  background-color: #1e1e1e;
+  border-color: #3c3c3c;
+}
+
+.bp6-dark .function-execute-table th,
+.bp5-dark .function-execute-table th,
+.bp4-dark .function-execute-table th,
+.vs-dark .function-execute-table th {
+  background-color: #252526;
+}
+
+.bp6-dark .function-execute-table tr:hover td,
+.bp5-dark .function-execute-table tr:hover td,
+.bp4-dark .function-execute-table tr:hover td,
+.vs-dark .function-execute-table tr:hover td {
+  background-color: #2a2d2e;
+}

@@ -1,0 +1,1363 @@
+{
+  "common": {
+    "ok": "确定",
+    "cancel": "取消",
+    "save": "保存",
+    "saveAs": "另存为",
+    "close": "关闭",
+    "delete": "删除",
+    "edit": "编辑",
+    "create": "新建",
+    "refresh": "刷新",
+    "test": "测试",
+    "apply": "应用",
+    "reset": "重置",
+    "loading": "加载中...",
+    "error": "错误",
+    "success": "成功",
+    "warning": "警告",
+    "info": "信息",
+    "open": "打开",
+    "confirm": "确认",
+    "retry": "重试",
+    "execute": "执行",
+    "yes": "是",
+    "no": "否",
+    "none": "无"
+  },
+  "menu": {
+    "file": {
+      "title": "文件",
+      "newConnection": "新建连接",
+      "newQuery": "新建查询",
+      "open": "打开 SQL 文件...",
+      "save": "保存",
+      "saveAs": "另存为...",
+      "exit": "退出"
+    },
+    "edit": {
+      "title": "编辑",
+      "undo": "撤销",
+      "redo": "重做",
+      "cut": "剪切",
+      "copy": "复制",
+      "paste": "粘贴",
+      "selectAll": "全选",
+      "find": "查找",
+      "replace": "替换"
+    },
+    "view": {
+      "title": "查看",
+      "toolbar": "工具栏",
+      "statusbar": "状态栏",
+      "sidebar": "侧边栏",
+      "properties": "属性",
+      "refresh": "刷新",
+      "erDiagram": "ER 图表",
+      "toggleSidebar": "显示/隐藏 导航栏",
+      "toggleStatusbar": "显示/隐藏 状态栏",
+      "hideStatusbar": "隐藏状态栏",
+      "showStatusbar": "显示状态栏"
+    },
+    "favorites": {
+      "title": "收藏夹",
+      "add": "添加到收藏夹",
+      "manage": "管理收藏夹",
+      "sqlQueries": "SQL 查询",
+      "connections": "连接配置",
+      "empty": "暂无收藏",
+      "use": "使用收藏",
+      "opened": "已打开收藏",
+      "connection": "连接配置收藏",
+      "object": "数据库对象收藏",
+      "added": "收藏已添加",
+      "addFailed": "添加收藏失败"
+    },
+    "tools": {
+      "title": "工具",
+      "options": "选项",
+      "backup": "备份数据库...",
+      "restore": "还原数据库...",
+      "importConnections": "导入连接配置...",
+      "exportConnections": "导出连接配置..."
+    },
+    "window": {
+      "title": "窗口",
+      "maximize": "最大化",
+      "minimize": "最小化",
+      "closeCurrentTab": "关闭当前标签",
+      "closeAllTabs": "关闭所有标签",
+      "toggleTheme": "切换主题"
+    },
+    "help": {
+      "title": "帮助",
+      "documentation": "使用文档",
+      "shortcuts": "快捷键参考",
+      "mysqlDocs": "MySQL 官方文档",
+      "checkUpdate": "检查更新...",
+      "about": "关于 Database Workbench"
+    }
+  },
+  "toolbar": {
+    "connection": "新建连接",
+    "database": "数据库",
+    "query": "查询",
+    "table": "表",
+    "view": "视图",
+    "function": "函数",
+    "backup": "备份",
+    "restore": "还原",
+    "refresh": "刷新",
+    "user": "用户"
+  },
+  "welcome": {
+    "title": "Database Workbench",
+    "subtitle": "数据库工作台",
+    "start": "开始",
+    "recent": "最近",
+    "newConnection": "新建连接",
+    "newQuery": "新建查询",
+    "openFile": "打开 SQL 文件...",
+    "noRecentFiles": "暂无最近文件",
+    "clearRecent": "清除最近文件"
+  },
+  "dialog": {
+    "options": {
+      "title": "选项",
+      "general": {
+        "title": "常规",
+        "language": "语言",
+        "languageTooltip": "更换语言重启后生效",
+        "theme": "主题",
+        "showWelcome": "启动时显示欢迎页面",
+        "showWelcomeDesc": "应用启动时显示欢迎页面和快捷操作",
+        "autoCheckUpdate": "自动检查更新",
+        "autoCheckUpdateDesc": "启动时自动检查是否有新版本可用",
+        "startupOptions": "启动选项",
+        "fontSize": "字体大小",
+        "tabSize": "制表符大小",
+        "wordWrap": "自动换行"
+      },
+      "editor": {
+        "title": "编辑器",
+        "fontSize": "字体大小",
+        "fontSizeDesc": "编辑器中的字体大小",
+        "tabSize": "Tab 缩进",
+        "tabSizeDesc": "按 Tab 键时插入的空格数",
+        "wordWrap": "自动换行",
+        "wordWrapDesc": "当行长度超过视图宽度时自动换行",
+        "autoComplete": "自动补全",
+        "autoCompleteDesc": "在编辑器中启用 SQL 自动补全功能",
+        "minimap": "显示代码缩略图",
+        "minimapDesc": "在编辑器右侧显示代码缩略图",
+        "lineNumbers": "显示行号",
+        "whitespace": "显示空白字符",
+        "fontAndLayout": "字体和排版",
+        "behavior": "编辑器行为",
+        "autoSave": "自动保存",
+        "autoSaveDesc": "自动保存对文件的修改",
+        "spaces": "空格"
+      },
+      "interface": {
+        "title": "界面",
+        "appearance": "外观",
+        "theme": "主题",
+        "themeDesc": "选择应用界面的颜色主题",
+        "elements": "界面元素",
+        "sidebarDefaultCollapsed": "默认折叠侧边栏",
+        "sidebarDefaultCollapsedDesc": "启动时侧边栏默认处于折叠状态",
+        "statusBarVisible": "显示状态栏",
+        "statusBarVisibleDesc": "在窗口底部显示状态栏",
+        "tabCloseButton": "标签关闭按钮",
+        "tabCloseButtonDesc": "设置标签页关闭按钮的显示方式",
+        "tabCloseButtonHover": "悬停时显示",
+        "tabCloseButtonAlways": "始终显示"
+      },
+      "connection": {
+        "title": "连接",
+        "config": "连接配置",
+        "timeout": "连接超时",
+        "timeoutDesc": "建立数据库连接的超时时间",
+        "maxConnections": "最大连接数",
+        "maxConnectionsDesc": "允许同时打开的最大连接数量",
+        "autoReconnect": "自动重新连接",
+        "autoReconnectDesc": "连接断开时自动尝试重新连接",
+        "advanced": "高级选项",
+        "seconds": "秒",
+        "count": "个",
+        "autoReconnectWarning": "自动重新连接功能可能会导致意外的数据库操作，请谨慎开启。",
+        "defaultCharset": "默认字符集"
+      }
+    },
+    "connection": {
+      "title": "新建连接",
+      "editTitle": "编辑连接",
+      "name": "连接名称",
+      "namePlaceholder": "输入连接名称",
+      "host": "主机",
+      "hostPlaceholder": "localhost",
+      "port": "端口",
+      "username": "用户名",
+      "usernamePlaceholder": "root",
+      "password": "密码",
+      "database": "默认数据库",
+      "databasePlaceholder": "可选",
+      "charset": "字符集",
+      "collation": "排序规则",
+      "connectionTimeout": "连接超时（秒）",
+      "timeout": "空闲超时（秒）",
+      "autoReconnect": "自动重连",
+      "autoReconnectDesc": "连接断开时自动重连（生产环境谨慎开启）",
+      "sslTab": "SSL",
+      "sslMode": "SSL 模式",
+      "sslCaPath": "SSL CA 证书路径",
+      "sslCaPathPlaceholder": "可选；VERIFY_CA/VERIFY_IDENTITY 建议必填",
+      "sslCertPath": "SSL 客户端证书路径",
+      "sslCertPathPlaceholder": "可选；与客户端私钥路径成对填写",
+      "sslKeyPath": "SSL 客户端私钥路径",
+      "sslKeyPathPlaceholder": "可选；与客户端证书路径成对填写",
+      "sslModes": {
+        "disabled": "禁用",
+        "preferred": "首选",
+        "required": "必需",
+        "verify-ca": "验证 CA",
+        "verify-identity": "验证身份"
+      },
+      "testConnection": "测试连接",
+      "saveConnection": "保存连接",
+      "testSuccess": "连接成功",
+      "testFailed": "连接失败"
+    },
+    "shortcuts": {
+      "title": "快捷键参考",
+      "fileOperations": "文件操作",
+      "editOperations": "编辑操作",
+      "viewOperations": "查看操作",
+      "queryOperations": "查询操作",
+      "otherOperations": "其他操作"
+    },
+    "about": {
+      "title": "关于 Database Workbench",
+      "version": "版本 {{version}}",
+      "description": "一款现代化的数据库管理工具，支持 MySQL 数据库。提供直观的用户界面，帮助开发者高效地管理数据库连接、执行 SQL 查询、设计表结构等功能。",
+      "techStack": "技术栈",
+      "uiLibrary": "UI 组件库",
+      "license": "许可证",
+      "copyright": "© 2026 Database Workbench. All rights reserved."
+    },
+    "favorites": {
+      "title": "收藏夹管理",
+      "allTypes": "全部类型",
+      "sqlQuery": "SQL 查询",
+      "connectionProfile": "连接配置",
+      "databaseObject": "数据库对象",
+      "sqlQueryShort": "SQL",
+      "connectionShort": "连接",
+      "objectShort": "对象",
+      "searchPlaceholder": "搜索收藏项...",
+      "export": "导出",
+      "import": "导入",
+      "addFavorite": "添加收藏",
+      "empty": "暂无收藏",
+      "noResults": "未找到收藏项",
+      "adjustSearch": "尝试调整搜索条件",
+      "createFirst": "点击「添加收藏」按钮创建您的第一个收藏",
+      "usedCount": "使用 {{count}} 次",
+      "today": "今天 {{time}}",
+      "yesterday": "昨天",
+      "daysAgo": "{{days}} 天前",
+      "totalCount": "共 {{count}} 个收藏",
+      "showingCount": "显示 {{count}} 个",
+      "addTitle": "添加收藏项",
+      "editTitle": "编辑收藏项",
+      "nameLabel": "名称",
+      "namePlaceholder": "输入收藏项名称",
+      "typeLabel": "类型",
+      "descriptionLabel": "描述",
+      "descriptionPlaceholder": "输入描述（可选）",
+      "contentLabel": "内容",
+      "sqlPlaceholder": "输入 SQL 查询语句...",
+      "connectionPlaceholder": "输入连接配置信息...",
+      "objectPlaceholder": "输入数据库对象路径...",
+      "importFailed": "导入失败"
+    },
+    "properties": {
+      "title": "属性",
+      "general": "常规",
+      "connection": "连接",
+      "database": "数据库",
+      "advanced": "高级",
+      "connectionName": "连接名称",
+      "connectionType": "连接类型",
+      "currentStatus": "当前状态",
+      "currentDatabase": "当前数据库",
+      "host": "主机地址",
+      "port": "端口号",
+      "serverVersion": "服务器版本",
+      "username": "用户名",
+      "password": "密码",
+      "defaultDatabase": "默认数据库",
+      "charset": "字符集",
+      "connectionTimeout": "连接超时",
+      "timeout": "空闲超时",
+      "sslMode": "SSL 模式",
+      "tableCount": "表数量",
+      "viewCount": "视图数量",
+      "procedureCount": "存储过程",
+      "functionCount": "函数数量",
+      "connected": "已连接",
+      "disconnected": "已断开",
+      "unknown": "未知"
+    }
+  },
+  "status": {
+    "ready": "就绪",
+    "connected": "已连接到 {{database}}",
+    "disconnected": "未连接",
+    "executing": "正在执行...",
+    "rowsAffected": "影响 {{count}} 行",
+    "executionTime": "执行时间: {{time}}ms",
+    "saving": "保存中...",
+    "saved": "已保存",
+    "loading": "加载中...",
+    "loaded": "已加载"
+  },
+  "connection": {
+    "new": "新建连接",
+    "edit": "编辑连接",
+    "delete": "删除连接",
+    "duplicate": "复制连接",
+    "connect": "连接",
+    "disconnect": "断开",
+    "connected": "已连接",
+    "disconnected": "已断开",
+    "connecting": "连接中...",
+    "disconnecting": "断开中...",
+    "test": "测试连接",
+    "save": "保存连接",
+    "name": "连接名称",
+    "host": "主机",
+    "port": "端口",
+    "username": "用户名",
+    "password": "密码",
+    "database": "数据库",
+    "charset": "字符集",
+    "timeout": "超时时间"
+  },
+  "query": {
+    "new": "新查询",
+    "execute": "执行",
+    "executeSelected": "执行选中",
+    "stop": "停止",
+    "format": "格式化",
+    "comment": "注释",
+    "uncomment": "取消注释",
+    "save": "保存查询",
+    "saveAs": "另存为",
+    "unsavedChanges": "有未保存的更改",
+    "executionSuccess": "执行成功",
+    "executionFailed": "执行失败",
+    "noQuery": "没有要执行的查询",
+    "results": "结果",
+    "messages": "消息"
+  },
+  "database": {
+    "tables": "表",
+    "views": "视图",
+    "functions": "函数",
+    "procedures": "存储过程",
+    "triggers": "触发器",
+    "events": "事件",
+    "users": "用户",
+    "backup": "备份",
+    "restore": "恢复",
+    "createTable": "新建表",
+    "createView": "新建视图",
+    "createFunction": "新建函数",
+    "design": "设计",
+    "preview": "预览",
+    "data": "数据"
+  },
+  "table": {
+    "name": "表名",
+    "engine": "引擎",
+    "rows": "行数",
+    "size": "大小",
+    "created": "创建时间",
+    "updated": "更新时间",
+    "collation": "排序规则",
+    "comment": "注释",
+    "columns": "列",
+    "indexes": "索引",
+    "foreignKeys": "外键",
+    "triggers": "触发器"
+  },
+  "error": {
+    "connectionFailed": "连接失败: {{message}}",
+    "queryFailed": "查询执行失败: {{message}}",
+    "saveFailed": "保存失败: {{message}}",
+    "loadFailed": "加载失败: {{message}}",
+    "invalidConnection": "无效的连接配置",
+    "noDatabaseSelected": "未选择数据库",
+    "noActiveConnection": "没有活动的连接"
+  },
+  "theme": {
+    "light": "浅色",
+    "dark": "深色",
+    "system": "跟随系统"
+  },
+  "language": {
+    "zhCN": "简体中文",
+    "enUS": "English"
+  },
+  "databaseObject": {
+    "table": "表",
+    "view": "视图",
+    "function": "函数",
+    "procedure": "存储过程",
+    "object": "对象",
+    "name": "名称",
+    "rows": "行",
+    "dataLength": "数据长度",
+    "engine": "引擎",
+    "updateTime": "修改日期",
+    "comment": "注释",
+    "createTime": "创建时间",
+    "updatable": "可更新",
+    "securityType": "安全类型",
+    "definer": "定义者",
+    "type": "类型",
+    "returnType": "返回类型",
+    "deterministic": "确定性",
+    "searchPlaceholder": "搜索{{type}}...",
+    "totalCount": "共 {{count}} 个{{type}}",
+    "loading": "正在加载{{type}}...",
+    "empty": "暂无{{type}}",
+    "loadFailed": "加载{{type}}失败: {{error}}",
+    "new": "新建{{type}}",
+    "open": "打开",
+    "openView": "打开视图",
+    "definition": "定义",
+    "deleteSuccess": "{{type}} {{name}} 删除成功",
+    "deleteFailed": "删除{{type}}失败: {{error}}",
+    "deleteConfirm": "确定要删除{{type}} <strong>{{name}}</strong> 吗？",
+    "deleteWarning": "此操作不可撤销。",
+    "newObject": "新建对象",
+    "selectType": "请选择要创建的对象类型："
+  },
+  "queryToolbar": {
+    "connection": "连接",
+    "database": "数据库",
+    "noConnection": "未选连接",
+    "selectConnection": "选择连接",
+    "selectDatabase": "选择数据库",
+    "execute": "执行 (Ctrl+Enter)",
+    "executeTitle": "执行 (Ctrl+Enter)",
+    "executeSelected": "执行选中",
+    "explain": "执行计划",
+    "format": "格式化",
+    "formatSuccess": "SQL已格式化",
+    "formatFailed": "格式化失败",
+    "snippets": "片段",
+    "clear": "清空",
+    "transaction": "事务",
+    "autoCommit": "自动提交",
+    "manualCommit": "手动提交",
+    "commit": "提交",
+    "commitSuccess": "事务已提交",
+    "commitFailed": "提交失败",
+    "rollback": "回滚",
+    "rollbackSuccess": "事务已回滚",
+    "rollbackFailed": "回滚失败",
+    "txModeFailed": "切换事务模式失败",
+    "connecting": "正在连接..."
+  },
+  "resultPanel": {
+    "title": "执行结果",
+    "result": "结果",
+    "noData": "暂无数据",
+    "copy": "复制",
+    "copyRow": "复制行",
+    "showingRows": "显示 {{shown}} 行，共 {{total}} 行",
+    "page": "第 {{current}} / {{total}} 页",
+    "execSuccess": "执行成功",
+    "execFailed": "执行失败",
+    "affectedRows": "受影响行数: {{count}}",
+    "lastInsertId": "最后插入ID: {{id}}",
+    "exportCsv": "导出CSV",
+    "clearResults": "清空结果",
+    "emptyHint": "执行SQL后将在此显示结果",
+    "exportTitle": "导出查询结果为 CSV",
+    "exportCancelled": "已取消导出",
+    "exportSuccess": "导出成功｜时间: {{time}}｜路径: {{path}}",
+    "exportFailed": "导出失败: {{error}}",
+    "queryResult": "查询结果 - {{count}} 行",
+    "queryResultSet": "结果集 {{index}} - {{count}} 行",
+    "updateResult": "更新结果",
+    "errorResult": "错误",
+    "explainResult": "执行计划",
+    "explainSuccess": "执行计划已生成",
+    "explainFailed": "执行计划失败",
+    "execComplete": "执行完成: {{success}} 成功, {{error}} 失败, 耗时 {{time}}ms",
+    "expand": "展开结果面板"
+  },
+  "userTab": {
+    "username": "用户名",
+    "host": "主机",
+    "plugin": "认证插件",
+    "status": "状态",
+    "searchPlaceholder": "搜索用户...",
+    "totalCount": "共 {{count}} 个用户",
+    "loading": "正在加载用户列表...",
+    "empty": "暂无用户",
+    "loadFailed": "加载用户列表失败: {{error}}",
+    "newUser": "新建用户",
+    "deleteConfirm": "确定要删除用户 <strong>{{username}}@{{host}}</strong> 吗？",
+    "deleteWarning": "此操作不可撤销。",
+    "deleteFailed": "删除用户失败: {{error}}"
+  },
+  "backup": {
+    "title": "数据库备份向导",
+    "targetDatabase": "目标数据库: {{database}} @ {{host}}",
+    "ready": "就绪",
+    "basicConfig": "基础配置",
+    "mysqldumpPlaceholder": "选择或输入 mysqldump.exe 路径...",
+    "rememberConfig": "记住配置 (mysqldump 路径)",
+    "selectMysqldump": "选择 mysqldump.exe",
+    "executable": "可执行文件",
+    "file": "文件",
+    "browse": "浏览",
+    "exportOptions": "导出选项",
+    "includeData": "包含数据 (--no-data=false)",
+    "includeViews": "包含视图 (Views)",
+    "includeRoutines": "包含存储过程/函数 (--routines)",
+    "addDropTable": "添加 DROP TABLE (--add-drop-table)",
+    "incrementalTitle": "增量备份 (binlog)",
+    "mysqlbinlogPlaceholder": "可留空使用系统 PATH...",
+    "selectMysqlbinlog": "选择 mysqlbinlog.exe",
+    "binlogIndex": "binlog索引文件",
+    "binlogIndexPlaceholder": "例如 C:\\mysql\\data\\mysql-bin.index",
+    "selectBinlogIndex": "选择 binlog 索引文件",
+    "outputDir": "输出目录",
+    "outputDirPlaceholder": "选择增量备份输出目录...",
+    "selectOutputDir": "选择输出目录",
+    "startIncremental": "开始增量备份",
+    "scheduleTitle": "备份调度",
+    "cronExpression": "Cron 表达式",
+    "cronPlaceholder": "例如 0 0 2 * * * (每天02:00)",
+    "scheduleId": "调度 ID",
+    "scheduleIdPlaceholder": "例如 profile:database",
+    "outputPath": "输出路径模板",
+    "outputPathPlaceholder": "例如 D:\\backup\\db_{timestamp}.sql",
+    "selectOutputFile": "选择备份输出文件",
+    "sqlFile": "SQL 文件",
+    "addSchedule": "添加调度",
+    "removeSchedule": "移除调度",
+    "listSchedule": "列出调度",
+    "start": "开始备份",
+    "running": "正在执行备份...",
+    "success": "备份成功",
+    "failed": "备份失败",
+    "cancelled": "已取消备份",
+    "preparing": "正在准备备份...",
+    "startLog": "开始备份 -> {{path}}",
+    "complete": "备份完成，耗时 {{time}}ms",
+    "outputFile": "输出文件: {{path}}",
+    "logs": "执行日志",
+    "noLogs": "暂无日志",
+    "empty": "(空)",
+    "incremental": {
+      "running": "正在执行增量备份...",
+      "success": "增量备份成功",
+      "failed": "增量备份失败",
+      "start": "开始增量备份",
+      "complete": "增量备份完成"
+    },
+    "schedule": {
+      "adding": "正在添加调度...",
+      "added": "调度添加成功",
+      "addFailed": "添加调度失败",
+      "removing": "正在移除调度...",
+      "removed": "调度移除成功",
+      "removeFailed": "移除调度失败",
+      "listing": "正在列出调度...",
+      "listed": "调度列表",
+      "listFailed": "列出调度失败",
+      "addingLog": "添加调度: {{id}}",
+      "addedLog": "调度已添加",
+      "addFailedLog": "添加调度失败: {{error}}",
+      "removingLog": "移除调度: {{id}}",
+      "removedLog": "调度已移除",
+      "removeFailedLog": "移除调度失败: {{error}}",
+      "listingLog": "列出所有调度",
+      "listedLog": "调度列表: {{count}} 个",
+      "listFailedLog": "列出调度失败: {{error}}"
+    },
+    "error": {
+      "missingMysqldump": "请指定 mysqldump 路径",
+      "missingMysqldumpLog": "参数错误: 缺少 mysqldump 路径",
+      "missingBinlogIndex": "请指定 binlog 索引文件路径",
+      "missingBinlogIndexLog": "参数错误: 缺少 binlog 索引文件路径",
+      "missingOutputDir": "请指定输出目录",
+      "missingOutputDirLog": "参数错误: 缺少输出目录",
+      "missingCron": "请指定 Cron 表达式",
+      "missingCronLog": "参数错误: 缺少 Cron 表达式",
+      "missingScheduleId": "请指定调度 ID",
+      "missingScheduleIdLog": "参数错误: 缺少调度 ID",
+      "missingOutputPath": "请指定输出路径模板",
+      "missingOutputPathLog": "参数错误: 缺少输出路径模板",
+      "message": "错误: {{message}}"
+    }
+  },
+  "restore": {
+    "title": "数据库还原向导",
+    "targetConnection": "目标连接: {{name}} @ {{host}}",
+    "unnamedConnection": "未命名连接",
+    "ready": "就绪",
+    "basicConfig": "基础配置",
+    "mysqlPlaceholder": "选择或输入 mysql.exe 路径...",
+    "rememberConfig": "记住配置 (mysql 路径)",
+    "selectMysql": "选择 mysql.exe",
+    "executable": "可执行文件",
+    "sqlFile": "SQL 文件",
+    "browse": "浏览",
+    "sqlScript": "SQL 脚本",
+    "sqlScriptPath": "SQL 脚本路径",
+    "sqlScriptPlaceholder": "选择或输入 .sql 文件路径...",
+    "selectSqlFile": "选择 SQL 脚本文件",
+    "targetDatabase": "目标数据库",
+    "restoreToExisting": "还原到现有数据库",
+    "restoreToNew": "还原到新数据库",
+    "selectDatabase": "选择数据库",
+    "loading": "正在加载...",
+    "noDatabases": "暂无数据库",
+    "refresh": "刷新",
+    "newDatabaseName": "新数据库名称",
+    "newDatabasePlaceholder": "输入新数据库名称...",
+    "start": "开始还原",
+    "running": "正在执行还原...",
+    "success": "还原成功",
+    "failed": "还原失败",
+    "preparing": "正在准备还原...",
+    "sqlScriptLog": "SQL 脚本: {{path}}",
+    "targetSchema": "目标数据库: {{schema}}",
+    "complete": "还原完成，耗时 {{time}}ms",
+    "failedLog": "还原失败: {{error}}",
+    "loadDatabasesFailed": "加载数据库列表失败: {{error}}",
+    "logs": "执行日志",
+    "noLogs": "暂无日志",
+    "cancel": "取消",
+    "confirmRestore": "确认还原",
+    "confirmOverwrite": "还原操作将覆盖数据库 \"{{database}}\" 中的现有数据。",
+    "confirmWarning": "此操作不可撤销，确定继续吗？",
+    "error": {
+      "missingMysql": "请指定 mysql 路径",
+      "missingMysqlLog": "参数错误: 缺少 mysql 路径",
+      "missingSql": "请指定 SQL 脚本路径",
+      "missingSqlLog": "参数错误: 缺少 SQL 脚本路径",
+      "missingDatabase": "请选择现有数据库",
+      "missingDatabaseLog": "参数错误: 未选择现有数据库",
+      "missingNewDatabase": "请输入新数据库名称",
+      "missingNewDatabaseLog": "参数错误: 缺少新数据库名称"
+    }
+  },
+  "metadataTree": {
+    "columns": "字段",
+    "indexes": "索引",
+    "foreignKeys": "外键",
+    "checks": "检查",
+    "triggers": "触发器",
+    "tables": "表",
+    "views": "视图",
+    "functions": "函数",
+    "noTables": "无表",
+    "noViews": "无视图",
+    "noFunctions": "无函数",
+    "noColumns": "无字段",
+    "noIndexes": "无索引",
+    "noForeignKeys": "无外键",
+    "noChecks": "无检查约束",
+    "noTriggers": "无触发器",
+    "noParams": "无参数",
+    "loadingDatabases": "正在加载数据库...",
+    "databasesLoaded": "已加载数据库: {{count}} 个",
+    "connectionFailed": "连接失败",
+    "connectionFailedWithError": "连接失败: {{error}}",
+    "connectionClosed": "连接已关闭",
+    "openDatabaseFailed": "打开数据库失败",
+    "databaseClosed": "数据库已关闭",
+    "loadFailed": "加载失败",
+    "creatingDatabase": "正在创建数据库...",
+    "databaseCreated": "数据库 '{{name}}' 已创建",
+    "createDatabaseFailed": "创建数据库失败",
+    "createFailed": "创建失败: {{error}}",
+    "systemDbProtected": "系统数据库受保护，无法删除！",
+    "confirmDeleteDatabase": "确认删除数据库",
+    "deleteDatabaseWarning": "确定要删除数据库 '{{name}}' 吗？\n所有数据将永久丢失！",
+    "deletingDatabase": "正在删除数据库...",
+    "databaseDeleted": "数据库 '{{name}}' 已删除",
+    "deleteDatabaseFailed": "删除数据库失败",
+    "deleteFailed": "删除失败: {{error}}",
+    "confirmDeleteConnection": "确认删除连接",
+    "deleteConnectionWarning": "确定要删除连接 '{{name}}' 吗？\n此操作不可撤销。",
+    "connectionDeleted": "连接 '{{name}}' 已删除",
+    "noMetadataToRefresh": "没有可刷新的已连接元数据",
+    "refreshingMetadata": "正在刷新元数据...",
+    "metadataRefreshed": "元数据刷新完成",
+    "openConnection": "打开连接",
+    "closeConnection": "关闭连接",
+    "newDatabase": "新建数据库",
+    "editConnection": "编辑连接",
+    "deleteConnection": "删除连接",
+    "systemDbWarning": "⚠️ 系统数据库 - 谨慎操作",
+    "openDatabase": "打开数据库",
+    "closeDatabase": "关闭数据库",
+    "deleteDatabase": "删除数据库",
+    "deleteSystemDb": "删除数据库 (系统数据库受保护)",
+    "noConnections": "暂无连接",
+    "addConnectionHint": "点击工具栏的\"新建连接\"添加",
+    "openSystemDbTitle": "打开系统数据库",
+    "openSystemDbWarning": "⚠️ 警告：您即将打开系统数据库！\n\n系统数据库包含MySQL服务器运行所需的关键数据，不当操作可能导致服务器无法正常运行。\n\n请确保您了解正在进行的操作，并谨慎行事！",
+    "maxConnectionsReached": "连接数已达上限 ({{current}}/{{max}})"
+  },
+  "propertiesDialog": {
+    "title": "属性",
+    "tabs": {
+      "general": "常规",
+      "connection": "连接",
+      "database": "数据库",
+      "advanced": "高级"
+    },
+    "groups": {
+      "basicInfo": "基本信息",
+      "serverInfo": "服务器信息",
+      "connectionConfig": "连接配置",
+      "connectionParams": "连接参数",
+      "databaseInfo": "数据库信息",
+      "statistics": "统计信息",
+      "connectionOptions": "连接选项",
+      "performance": "性能设置"
+    },
+    "labels": {
+      "connectionName": "连接名称",
+      "connectionType": "连接类型",
+      "currentStatus": "当前状态",
+      "currentDatabase": "当前数据库",
+      "host": "主机地址",
+      "port": "端口号",
+      "serverVersion": "服务器版本",
+      "username": "用户名",
+      "password": "密码",
+      "defaultDatabase": "默认数据库",
+      "charset": "字符集",
+      "connectionTimeout": "连接超时",
+      "timeout": "空闲超时",
+      "sslMode": "SSL 模式",
+      "databaseType": "数据库类型",
+      "tableCount": "表数量",
+      "viewCount": "视图数量",
+      "procedureCount": "存储过程",
+      "functionCount": "函数数量",
+      "autoReconnect": "自动重连",
+      "compress": "压缩传输",
+      "readOnly": "只读模式",
+      "poolSize": "连接池大小",
+      "queryCache": "查询缓存",
+      "maxPacketSize": "最大包大小"
+    },
+    "connected": "已连接",
+    "disconnected": "已断开",
+    "notSelected": "未选择",
+    "notSet": "未设置",
+    "unknown": "未知",
+    "enabled": "启用",
+    "disabled": "禁用",
+    "default": "默认",
+    "seconds": "秒",
+    "clickToCopy": "点击复制",
+    "noActiveConnection": "当前没有活动的连接。请先创建一个数据库连接。",
+    "advancedSettingsHint": "高级设置仅显示当前连接的配置信息。如需修改，请编辑连接配置。"
+  },
+  "sidebar": {
+    "searchPlaceholder": "搜索...",
+    "expandSidebar": "展开导航栏",
+    "collapseSidebar": "折叠导航栏"
+  },
+  "welcomeTab": {
+    "subtitle": "数据库工作台",
+    "startSection": "开始",
+    "newConnection": "新建连接",
+    "newQuery": "新建查询",
+    "openSqlFile": "打开 SQL 文件...",
+    "recentSection": "最近",
+    "clearRecentFiles": "清除最近文件",
+    "noRecentFiles": "暂无最近文件",
+    "sqlFiles": "SQL 文件",
+    "allFiles": "所有文件",
+    "untitled": "未命名.sql",
+    "status": {
+      "openNewConnection": "打开新建连接对话框",
+      "newQuery": "新建查询",
+      "openFile": "打开文件: {{name}}",
+      "openFileFailed": "打开文件失败: {{error}}",
+      "clearRecentFiles": "清除最近文件列表"
+    },
+    "time": {
+      "justNow": "刚刚",
+      "minutesAgo": "{{minutes}} 分钟前",
+      "hoursAgo": "{{hours}} 小时前",
+      "daysAgo": "{{days}} 天前"
+    }
+  },
+  "statusBar": {
+    "ready": "就绪",
+    "showSidebar": "显示导航栏",
+    "hideSidebar": "隐藏导航栏",
+    "switchToLight": "切换到浅色主题",
+    "switchToDark": "切换到深色主题"
+  },
+  "tableDataTab": {
+    "buttons": {
+      "refresh": "刷新",
+      "addRow": "添加行",
+      "deleteRow": "删除行",
+      "preview": "预览提交",
+      "withdraw": "撤回",
+      "submit": "提交更改",
+      "reset": "重置",
+      "confirm": "确认",
+      "export": "导出",
+      "import": "导入",
+      "exportCsv": "导出CSV"
+    },
+    "tooltips": {
+      "refresh": "刷新数据",
+      "addRow": "添加新行",
+      "deleteRow": "删除选中行",
+      "preview": "预览提交",
+      "withdraw": "撤回所有更改",
+      "submit": "提交更改",
+      "export": "导出数据",
+      "import": "导入数据",
+      "exportCsv": "导出CSV"
+    },
+    "export": {
+      "title": "导出{{format}}文件",
+      "cancelled": "导出已取消",
+      "success": "导出成功：{{count}} 行数据已保存到 {{path}}",
+      "failed": "导出失败：{{error}}",
+      "dialogTitle": "选择导出范围",
+      "dialogMessage": "共有 {{totalRows}} 行数据，请选择导出范围",
+      "exportAll": "导出全表",
+      "exportCurrent": "导出当前页"
+    },
+    "import": {
+      "title": "导入{{format}}文件",
+      "cancelled": "导入已取消",
+      "success": "导入成功：{{count}} 行数据已导入",
+      "failed": "导入失败：{{error}}"
+    },
+    "format": {
+      "csv": "CSV",
+      "txt": "TXT",
+      "json": "JSON",
+      "html": "HTML",
+      "xml": "XML",
+      "sql": "SQL",
+      "xlsx": "XLSX"
+    },
+    "changesPending": "{{count}} 项更改待提交",
+    "rowsSelected": "已选择 {{count}} 行",
+    "loading": "加载中...",
+    "pagination": {
+      "showingRows": "显示 {{start}}-{{end}} 行，共 {{total}} 行",
+      "pageSize": "每页显示:",
+      "pageInfo": "第 {{page}} / {{totalPages}} 页"
+    },
+    "errors": {
+      "connectionFailed": "连接失败: {{error}}",
+      "loadDataFailed": "加载数据失败: {{error}}",
+      "submitFailed": "提交更改失败: {{error}}"
+    },
+    "contextMenu": {
+      "copy": "复制",
+      "copyRow": "复制行",
+      "edit": "编辑",
+      "cancel": "取消"
+    }
+  },
+  "designerTab": {
+    "tabTitle": "表设计 - {{name}}",
+    "loading": "正在加载表结构...",
+    "saveSuccess": {
+      "create": "表 {{name}} 创建成功",
+      "modify": "表 {{name}} 修改成功"
+    },
+    "errors": {
+      "loadFailed": "加载表结构失败: {{error}}",
+      "noTableName": "请先输入表名",
+      "saveFailed": "保存失败: {{error}}"
+    },
+    "fields": {
+      "addField": "添加字段",
+      "insertField": "插入字段",
+      "deleteField": "删除字段",
+      "primaryKey": "主键",
+      "moveUp": "上移",
+      "moveDown": "下移",
+      "charsetCollation": "字符集和排序规则",
+      "default": "默认",
+      "columns": {
+        "name": "名称",
+        "type": "类型",
+        "length": "长度",
+        "decimals": "小数点",
+        "notNull": "不是 null",
+        "key": "键",
+        "autoIncrement": "自增",
+        "default": "默认值",
+        "comment": "注释",
+        "charset": "字符集",
+        "collation": "排序规则"
+      },
+      "placeholders": {
+        "name": "字段名",
+        "length": "长度",
+        "decimals": "小数点",
+        "default": "默认值",
+        "comment": "注释"
+      }
+    },
+    "indexes": {
+      "addIndex": "添加索引",
+      "deleteIndex": "删除索引",
+      "noIndexes": "暂无索引",
+      "columns": {
+        "name": "名称",
+        "fields": "字段",
+        "type": "索引类型",
+        "method": "索引方法",
+        "comment": "注释"
+      },
+      "placeholders": {
+        "name": "索引名",
+        "fields": "字段名，逗号分隔",
+        "comment": "注释"
+      }
+    },
+    "foreignKeys": {
+      "addForeignKey": "添加外键",
+      "deleteForeignKey": "删除外键",
+      "noForeignKeys": "暂无外键",
+      "columns": {
+        "name": "名称",
+        "fields": "字段",
+        "refSchema": "被引用的模式",
+        "refTable": "被引用的表",
+        "refFields": "被引用的字段",
+        "onDelete": "删除时",
+        "onUpdate": "更新时"
+      },
+      "placeholders": {
+        "name": "外键名",
+        "fields": "字段名，逗号分隔",
+        "refSchema": "被引用的模式",
+        "refTable": "被引用的表",
+        "refFields": "被引用的字段"
+      }
+    },
+    "checks": {
+      "addCheck": "添加检查",
+      "deleteCheck": "删除检查",
+      "noChecks": "暂无检查约束",
+      "columns": {
+        "name": "名称",
+        "clause": "检查",
+        "notEnforced": "不强制实施"
+      },
+      "placeholders": {
+        "name": "检查名",
+        "clause": "检查条件"
+      }
+    },
+    "triggers": {
+      "addTrigger": "添加触发器",
+      "deleteTrigger": "删除触发器",
+      "noTriggers": "暂无触发器",
+      "columns": {
+        "name": "名称",
+        "timing": "触发",
+        "insert": "插入",
+        "update": "更新",
+        "delete": "删除"
+      },
+      "placeholders": {
+        "name": "触发器名"
+      },
+      "definition": "定义",
+      "edit": "修改",
+      "done": "完成"
+    },
+    "options": {
+      "engine": "存储引擎",
+      "charset": "字符集",
+      "collation": "排序规则",
+      "comment": "表注释",
+      "autoIncrement": "自增值",
+      "placeholders": {
+        "comment": "表注释",
+        "autoIncrement": "自增值"
+      }
+    },
+    "tabs": {
+      "fields": "字段",
+      "indexes": "索引",
+      "foreignKeys": "外键",
+      "checks": "检查",
+      "triggers": "触发器",
+      "options": "选项",
+      "sqlPreview": "SQL 预览"
+    },
+    "newTable": "新建表",
+    "designTable": "设计表",
+    "refresh": "刷新",
+    "save": "保存",
+    "tableNamePlaceholder": "请输入表名"
+  },
+  "viewTab": {
+    "designer": {
+      "newView": "创建新视图",
+      "editView": "编辑视图",
+      "database": "数据库",
+      "viewNamePlaceholder": "输入视图名称",
+      "save": "保存",
+      "saveAsNew": "另存为新视图",
+      "format": "格式化",
+      "clear": "清空",
+      "error": "错误",
+      "success": "成功",
+      "definitionLabel": "视图定义 (SELECT 语句)",
+      "loading": "正在加载视图定义...",
+      "errors": {
+        "loadFailed": "无法加载视图 \"{{name}}\" 的定义",
+        "loadDefinitionFailed": "加载视图定义失败: {{error}}",
+        "enterViewName": "请输入视图名称",
+        "enterDefinition": "请输入视图定义 (SELECT 语句)",
+        "saveFailed": "保存视图失败: {{error}}",
+        "createFailed": "创建新视图失败: {{error}}"
+      },
+      "successes": {
+        "saved": "视图 \"{{name}}\" 已保存成功",
+        "created": "新视图 \"{{name}}\" 已创建成功"
+      },
+      "prompts": {
+        "enterNewViewName": "请输入新视图名称"
+      }
+    },
+    "data": {
+      "title": "视图数据",
+      "readOnly": {
+        "title": "只读模式",
+        "description": "此视图为只读模式，不可进行数据编辑操作。该视图不满足MySQL可更新视图的条件（如包含聚合函数、多表连接、UNION等）"
+      },
+      "toolbar": {
+        "refresh": "刷新",
+        "addRow": "添加行",
+        "deleteRow": "删除行",
+        "preview": "预览提交",
+        "withdraw": "撤回",
+        "submit": "提交更改",
+        "changesPending": "项更改待提交",
+        "rowsSelected": "已选择 {{count}} 行"
+      },
+      "buttons": {
+        "reset": "重置",
+        "confirm": "确认",
+        "exportCsv": "导出CSV"
+      },
+      "tooltips": {
+        "refresh": "刷新数据",
+        "addRow": "添加新行",
+        "deleteRow": "删除选中行",
+        "preview": "预览提交",
+        "withdraw": "撤回所有更改",
+        "submit": "提交更改",
+        "exportCsv": "导出"
+      },
+      "export": {
+        "title": "导出{{format}}文件",
+        "cancelled": "导出已取消",
+        "success": "导出成功：{{count}} 行数据已保存到 {{path}}",
+        "failed": "导出失败：{{error}}",
+        "dialogTitle": "选择导出范围",
+        "dialogMessage": "共有 {{totalRows}} 行数据，请选择导出范围",
+        "exportAll": "导出全表",
+        "exportCurrent": "导出当前页"
+      },
+      "pagination": {
+        "showing": "显示 {{start}}-{{end}} 行，共 {{total}} 行",
+        "pageSize": "每页显示"
+      },
+      "loading": "加载中...",
+      "errors": {
+        "connectFailed": "连接失败: {{error}}",
+        "loadDataFailed": "加载数据失败: {{error}}",
+        "cannotDeterminePk": "无法更新：无法确定基表的主键",
+        "pkColumnNotFound": "无法找到主键列 {{name}} 在视图中的映射",
+        "submitFailed": "提交更改失败: {{error}}"
+      }
+    }
+  },
+  "previewCommit": {
+    "dialog": {
+      "title": "预览提交 - {{database}}.{{tableName}}",
+      "viewTitle": "预览提交 - {{database}}.{{viewName}} (基表: {{baseTableName}})",
+      "tabs": {
+        "changes": "变更详情",
+        "associations": "预览关联"
+      },
+      "changes": {
+        "noData": "没有变更数据",
+        "recordCount": "共 {{count}} 条变更记录",
+        "operation": "操作",
+        "operations": {
+          "new": "新增",
+          "modified": "修改",
+          "deleted": "删除"
+        },
+        "pkIndicator": "PK"
+      },
+      "associations": {
+        "loading": "加载关联信息...",
+        "noAssociations": "没有发现关联的约束或触发器影响",
+        "viewNoAssociations": "基表没有发现关联的约束或触发器影响",
+        "baseTable": "基表",
+        "baseTableInfo": "以下关联信息来自基表，您的修改将直接影响基表数据",
+        "trigger": "触发器",
+        "foreignKeyConstraint": "[外键约束] 本表字段 '{{myColumn}}' → 父表 '{{refTable}}.{{refColumn}}'",
+        "viewForeignKeyConstraint": "[外键约束] 基表字段 '{{myColumn}}' → 父表 '{{refTable}}.{{refColumn}}'",
+        "dependencyCheck": "[依赖检查] 子表 '{{refTable}}' (外键 '{{refColumn}}' → 本表 '{{myColumn}}') 包含相关数据:",
+        "viewDependencyCheck": "[依赖检查] 子表 '{{refTable}}' (外键 '{{refColumn}}' → 基表 '{{myColumn}}') 包含相关数据:",
+        "moreRows": "还有 {{count}} 行数据...",
+        "missingValuesWarning": "父表 ({{parentTable}}) 中不存在以下引用值，提交将会失败",
+        "dependencyWarning": "存在依赖数据，提交变更可能导致外键冲突错误或触发级联操作"
+      },
+      "viewInfo": {
+        "title": "视图操作提示：",
+        "description": "您正在通过视图 {{viewName}} 修改基表 {{baseTableName}} 的数据。以下变更将直接作用于基表。"
+      },
+      "errors": {
+        "loadAssociationsFailed": "加载关联信息失败: {{error}}"
+      },
+      "close": "关闭"
+    }
+  },
+  "functionTab": {
+    "newFunction": "新建函数",
+    "newProcedure": "新建存储过程",
+    "editFunction": "函数 - {{name}}",
+    "editProcedure": "存储过程 - {{name}}",
+    "toolbar": {
+      "refresh": "刷新",
+      "new": "新建",
+      "execute": "执行",
+      "save": "保存"
+    },
+    "properties": {
+      "name": "名称",
+      "type": "类型",
+      "returnType": "返回类型",
+      "deterministic": "确定性",
+      "comment": "注释",
+      "placeholders": {
+        "functionName": "函数名称",
+        "procedureName": "存储过程名称",
+        "returnType": "如: INT, VARCHAR(255)",
+        "functionComment": "函数注释",
+        "procedureComment": "存储过程注释"
+      }
+    },
+    "types": {
+      "function": "函数",
+      "procedure": "存储过程"
+    },
+    "editor": {
+      "label": "定义代码:"
+    },
+    "status": {
+      "ready": "就绪",
+      "loading": "加载中...",
+      "loadComplete": "加载完成",
+      "loadFailed": "加载失败",
+      "saving": "保存中...",
+      "saveSuccess": "保存成功",
+      "saveFailed": "保存失败"
+    },
+    "loading": "正在加载{{type}}...",
+    "template": {
+      "functionComment": "-- 函数逻辑",
+      "procedureComment": "-- 存储过程逻辑"
+    },
+    "executeDialog": {
+      "title": "执行 {{type}}: {{name}}",
+      "params": "参数:",
+      "result": "执行结果:",
+      "tabs": {
+        "message": "消息",
+        "data": "数据"
+      },
+      "noParams": "无参数，可以直接执行",
+      "loadingParams": "正在加载参数信息...",
+      "placeholder": "输入 {{type}} 值",
+      "noData": "暂无数据",
+      "defaultMessage": "执行消息将显示在这里...",
+      "close": "关闭",
+      "execute": "执行",
+      "resultSetSelector": "选择结果集",
+      "resultSetLabel": "结果集 {{index}} ({{count}} 行)"
+    },
+    "errors": {
+      "loadFailed": "无法加载{{type}}定义",
+      "loadError": "加载{{type}}失败: {{error}}",
+      "enterName": "请输入{{type}}名称",
+      "enterCode": "请输入{{type}}定义代码",
+      "saveError": "保存失败: {{error}}",
+      "executeSaveFirst": "请先保存后再执行",
+      "loadParamsFailed": "加载参数失败: {{error}}"
+    },
+    "success": {
+      "saved": "{{type}}已保存"
+    },
+    "execute": {
+      "success": "执行成功，返回 {{count}} 行数据",
+      "multiResultSuccess": "执行成功，返回 {{setCount}} 个结果集，共 {{totalRows}} 行数据",
+      "outParams": "执行成功，输出参数: {{params}}",
+      "failed": "执行失败: {{error}}"
+    }
+  },
+  "userEditor": {
+    "newUser": "创建新用户",
+    "editUser": "编辑用户: {{username}}@{{host}}",
+    "tabs": {
+      "general": "常规",
+      "serverPrivileges": "服务器权限",
+      "databasePrivileges": "数据库权限",
+      "sqlPreview": "SQL 预览"
+    },
+    "form": {
+      "username": "用户名",
+      "host": "主机",
+      "password": "密码",
+      "confirmPassword": "确认密码",
+      "authPlugin": "认证插件",
+      "required": "(required)",
+      "placeholders": {
+        "username": "输入用户名",
+        "host": "例如: % 或 localhost",
+        "passwordNew": "输入密码",
+        "passwordEdit": "留空表示不修改密码",
+        "confirmPassword": "再次输入密码"
+      }
+    },
+    "databasePrivileges": {
+      "add": "添加",
+      "name": "名称",
+      "operation": "操作",
+      "hint": "请选择数据库、表、字段后点击\"添加\"，在下方按作用域配置权限。"
+    },
+    "buttons": {
+      "save": "保存",
+      "saving": "保存中..."
+    },
+    "loading": "正在加载用户数据...",
+    "systemUserConfirm": {
+      "title": "修改系统用户",
+      "message": "⚠️ 警告：您即将修改系统用户 {{username}}@{{host}}！\n\n系统用户与 MySQL 服务器运行和内部机制密切相关，不当修改可能导致认证异常、权限问题或服务不可用。\n\n请确认您已了解风险，并确认继续保存。",
+      "confirm": "确认修改",
+      "cancel": "取消"
+    },
+    "errors": {
+      "loadFailed": "加载用户数据失败: {{error}}",
+      "usernameRequired": "用户名不能为空",
+      "hostRequired": "主机不能为空",
+      "passwordRequired": "密码不能为空",
+      "passwordMismatch": "两次输入的密码不一致",
+      "saveFailed": "保存失败: {{error}}",
+      "generateSqlFailed": "-- 生成SQL失败: {{error}}"
+    },
+    "success": {
+      "userCreated": "用户创建成功",
+      "userUpdated": "用户更新成功"
+    }
+  },
+  "tabTitles": {
+    "welcome": "欢迎页",
+    "unknownConnection": "未知连接",
+    "tableData": "{{tableName}}@{{database}}({{connectionName}}) - 表",
+    "viewData": "{{viewName}}@{{database}}({{connectionName}}) - 视图",
+    "designer": {
+      "edit": "表设计 - {{tableName}}",
+      "newWithDatabase": "新建表 - {{database}}",
+      "new": "新建表"
+    },
+    "viewDesigner": "视图 - {{viewName}}",
+    "functionDesigner": {
+      "editFunction": "函数 - {{name}}",
+      "editProcedure": "存储过程 - {{name}}",
+      "newFunction": "新建函数",
+      "newProcedure": "新建存储过程"
+    },
+    "userEditor": {
+      "edit": "用户 - {{username}}@{{host}}",
+      "new": "新建用户"
+    },
+    "erDiagram": "ER图 - {{database}}"
+  },
+  "erDiagram": {
+    "toolbar": {
+      "refresh": "刷新",
+      "zoomIn": "放大",
+      "zoomOut": "缩小",
+      "reset": "重置",
+      "autoLayout": "自动布局",
+      "export": "导出"
+    },
+    "loading": "正在生成 ER 图...",
+    "retry": "重试",
+    "status": {
+      "loading": "正在加载 ER 图...",
+      "loaded": "ER 图已加载: {{tables}} 张表, {{relations}} 条关系 ({{time}}ms)",
+      "loadFailed": "加载 ER 图失败: {{message}}"
+    },
+    "export": {
+      "title": "导出{{format}}文件",
+      "format": {
+        "png": "PNG",
+        "jpg": "JPG",
+        "pdf": "PDF",
+        "sql": "SQL"
+      },
+      "mode": {
+        "current": "当前画面",
+        "full": "全景图"
+      }
+    }
+  },
+  "update": {
+    "title": "检查更新",
+    "checking": "正在检查更新...",
+    "upToDate": "您使用的是最新版本",
+    "newVersionAvailable": "发现新版本 {{version}}",
+    "releaseDate": "发布日期",
+    "releaseNotes": "更新说明",
+    "downloading": "正在下载更新...",
+    "download": "下载更新",
+    "readyToInstall": "更新已下载完成，点击\"重启\"按钮安装更新",
+    "restart": "重启",
+    "retry": "重试",
+    "checkFailed": "检查更新失败",
+    "downloadFailed": "下载更新失败",
+    "restartFailed": "重启失败",
+    "unknownError": "未知错误"
+  }
+}

@@ -1,0 +1,254 @@
+.restore-tab {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--bp5-app-background-color);
+}
+
+.restore-tab-scroll {
+  height: 100%;
+  overflow: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.restore-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.restore-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--bp5-text-color);
+}
+
+.restore-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--bp5-text-color-muted);
+}
+
+.restore-card {
+  background-color: var(--bp5-panel-background-color, var(--bp5-app-background-color));
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 6px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.restore-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--bp5-text-color);
+}
+
+.restore-form-grid {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.restore-label {
+  font-size: 13px;
+  color: var(--bp5-text-color-muted);
+}
+
+.restore-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--bp5-text-color);
+}
+
+.restore-radio-group {
+  margin-bottom: 2px;
+}
+
+.restore-action-card {
+  gap: 10px;
+}
+
+.restore-main-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.restore-status-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.restore-status-text {
+  font-size: 13px;
+  color: var(--bp5-text-color);
+}
+
+.restore-log-box {
+  min-height: 180px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 4px;
+  background-color: var(--bp5-app-background-color);
+  color: var(--bp5-text-color);
+  font-size: 12px;
+  font-family: Consolas, 'Courier New', monospace;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+@media (max-width: 1100px) {
+  .restore-form-grid {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+
+  .restore-form-grid > :nth-child(3n) {
+    justify-self: start;
+  }
+
+  .restore-main-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Dark theme for restore tab - bp6优先，bp5兜底 */
+html.bp6-dark .restore-tab input,
+html.bp5-dark .restore-tab input,
+.bp6-dark .restore-tab input,
+.bp5-dark .restore-tab input,
+html.bp6-dark .restore-tab .bp6-input,
+html.bp5-dark .restore-tab .bp5-input,
+.bp6-dark .restore-tab .bp6-input,
+.bp5-dark .restore-tab .bp5-input,
+html.bp6-dark .restore-tab .bp6-input-group input,
+html.bp5-dark .restore-tab .bp5-input-group input,
+.bp6-dark .restore-tab .bp6-input-group input,
+.bp5-dark .restore-tab .bp5-input-group input {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+html.bp6-dark .restore-tab input::placeholder,
+html.bp5-dark .restore-tab input::placeholder,
+.bp6-dark .restore-tab input::placeholder,
+.bp5-dark .restore-tab input::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+html.bp6-dark .restore-tab select,
+html.bp5-dark .restore-tab select,
+.bp6-dark .restore-tab select,
+.bp5-dark .restore-tab select,
+html.bp6-dark .restore-tab .bp6-html-select select,
+html.bp5-dark .restore-tab .bp5-html-select select,
+.bp6-dark .restore-tab .bp6-html-select select,
+.bp5-dark .restore-tab .bp5-html-select select {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+html.bp6-dark .restore-tab button,
+html.bp5-dark .restore-tab button,
+.bp6-dark .restore-tab button,
+.bp5-dark .restore-tab button,
+html.bp6-dark .restore-tab .bp6-button,
+html.bp5-dark .restore-tab .bp5-button,
+.bp6-dark .restore-tab .bp6-button,
+.bp5-dark .restore-tab .bp5-button {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+html.bp6-dark .restore-tab button svg,
+html.bp5-dark .restore-tab button svg,
+.bp6-dark .restore-tab button svg,
+.bp5-dark .restore-tab button svg,
+html.bp6-dark .restore-tab .bp6-button svg,
+html.bp5-dark .restore-tab .bp5-button svg,
+.bp6-dark .restore-tab .bp6-button svg,
+.bp5-dark .restore-tab .bp5-button svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .restore-tab button:hover,
+html.bp5-dark .restore-tab button:hover,
+.bp6-dark .restore-tab button:hover,
+.bp5-dark .restore-tab button:hover,
+html.bp6-dark .restore-tab .bp6-button:hover,
+html.bp5-dark .restore-tab .bp5-button:hover,
+.bp6-dark .restore-tab .bp6-button:hover,
+.bp5-dark .restore-tab .bp5-button:hover {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: var(--bp6-menu-background-color-hover, var(--bp5-menu-background-color-hover)) !important;
+}
+
+html.bp6-dark .restore-tab button:hover svg,
+html.bp5-dark .restore-tab button:hover svg,
+.bp6-dark .restore-tab button:hover svg,
+.bp5-dark .restore-tab button:hover svg,
+html.bp6-dark .restore-tab .bp6-button:hover svg,
+html.bp5-dark .restore-tab .bp5-button:hover svg,
+.bp6-dark .restore-tab .bp6-button:hover svg,
+.bp5-dark .restore-tab .bp5-button:hover svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .restore-tab button.bp6-intent-primary,
+html.bp5-dark .restore-tab button.bp5-intent-primary,
+.bp6-dark .restore-tab button.bp6-intent-primary,
+.bp5-dark .restore-tab button.bp5-intent-primary,
+html.bp6-dark .restore-tab .bp6-button.bp6-intent-primary,
+html.bp5-dark .restore-tab .bp5-button.bp5-intent-primary,
+.bp6-dark .restore-tab .bp6-button.bp6-intent-primary,
+.bp5-dark .restore-tab .bp5-button.bp5-intent-primary {
+  color: #ffffff !important;
+  background-color: var(--bp6-intent-primary, var(--bp5-intent-primary)) !important;
+}
+
+html.bp6-dark .restore-label,
+html.bp5-dark .restore-label,
+.bp6-dark .restore-label,
+.bp5-dark .restore-label {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+html.bp6-dark .restore-card-title,
+html.bp5-dark .restore-card-title,
+.bp6-dark .restore-card-title,
+.bp5-dark .restore-card-title {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .restore-check-label,
+html.bp5-dark .restore-check-label,
+.bp6-dark .restore-check-label,
+.bp5-dark .restore-check-label {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .restore-log-box,
+html.bp5-dark .restore-log-box,
+.bp6-dark .restore-log-box,
+.bp5-dark .restore-log-box {
+  background-color: var(--bp6-app-background-color, var(--bp5-app-background-color)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}

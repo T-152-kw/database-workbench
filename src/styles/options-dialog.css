@@ -1,0 +1,781 @@
+/* ============ 现代选项对话框样式 - 类似 VS Code / JetBrains ============ */
+
+/* 对话框根容器 - 无边框现代风格 */
+.options-dialog-modern .bp5-dialog,
+.options-dialog-modern .bp6-dialog {
+  padding: 0;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--bp5-divider-black);
+}
+
+.options-dialog-modern .bp5-dialog-header,
+.options-dialog-modern .bp6-dialog-header {
+  display: none;
+}
+
+.options-dialog-modern .bp5-dialog-body,
+.options-dialog-modern .bp6-dialog-body {
+  padding: 0;
+  margin: 0;
+  background-color: var(--bp5-app-background-color);
+}
+
+.options-dialog-modern .bp5-dialog-footer,
+.options-dialog-modern .bp6-dialog-footer {
+  display: none;
+}
+
+/* ============ 主容器布局 - 左右分栏 ============ */
+.options-dialog-container {
+  display: flex;
+  height: 100%;
+  min-height: 550px;
+}
+
+/* ============ 左侧边栏 ============ */
+.options-sidebar {
+  width: 200px;
+  background-color: var(--bp5-menu-background-color);
+  border-right: 1px solid var(--bp5-divider-black);
+  display: flex;
+  flex-direction: column;
+  flex-shrink: 0;
+}
+
+.options-sidebar-header {
+  padding: 16px 20px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--bp5-text-color);
+  border-bottom: 1px solid var(--bp5-divider-black);
+}
+
+.options-sidebar-header svg {
+  color: var(--bp5-intent-primary);
+}
+
+.options-sidebar-nav {
+  flex: 1;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  overflow-y: auto;
+}
+
+.options-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border: none;
+  background: transparent;
+  color: var(--bp5-text-color-muted);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s ease;
+  text-align: left;
+  position: relative;
+}
+
+.options-nav-item:hover {
+  background-color: var(--bp5-menu-background-color-hover);
+  color: var(--bp5-text-color);
+}
+
+.options-nav-item.active {
+  background-color: var(--bp5-menu-background-color-active);
+  color: var(--bp5-text-color);
+  font-weight: 600;
+}
+
+.options-nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 3px;
+  height: 20px;
+  background-color: var(--bp5-intent-primary);
+  border-radius: 0 2px 2px 0;
+}
+
+.options-nav-item svg {
+  flex-shrink: 0;
+}
+
+.options-nav-item.active svg {
+  color: var(--bp5-intent-primary);
+}
+
+/* ============ 右侧内容区 ============ */
+.options-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  background-color: var(--bp5-app-background-color);
+}
+
+.options-content-header {
+  padding: 20px 24px 16px;
+  border-bottom: 1px solid var(--bp5-divider-black);
+  flex-shrink: 0;
+}
+
+.options-content-header h2 {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--bp5-text-color);
+  line-height: 1.3;
+}
+
+.options-content-body {
+  flex: 1;
+  padding: 24px;
+  overflow-y: auto;
+  overflow-x: hidden;
+}
+
+.options-content-footer {
+  padding: 16px 24px;
+  border-top: 1px solid var(--bp5-divider-black);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+  background-color: var(--bp5-app-background-color);
+}
+
+.options-footer-left {
+  display: flex;
+  align-items: center;
+}
+
+.options-footer-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.options-unsaved-indicator {
+  font-size: 12px;
+  color: var(--bp5-intent-primary);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.options-unsaved-indicator::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  background-color: var(--bp5-intent-primary);
+  border-radius: 50%;
+  animation: pulse 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+/* ============ 设置面板内容 ============ */
+.options-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  max-width: 600px;
+}
+
+/* ============ 设置分组 ============ */
+.options-setting-group {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.options-setting-group-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--bp5-text-color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 4px;
+}
+
+.options-setting-group-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  background-color: var(--bp5-divider-black);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+/* ============ 设置项 - 现代卡片风格 ============ */
+.options-setting-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 16px;
+  background-color: var(--bp5-app-background-color);
+  gap: 16px;
+  transition: background-color 0.15s ease;
+}
+
+.options-setting-item:hover {
+  background-color: var(--bp5-menu-background-color-hover);
+}
+
+.options-setting-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.options-setting-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--bp5-text-color);
+  line-height: 1.4;
+}
+
+.options-setting-description {
+  font-size: 12px;
+  color: var(--bp5-text-color-muted);
+  line-height: 1.4;
+}
+
+.options-setting-control {
+  flex-shrink: 0;
+}
+
+.options-setting-control-number {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.options-setting-suffix {
+  font-size: 12px;
+  color: var(--bp5-text-color-muted);
+  min-width: 30px;
+}
+
+.options-setting-control-select {
+  min-width: 140px;
+}
+
+/* ============ 自定义 Switch 开关样式 ============ */
+.options-custom-switch {
+  position: relative;
+  display: inline-block;
+  width: 44px;
+  height: 24px;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+.options-custom-switch input {
+  opacity: 0;
+  width: 0;
+  height: 0;
+  position: absolute;
+}
+
+.options-custom-switch-slider {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: #ccc;
+  border-radius: 12px;
+  transition: background-color 0.2s ease;
+}
+
+.options-custom-switch-slider::before {
+  content: '';
+  position: absolute;
+  height: 20px;
+  width: 20px;
+  left: 2px;
+  bottom: 2px;
+  background-color: white;
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.options-custom-switch input:checked + .options-custom-switch-slider {
+  background-color: #007acc;
+}
+
+.options-custom-switch input:checked + .options-custom-switch-slider::before {
+  transform: translateX(20px);
+}
+
+/* 暗色主题下的 Switch */
+.bp5-dark .options-custom-switch-slider,
+.bp6-dark .options-custom-switch-slider {
+  background-color: #555;
+}
+
+.bp5-dark .options-custom-switch input:checked + .options-custom-switch-slider,
+.bp6-dark .options-custom-switch input:checked + .options-custom-switch-slider {
+  background-color: #007acc;
+}
+
+/* 亮色主题下的 Switch */
+.bp5-light .options-custom-switch-slider,
+.bp6-light .options-custom-switch-slider {
+  background-color: #ccc;
+}
+
+.bp5-light .options-custom-switch input:checked + .options-custom-switch-slider,
+.bp6-light .options-custom-switch input:checked + .options-custom-switch-slider {
+  background-color: #007acc;
+}
+
+/* ============ NumericInput 数字输入框 - 紧凑风格 ============ */
+.options-setting-control-number .bp5-numeric-input,
+.options-setting-control-number .bp6-numeric-input {
+  width: 80px;
+}
+
+.options-setting-control-number .bp5-input-group,
+.options-setting-control-number .bp6-input-group {
+  width: 80px;
+}
+
+.options-setting-control-number .bp5-input,
+.options-setting-control-number .bp6-input {
+  height: 32px;
+  padding: 0 10px;
+  font-size: 13px;
+  background-color: var(--bp5-app-background-color);
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 6px;
+  color: var(--bp5-text-color);
+  text-align: center;
+}
+
+.options-setting-control-number .bp5-input:focus,
+.options-setting-control-number .bp6-input:focus {
+  border-color: var(--bp5-intent-primary);
+  box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+}
+
+.options-setting-control-number .bp5-button-group,
+.options-setting-control-number .bp6-button-group {
+  display: none;
+}
+
+/* ============ HTMLSelect 下拉选择框 ============ */
+.options-setting-control-select select {
+  height: 32px;
+  padding: 0 28px 0 12px;
+  font-size: 13px;
+  background-color: var(--bp5-app-background-color);
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 6px;
+  color: var(--bp5-text-color);
+  cursor: pointer;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' fill='%23666'%3E%3Cpath d='M4 6l4 4 4-4'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 8px center;
+  background-size: 12px;
+}
+
+.options-setting-control-select select:focus {
+  border-color: var(--bp5-intent-primary);
+  box-shadow: 0 0 0 2px rgba(0, 122, 204, 0.2);
+  outline: none;
+}
+
+/* ============ 主题卡片选择器 - 可视化预览 ============ */
+.options-theme-cards {
+  display: flex;
+  gap: 16px;
+}
+
+.options-theme-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border: 2px solid var(--bp5-divider-black);
+  border-radius: 10px;
+  background-color: var(--bp5-app-background-color);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 100px;
+}
+
+.options-theme-card:hover {
+  border-color: var(--bp5-text-color-muted);
+  transform: translateY(-2px);
+}
+
+.options-theme-card.active {
+  border-color: var(--bp5-intent-primary);
+  background-color: rgba(0, 122, 204, 0.08);
+}
+
+.options-theme-card-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--bp5-text-color);
+}
+
+/* 主题预览缩略图 */
+.options-theme-preview {
+  width: 80px;
+  height: 60px;
+  border-radius: 6px;
+  overflow: hidden;
+  position: relative;
+  border: 1px solid var(--bp5-divider-black);
+}
+
+.options-theme-preview-header {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 12px;
+}
+
+.options-theme-preview-sidebar {
+  position: absolute;
+  top: 12px;
+  left: 0;
+  width: 20px;
+  bottom: 0;
+}
+
+.options-theme-preview-content {
+  position: absolute;
+  top: 12px;
+  left: 20px;
+  right: 0;
+  bottom: 0;
+}
+
+/* 亮色主题预览 */
+.options-theme-preview-light {
+  background-color: #f5f5f5;
+}
+
+.options-theme-preview-light .options-theme-preview-header {
+  background-color: #e8e8e8;
+}
+
+.options-theme-preview-light .options-theme-preview-sidebar {
+  background-color: #f0f0f0;
+}
+
+.options-theme-preview-light .options-theme-preview-content {
+  background-color: #ffffff;
+}
+
+/* 暗色主题预览 */
+.options-theme-preview-dark {
+  background-color: #1e1e1e;
+}
+
+.options-theme-preview-dark .options-theme-preview-header {
+  background-color: #2d2d30;
+}
+
+.options-theme-preview-dark .options-theme-preview-sidebar {
+  background-color: #252526;
+}
+
+.options-theme-preview-dark .options-theme-preview-content {
+  background-color: #1e1e1e;
+}
+
+/* ============ Callout 提示框 - 现代风格 ============ */
+.options-callout-modern {
+  margin-top: 8px;
+  border-radius: 8px;
+  padding: 12px 16px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.options-callout-modern.bp5-callout,
+.options-callout-modern.bp6-callout {
+  background-color: var(--bp5-menu-background-color);
+  border: 1px solid var(--bp5-divider-black);
+  box-shadow: none;
+}
+
+.options-callout-modern.bp5-intent-primary,
+.options-callout-modern.bp6-intent-primary {
+  background-color: rgba(0, 122, 204, 0.1);
+  border-color: rgba(0, 122, 204, 0.3);
+}
+
+.options-callout-modern.bp5-intent-primary .bp5-callout-icon,
+.options-callout-modern.bp6-intent-primary .bp6-callout-icon {
+  color: var(--bp5-intent-primary);
+}
+
+.options-callout-modern.bp5-intent-warning,
+.options-callout-modern.bp6-intent-warning {
+  background-color: rgba(255, 152, 0, 0.1);
+  border-color: rgba(255, 152, 0, 0.3);
+}
+
+.options-callout-modern.bp5-intent-warning .bp5-callout-icon,
+.options-callout-modern.bp6-intent-warning .bp6-callout-icon {
+  color: var(--bp5-intent-warning);
+}
+
+/* ============ 底部按钮样式 ============ */
+.options-btn-reset {
+  font-size: 13px;
+  color: var(--bp5-text-color-muted) !important;
+}
+
+.options-btn-reset:hover {
+  color: var(--bp5-text-color) !important;
+}
+
+.options-btn-cancel {
+  font-size: 13px;
+  padding: 6px 16px;
+}
+
+.options-btn-save {
+  font-size: 13px;
+  padding: 6px 20px;
+  font-weight: 500;
+}
+
+/* ============ 暗色主题特定样式 ============ */
+.bp5-dark .options-sidebar,
+.bp6-dark .options-sidebar {
+  background-color: #252526;
+}
+
+.bp5-dark .options-sidebar-header,
+.bp6-dark .options-sidebar-header {
+  border-color: #3e3e42;
+}
+
+.bp5-dark .options-nav-item.active,
+.bp6-dark .options-nav-item.active {
+  background-color: #094771;
+}
+
+.bp5-dark .options-setting-group-content,
+.bp6-dark .options-setting-group-content {
+  background-color: #3e3e42;
+}
+
+.bp5-dark .options-setting-item,
+.bp6-dark .options-setting-item {
+  background-color: #1e1e1e;
+}
+
+.bp5-dark .options-setting-item:hover,
+.bp6-dark .options-setting-item:hover {
+  background-color: #2d2d30;
+}
+
+.bp5-dark .options-setting-control-number .bp5-input,
+.bp6-dark .options-setting-control-number .bp6-input,
+.bp5-dark .options-setting-control-select select,
+.bp6-dark .options-setting-control-select select {
+  background-color: #3c3c3c;
+  border-color: #555;
+  color: #cccccc;
+}
+
+.bp5-dark .options-theme-card,
+.bp6-dark .options-theme-card {
+  background-color: #2d2d30;
+  border-color: #3e3e42;
+}
+
+.bp5-dark .options-theme-card.active,
+.bp6-dark .options-theme-card.active {
+  background-color: rgba(0, 122, 204, 0.15);
+}
+
+.bp5-dark .options-callout-modern.bp5-callout,
+.bp6-dark .options-callout-modern.bp6-callout {
+  background-color: #2d2d30;
+  border-color: #3e3e42;
+}
+
+/* ============ 浅色主题特定样式 ============ */
+.bp5-light .options-sidebar,
+.bp6-light .options-sidebar {
+  background-color: #f8f9fa;
+}
+
+.bp5-light .options-sidebar-header,
+.bp6-light .options-sidebar-header {
+  border-color: #e0e0e0;
+}
+
+.bp5-light .options-nav-item.active,
+.bp6-light .options-nav-item.active {
+  background-color: #e3f2fd;
+  color: #1976d2;
+}
+
+.bp5-light .options-setting-group-content,
+.bp6-light .options-setting-group-content {
+  background-color: #e0e0e0;
+}
+
+.bp5-light .options-setting-item,
+.bp6-light .options-setting-item {
+  background-color: #ffffff;
+}
+
+.bp5-light .options-setting-item:hover,
+.bp6-light .options-setting-item:hover {
+  background-color: #f5f5f5;
+}
+
+.bp5-light .options-setting-control-number .bp5-input,
+.bp6-light .options-setting-control-number .bp6-input,
+.bp5-light .options-setting-control-select select,
+.bp6-light .options-setting-control-select select {
+  background-color: #ffffff;
+  border-color: #d0d0d0;
+  color: #333333;
+}
+
+.bp5-light .options-theme-card,
+.bp6-light .options-theme-card {
+  background-color: #ffffff;
+  border-color: #e0e0e0;
+}
+
+.bp5-light .options-theme-card.active,
+.bp6-light .options-theme-card.active {
+  background-color: rgba(0, 122, 204, 0.08);
+}
+
+.bp5-light .options-callout-modern.bp5-callout,
+.bp6-light .options-callout-modern.bp6-callout {
+  background-color: #f5f5f5;
+  border-color: #e0e0e0;
+}
+
+/* ============ 滚动条样式 ============ */
+.options-content-body::-webkit-scrollbar,
+.options-sidebar-nav::-webkit-scrollbar {
+  width: 8px;
+}
+
+.options-content-body::-webkit-scrollbar-track,
+.options-sidebar-nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.options-content-body::-webkit-scrollbar-thumb,
+.options-sidebar-nav::-webkit-scrollbar-thumb {
+  background: var(--bp5-divider-black);
+  border-radius: 4px;
+}
+
+.options-content-body::-webkit-scrollbar-thumb:hover,
+.options-sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: var(--bp5-text-color-muted);
+}
+
+/* ============ 响应式调整 ============ */
+@media (max-width: 700px) {
+  .options-dialog-modern .bp5-dialog,
+  .options-dialog-modern .bp6-dialog {
+    width: 100% !important;
+    height: 100% !important;
+    max-width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+    margin: 0;
+  }
+  
+  .options-dialog-container {
+    min-height: auto;
+  }
+  
+  .options-sidebar {
+    width: 60px;
+  }
+  
+  .options-sidebar-header span,
+  .options-nav-item span {
+    display: none;
+  }
+  
+  .options-nav-item {
+    justify-content: center;
+    padding: 12px;
+  }
+  
+  .options-content-header {
+    padding: 16px 20px 12px;
+  }
+  
+  .options-content-body {
+    padding: 16px;
+  }
+  
+  .options-content-footer {
+    padding: 12px 16px;
+  }
+}
+
+/* ============ 动画效果 ============ */
+.options-dialog-modern {
+  animation: optionsDialogFadeIn 0.2s ease-out;
+}
+
+@keyframes optionsDialogFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.options-setting-item {
+  animation: settingItemFadeIn 0.3s ease-out;
+}
+
+@keyframes settingItemFadeIn {
+  from {
+    opacity: 0;
+    transform: translateX(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}

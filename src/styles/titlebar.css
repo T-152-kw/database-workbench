@@ -1,0 +1,104 @@
+/* ============ 自定义标题栏 ============ */
+.titlebar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 32px;
+  background-color: var(--bp5-app-background-color);
+  border-bottom: 1px solid var(--bp5-divider-black);
+  user-select: none;
+  -webkit-user-select: none;
+  flex-shrink: 0;
+}
+
+.titlebar-content {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px;
+  flex: 1;
+  height: 100%;
+}
+
+.titlebar-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--bp5-intent-primary);
+}
+
+.titlebar-icon-img {
+  width: 16px;
+  height: 16px;
+  object-fit: contain;
+}
+
+.titlebar-title {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--bp5-text-color);
+  flex: 1;
+}
+
+/* 窗口控制按钮区域 */
+.titlebar-controls {
+  display: flex;
+  align-items: center;
+  height: 100%;
+}
+
+.titlebar-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 46px;
+  height: 100%;
+  border: none;
+  background: transparent;
+  color: var(--bp5-text-color);
+  cursor: pointer;
+  transition: background-color 0.15s ease, color 0.15s ease;
+}
+
+.titlebar-btn:hover {
+  background-color: var(--bp5-menu-background-color-hover);
+}
+
+.titlebar-close:hover {
+  background-color: #e81123;
+  color: white;
+}
+
+/* 暗色主题下的标题栏样式调整 */
+.bp5-dark .titlebar {
+  background-color: #2d2d30;
+  border-bottom-color: #3e3e42;
+}
+
+.bp5-dark .titlebar-title {
+  color: #cccccc;
+}
+
+/* 浅色主题下的标题栏样式调整 */
+.bp5-light .titlebar {
+  background-color: #f3f3f3;
+  border-bottom-color: #e0e0e0;
+}
+
+.bp5-light .titlebar-title {
+  color: #333333;
+}
+
+.bp5-light .titlebar-btn {
+  color: #424242;
+}
+
+/* 拖拽区域 */
+[data-tauri-drag-region] {
+  -webkit-app-region: drag;
+}
+
+.titlebar-btn,
+.no-drag {
+  -webkit-app-region: no-drag;
+}

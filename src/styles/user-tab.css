@@ -1,0 +1,452 @@
+.user-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.user-toolbar {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bp5-app-background-color);
+  border-bottom: 1px solid var(--bp5-divider-black);
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+
+.user-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.user-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.user-toolbar-spacer {
+  flex: 1;
+}
+
+.user-search-box {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 200px;
+  height: 28px;
+  background-color: var(--bp5-input-background-color, #fff);
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 3px;
+  padding: 0 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.user-search-box:focus-within {
+  border-color: var(--bp5-intent-primary);
+  box-shadow: 0 0 0 1px var(--bp5-intent-primary);
+}
+
+.user-search-icon {
+  color: var(--bp5-text-color-muted);
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+
+.user-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--bp5-text-color);
+  padding: 0;
+  height: 100%;
+}
+
+.user-search-input::placeholder {
+  color: var(--bp5-text-color-muted);
+}
+
+.user-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: var(--bp5-text-color-muted);
+  border-radius: 2px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.user-search-clear:hover {
+  color: var(--bp5-text-color);
+  background-color: var(--bp5-hover-background);
+}
+
+.user-info-inline {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--bp5-text-color-muted);
+  margin-left: 4px;
+}
+
+.user-count {
+  white-space: nowrap;
+}
+
+.user-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.user-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  color: var(--bp5-text-color-muted);
+  font-size: 14px;
+}
+
+.user-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  color: #dc3545;
+  font-size: 14px;
+  padding: 24px;
+}
+
+.user-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--bp5-text-color-muted);
+  font-size: 14px;
+}
+
+.user-table-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+}
+
+.user-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+}
+
+.user-table th,
+.user-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--bp5-divider-black);
+  white-space: nowrap;
+  color: var(--bp5-text-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.user-table th {
+  background-color: var(--bp5-app-background-color);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  user-select: none;
+  border-bottom: 1px solid var(--bp5-divider-black);
+}
+
+.user-row {
+  background-color: var(--bp5-app-background-color);
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.user-row:hover {
+  background-color: var(--bp5-hover-background);
+}
+
+.user-row.selected {
+  background-color: var(--bp5-intent-primary);
+}
+
+.user-row.selected td {
+  color: white;
+}
+
+.user-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.user-name svg {
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .user-row.selected {
+  background-color: #1d4ed8;
+}
+
+[data-theme="dark"] .user-row.selected td {
+  color: #ffffff;
+}
+
+.user-table-wrapper::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.user-table-wrapper::-webkit-scrollbar-track {
+  background: var(--bp5-app-background-color);
+}
+
+.user-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--bp5-text-color-muted);
+  border-radius: 4px;
+}
+
+.user-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--bp5-text-color);
+}
+
+/* Resizable column styles - 同款 from database-object-tab.css */
+.resizable-header {
+  position: relative;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.header-content {
+  padding: 8px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background-color: transparent;
+  transition: background-color 0.15s ease;
+  z-index: 10;
+}
+
+.resize-handle:hover,
+.resize-handle.resizing {
+  background-color: var(--bp5-intent-primary);
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  right: 2px;
+  top: 25%;
+  bottom: 25%;
+  width: 1px;
+  background-color: var(--bp5-divider-black);
+}
+
+.resize-handle:hover::after,
+.resize-handle.resizing::after {
+  background-color: transparent;
+}
+
+/* Dark theme for UserTab - bp6优先，bp5兜底 */
+html.bp6-dark .user-search-box,
+html.bp5-dark .user-search-box,
+.bp6-dark .user-search-box,
+.bp5-dark .user-search-box {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+html.bp6-dark .user-search-input,
+html.bp5-dark .user-search-input,
+.bp6-dark .user-search-input,
+.bp5-dark .user-search-input {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .user-search-input::placeholder,
+html.bp5-dark .user-search-input::placeholder,
+.bp6-dark .user-search-input::placeholder,
+.bp5-dark .user-search-input::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+html.bp6-dark .user-search-icon,
+html.bp5-dark .user-search-icon,
+.bp6-dark .user-search-icon,
+.bp5-dark .user-search-icon {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+html.bp6-dark .user-search-clear,
+html.bp5-dark .user-search-clear,
+.bp6-dark .user-search-clear,
+.bp5-dark .user-search-clear {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+html.bp6-dark .user-search-clear:hover,
+html.bp5-dark .user-search-clear:hover,
+.bp6-dark .user-search-clear:hover,
+.bp5-dark .user-search-clear:hover {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: var(--bp6-menu-background-color-hover, var(--bp5-menu-background-color-hover)) !important;
+}
+
+html.bp6-dark .user-info-inline,
+html.bp5-dark .user-info-inline,
+.bp6-dark .user-info-inline,
+.bp5-dark .user-info-inline {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+/* Toolbar button styles for dark theme - bp6优先，bp5兜底 */
+html.bp6-dark .user-toolbar button,
+html.bp5-dark .user-toolbar button,
+.bp6-dark .user-toolbar button,
+.bp5-dark .user-toolbar button,
+html.bp6-dark .user-toolbar .bp6-button,
+html.bp5-dark .user-toolbar .bp5-button,
+.bp6-dark .user-toolbar .bp6-button,
+.bp5-dark .user-toolbar .bp5-button {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: transparent !important;
+}
+
+html.bp6-dark .user-toolbar button svg,
+html.bp5-dark .user-toolbar button svg,
+.bp6-dark .user-toolbar button svg,
+.bp5-dark .user-toolbar button svg,
+html.bp6-dark .user-toolbar .bp6-button svg,
+html.bp5-dark .user-toolbar .bp5-button svg,
+.bp6-dark .user-toolbar .bp6-button svg,
+.bp5-dark .user-toolbar .bp5-button svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .user-toolbar button:hover,
+html.bp5-dark .user-toolbar button:hover,
+.bp6-dark .user-toolbar button:hover,
+.bp5-dark .user-toolbar button:hover,
+html.bp6-dark .user-toolbar .bp6-button:hover,
+html.bp5-dark .user-toolbar .bp5-button:hover,
+.bp6-dark .user-toolbar .bp6-button:hover,
+.bp5-dark .user-toolbar .bp5-button:hover {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: var(--bp6-menu-background-color-hover, var(--bp5-menu-background-color-hover)) !important;
+}
+
+html.bp6-dark .user-toolbar button:hover svg,
+html.bp5-dark .user-toolbar button:hover svg,
+.bp6-dark .user-toolbar button:hover svg,
+.bp5-dark .user-toolbar button:hover svg,
+html.bp6-dark .user-toolbar .bp6-button:hover svg,
+html.bp5-dark .user-toolbar .bp5-button:hover svg,
+.bp6-dark .user-toolbar .bp6-button:hover svg,
+.bp5-dark .user-toolbar .bp5-button:hover svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .user-toolbar button:disabled,
+html.bp6-dark .user-toolbar button.bp6-disabled,
+html.bp5-dark .user-toolbar button:disabled,
+html.bp5-dark .user-toolbar button.bp5-disabled,
+.bp6-dark .user-toolbar button:disabled,
+.bp6-dark .user-toolbar button.bp6-disabled,
+.bp5-dark .user-toolbar button:disabled,
+.bp5-dark .user-toolbar button.bp5-disabled,
+html.bp6-dark .user-toolbar .bp6-button:disabled,
+html.bp6-dark .user-toolbar .bp6-button.bp6-disabled,
+html.bp5-dark .user-toolbar .bp5-button:disabled,
+html.bp5-dark .user-toolbar .bp5-button.bp5-disabled,
+.bp6-dark .user-toolbar .bp6-button:disabled,
+.bp6-dark .user-toolbar .bp6-button.bp6-disabled,
+.bp5-dark .user-toolbar .bp5-button:disabled,
+.bp5-dark .user-toolbar .bp5-button.bp5-disabled {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+  opacity: 0.6 !important;
+}
+
+html.bp6-dark .user-toolbar button:disabled svg,
+html.bp6-dark .user-toolbar button.bp6-disabled svg,
+html.bp5-dark .user-toolbar button:disabled svg,
+html.bp5-dark .user-toolbar button.bp5-disabled svg,
+.bp6-dark .user-toolbar button:disabled svg,
+.bp6-dark .user-toolbar button.bp6-disabled svg,
+.bp5-dark .user-toolbar button:disabled svg,
+.bp5-dark .user-toolbar button.bp5-disabled svg,
+html.bp6-dark .user-toolbar .bp6-button:disabled svg,
+html.bp6-dark .user-toolbar .bp6-button.bp6-disabled svg,
+html.bp5-dark .user-toolbar .bp5-button:disabled svg,
+html.bp5-dark .user-toolbar .bp5-button.bp5-disabled svg,
+.bp6-dark .user-toolbar .bp6-button:disabled svg,
+.bp6-dark .user-toolbar .bp6-button.bp6-disabled svg,
+.bp5-dark .user-toolbar .bp5-button:disabled svg,
+.bp5-dark .user-toolbar .bp5-button.bp5-disabled svg {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+/* Resizable table styles - 同款 from database-object-tab.css */
+.resizable-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  table-layout: fixed;
+}
+
+.resizable-table th,
+.resizable-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--bp5-divider-black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--bp5-text-color);
+}
+
+.resizable-table th {
+  background-color: var(--bp5-app-background-color);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  user-select: none;
+  border-bottom: 2px solid var(--bp5-divider-black);
+}
+
+.resizable-table td {
+  border-bottom: 1px solid var(--bp5-divider-black);
+}

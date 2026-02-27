@@ -1,0 +1,1363 @@
+{
+  "common": {
+    "ok": "OK",
+    "cancel": "Cancel",
+    "save": "Save",
+    "saveAs": "Save As",
+    "close": "Close",
+    "delete": "Delete",
+    "edit": "Edit",
+    "create": "Create",
+    "refresh": "Refresh",
+    "test": "Test",
+    "apply": "Apply",
+    "reset": "Reset",
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "warning": "Warning",
+    "info": "Info",
+    "open": "Open",
+    "confirm": "Confirm",
+    "retry": "Retry",
+    "execute": "Execute",
+    "yes": "Yes",
+    "no": "No",
+    "none": "None"
+  },
+  "menu": {
+    "file": {
+      "title": "File",
+      "newConnection": "New Connection",
+      "newQuery": "New Query",
+      "open": "Open SQL File...",
+      "save": "Save",
+      "saveAs": "Save As...",
+      "exit": "Exit"
+    },
+    "edit": {
+      "title": "Edit",
+      "undo": "Undo",
+      "redo": "Redo",
+      "cut": "Cut",
+      "copy": "Copy",
+      "paste": "Paste",
+      "selectAll": "Select All",
+      "find": "Find",
+      "replace": "Replace"
+    },
+    "view": {
+      "title": "View",
+      "toolbar": "Toolbar",
+      "statusbar": "Status Bar",
+      "sidebar": "Sidebar",
+      "properties": "Properties",
+      "refresh": "Refresh",
+      "erDiagram": "ER Diagram",
+      "toggleSidebar": "Toggle Sidebar",
+      "toggleStatusbar": "Toggle Status Bar",
+      "hideStatusbar": "Hide Status Bar",
+      "showStatusbar": "Show Status Bar"
+    },
+    "favorites": {
+      "title": "Favorites",
+      "add": "Add to Favorites",
+      "manage": "Manage Favorites",
+      "sqlQueries": "SQL Queries",
+      "connections": "Connections",
+      "empty": "No Favorites",
+      "use": "Use Favorite",
+      "opened": "Opened Favorite",
+      "connection": "Connection Favorite",
+      "object": "Database Object Favorite",
+      "added": "Favorite Added",
+      "addFailed": "Failed to Add Favorite"
+    },
+    "tools": {
+      "title": "Tools",
+      "options": "Options",
+      "backup": "Backup Database...",
+      "restore": "Restore Database...",
+      "importConnections": "Import Connections...",
+      "exportConnections": "Export Connections..."
+    },
+    "window": {
+      "title": "Window",
+      "maximize": "Maximize",
+      "minimize": "Minimize",
+      "closeCurrentTab": "Close Current Tab",
+      "closeAllTabs": "Close All Tabs",
+      "toggleTheme": "Toggle Theme"
+    },
+    "help": {
+      "title": "Help",
+      "documentation": "Documentation",
+      "shortcuts": "Keyboard Shortcuts",
+      "mysqlDocs": "MySQL Documentation",
+      "checkUpdate": "Check for Updates...",
+      "about": "About Database Workbench"
+    }
+  },
+  "toolbar": {
+    "connection": "Connection",
+    "database": "Database",
+    "query": "Query",
+    "table": "Table",
+    "view": "View",
+    "function": "Function",
+    "backup": "Backup",
+    "restore": "Restore",
+    "refresh": "Refresh",
+    "user": "User"
+  },
+  "welcome": {
+    "title": "Database Workbench",
+    "subtitle": "Database Workbench",
+    "start": "Start",
+    "recent": "Recent",
+    "newConnection": "New Connection",
+    "newQuery": "New Query",
+    "openFile": "Open SQL File...",
+    "noRecentFiles": "No recent files",
+    "clearRecent": "Clear Recent"
+  },
+  "dialog": {
+    "options": {
+      "title": "Options",
+      "general": {
+        "title": "General",
+        "language": "Language",
+        "languageTooltip": "Restart required for language change to take effect",
+        "theme": "Theme",
+        "showWelcome": "Show welcome page on startup",
+        "showWelcomeDesc": "Show welcome page and quick actions when app starts",
+        "autoCheckUpdate": "Auto check update",
+        "autoCheckUpdateDesc": "Automatically check for new versions on startup",
+        "startupOptions": "Startup Options",
+        "fontSize": "Font Size",
+        "tabSize": "Tab Size",
+        "wordWrap": "Word Wrap"
+      },
+      "editor": {
+        "title": "Editor",
+        "fontSize": "Font Size",
+        "fontSizeDesc": "Font size in the editor",
+        "tabSize": "Tab Size",
+        "tabSizeDesc": "Number of spaces inserted when pressing Tab",
+        "wordWrap": "Word Wrap",
+        "wordWrapDesc": "Automatically wrap lines when they exceed view width",
+        "autoComplete": "Auto Complete",
+        "autoCompleteDesc": "Enable SQL auto-completion in the editor",
+        "minimap": "Show Minimap",
+        "minimapDesc": "Show code minimap on the right side of editor",
+        "lineNumbers": "Show Line Numbers",
+        "whitespace": "Show Whitespace",
+        "fontAndLayout": "Font & Layout",
+        "behavior": "Editor Behavior",
+        "autoSave": "Auto Save",
+        "autoSaveDesc": "Automatically save changes to files",
+        "spaces": "spaces"
+      },
+      "interface": {
+        "title": "Interface",
+        "appearance": "Appearance",
+        "theme": "Theme",
+        "themeDesc": "Choose the color theme for the application interface",
+        "elements": "Interface Elements",
+        "sidebarDefaultCollapsed": "Collapse sidebar by default",
+        "sidebarDefaultCollapsedDesc": "Sidebar is collapsed by default on startup",
+        "statusBarVisible": "Show status bar",
+        "statusBarVisibleDesc": "Show status bar at the bottom of the window",
+        "tabCloseButton": "Tab close button",
+        "tabCloseButtonDesc": "Set how tab close buttons are displayed",
+        "tabCloseButtonHover": "Show on hover",
+        "tabCloseButtonAlways": "Always show"
+      },
+      "connection": {
+        "title": "Connection",
+        "config": "Connection Configuration",
+        "timeout": "Connection Timeout",
+        "timeoutDesc": "Timeout for establishing database connections",
+        "maxConnections": "Max Connections",
+        "maxConnectionsDesc": "Maximum number of connections allowed simultaneously",
+        "autoReconnect": "Auto Reconnect",
+        "autoReconnectDesc": "Automatically try to reconnect when connection is lost",
+        "advanced": "Advanced Options",
+        "seconds": "seconds",
+        "count": "count",
+        "autoReconnectWarning": "Auto reconnect may cause unexpected database operations. Please enable with caution.",
+        "defaultCharset": "Default Charset"
+      }
+    },
+    "connection": {
+      "title": "New Connection",
+      "editTitle": "Edit Connection",
+      "name": "Connection Name",
+      "namePlaceholder": "Enter connection name",
+      "host": "Host",
+      "hostPlaceholder": "localhost",
+      "port": "Port",
+      "username": "Username",
+      "usernamePlaceholder": "root",
+      "password": "Password",
+      "database": "Default Database",
+      "databasePlaceholder": "Optional",
+      "charset": "Charset",
+      "collation": "Collation",
+      "connectionTimeout": "Connection Timeout (seconds)",
+      "timeout": "Idle Timeout (seconds)",
+      "autoReconnect": "Auto Reconnect",
+      "autoReconnectDesc": "Auto reconnect when connection is lost (use with caution in production)",
+      "sslTab": "SSL",
+      "sslMode": "SSL Mode",
+      "sslCaPath": "SSL CA Certificate Path",
+      "sslCaPathPlaceholder": "Optional; recommended for VERIFY_CA/VERIFY_IDENTITY",
+      "sslCertPath": "SSL Client Certificate Path",
+      "sslCertPathPlaceholder": "Optional; must be used together with SSL client key path",
+      "sslKeyPath": "SSL Client Key Path",
+      "sslKeyPathPlaceholder": "Optional; must be used together with SSL client certificate path",
+      "sslModes": {
+        "disabled": "Disabled",
+        "preferred": "Preferred",
+        "required": "Required",
+        "verify-ca": "Verify CA",
+        "verify-identity": "Verify Identity"
+      },
+      "testConnection": "Test Connection",
+      "saveConnection": "Save Connection",
+      "testSuccess": "Connection successful",
+      "testFailed": "Connection failed"
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "fileOperations": "File Operations",
+      "editOperations": "Edit Operations",
+      "viewOperations": "View Operations",
+      "queryOperations": "Query Operations",
+      "otherOperations": "Other Operations"
+    },
+    "about": {
+      "title": "About Database Workbench",
+      "version": "Version {{version}}",
+      "description": "A modern database management tool supporting MySQL databases. Provides an intuitive user interface to help developers efficiently manage database connections, execute SQL queries, design table structures, and more.",
+      "techStack": "Tech Stack",
+      "uiLibrary": "UI Library",
+      "license": "License",
+      "copyright": "© 2026 Database Workbench. All rights reserved."
+    },
+    "favorites": {
+      "title": "Favorites Manager",
+      "allTypes": "All Types",
+      "sqlQuery": "SQL Query",
+      "connectionProfile": "Connection Profile",
+      "databaseObject": "Database Object",
+      "sqlQueryShort": "SQL",
+      "connectionShort": "Conn",
+      "objectShort": "Object",
+      "searchPlaceholder": "Search favorites...",
+      "export": "Export",
+      "import": "Import",
+      "addFavorite": "Add Favorite",
+      "empty": "No Favorites",
+      "noResults": "No favorites found",
+      "adjustSearch": "Try adjusting your search criteria",
+      "createFirst": "Click the \"Add Favorite\" button to create your first favorite",
+      "usedCount": "Used {{count}} times",
+      "today": "Today {{time}}",
+      "yesterday": "Yesterday",
+      "daysAgo": "{{days}} days ago",
+      "totalCount": "Total {{count}} favorites",
+      "showingCount": "Showing {{count}}",
+      "addTitle": "Add Favorite",
+      "editTitle": "Edit Favorite",
+      "nameLabel": "Name",
+      "namePlaceholder": "Enter favorite name",
+      "typeLabel": "Type",
+      "descriptionLabel": "Description",
+      "descriptionPlaceholder": "Enter description (optional)",
+      "contentLabel": "Content",
+      "sqlPlaceholder": "Enter SQL query...",
+      "connectionPlaceholder": "Enter connection configuration...",
+      "objectPlaceholder": "Enter database object path...",
+      "importFailed": "Import failed"
+    },
+    "properties": {
+      "title": "Properties",
+      "general": "General",
+      "connection": "Connection",
+      "database": "Database",
+      "advanced": "Advanced",
+      "connectionName": "Connection Name",
+      "connectionType": "Connection Type",
+      "currentStatus": "Current Status",
+      "currentDatabase": "Current Database",
+      "host": "Host",
+      "port": "Port",
+      "serverVersion": "Server Version",
+      "username": "Username",
+      "password": "Password",
+      "defaultDatabase": "Default Database",
+      "charset": "Charset",
+      "connectionTimeout": "Connection Timeout",
+      "timeout": "Idle Timeout",
+      "sslMode": "SSL Mode",
+      "tableCount": "Table Count",
+      "viewCount": "View Count",
+      "procedureCount": "Procedures",
+      "functionCount": "Functions",
+      "connected": "Connected",
+      "disconnected": "Disconnected",
+      "unknown": "Unknown"
+    }
+  },
+  "status": {
+    "ready": "Ready",
+    "connected": "Connected to {{database}}",
+    "disconnected": "Disconnected",
+    "executing": "Executing...",
+    "rowsAffected": "{{count}} rows affected",
+    "executionTime": "Execution time: {{time}}ms",
+    "saving": "Saving...",
+    "saved": "Saved",
+    "loading": "Loading...",
+    "loaded": "Loaded"
+  },
+  "connection": {
+    "new": "New Connection",
+    "edit": "Edit Connection",
+    "delete": "Delete Connection",
+    "duplicate": "Duplicate Connection",
+    "connect": "Connect",
+    "disconnect": "Disconnect",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "connecting": "Connecting...",
+    "disconnecting": "Disconnecting...",
+    "test": "Test Connection",
+    "save": "Save Connection",
+    "name": "Connection Name",
+    "host": "Host",
+    "port": "Port",
+    "username": "Username",
+    "password": "Password",
+    "database": "Database",
+    "charset": "Charset",
+    "timeout": "Timeout"
+  },
+  "query": {
+    "new": "New Query",
+    "execute": "Execute",
+    "executeSelected": "Execute Selected",
+    "stop": "Stop",
+    "format": "Format",
+    "comment": "Comment",
+    "uncomment": "Uncomment",
+    "save": "Save Query",
+    "saveAs": "Save As",
+    "unsavedChanges": "Unsaved changes",
+    "executionSuccess": "Execution successful",
+    "executionFailed": "Execution failed",
+    "noQuery": "No query to execute",
+    "results": "Results",
+    "messages": "Messages"
+  },
+  "database": {
+    "tables": "Tables",
+    "views": "Views",
+    "functions": "Functions",
+    "procedures": "Procedures",
+    "triggers": "Triggers",
+    "events": "Events",
+    "users": "Users",
+    "backup": "Backup",
+    "restore": "Restore",
+    "createTable": "New Table",
+    "createView": "New View",
+    "createFunction": "New Function",
+    "design": "Design",
+    "preview": "Preview",
+    "data": "Data"
+  },
+  "table": {
+    "name": "Name",
+    "engine": "Engine",
+    "rows": "Rows",
+    "size": "Size",
+    "created": "Created",
+    "updated": "Updated",
+    "collation": "Collation",
+    "comment": "Comment",
+    "columns": "Columns",
+    "indexes": "Indexes",
+    "foreignKeys": "Foreign Keys",
+    "triggers": "Triggers"
+  },
+  "error": {
+    "connectionFailed": "Connection failed: {{message}}",
+    "queryFailed": "Query execution failed: {{message}}",
+    "saveFailed": "Save failed: {{message}}",
+    "loadFailed": "Load failed: {{message}}",
+    "invalidConnection": "Invalid connection configuration",
+    "noDatabaseSelected": "No database selected",
+    "noActiveConnection": "No active connection"
+  },
+  "theme": {
+    "light": "Light",
+    "dark": "Dark",
+    "system": "System"
+  },
+  "language": {
+    "zhCN": "简体中文",
+    "enUS": "English"
+  },
+  "databaseObject": {
+    "table": "Table",
+    "view": "View",
+    "function": "Function",
+    "procedure": "Procedure",
+    "object": "Object",
+    "name": "Name",
+    "rows": "Rows",
+    "dataLength": "Size",
+    "engine": "Engine",
+    "updateTime": "Updated",
+    "comment": "Comment",
+    "createTime": "Created",
+    "updatable": "Updatable",
+    "securityType": "Security",
+    "definer": "Definer",
+    "type": "Type",
+    "returnType": "Return",
+    "deterministic": "Deterministic",
+    "searchPlaceholder": "Search {{type}}...",
+    "totalCount": "{{count}} {{type}}(s)",
+    "loading": "Loading {{type}}...",
+    "empty": "No {{type}}",
+    "loadFailed": "Failed to load {{type}}: {{error}}",
+    "new": "New {{type}}",
+    "open": "Open",
+    "openView": "Open View",
+    "definition": "Definition",
+    "deleteSuccess": "{{type}} {{name}} deleted successfully",
+    "deleteFailed": "Failed to delete {{type}}: {{error}}",
+    "deleteConfirm": "Delete {{type}} <strong>{{name}}</strong>?",
+    "deleteWarning": "This action cannot be undone.",
+    "newObject": "New Object",
+    "selectType": "Select object type to create:"
+  },
+  "queryToolbar": {
+    "connection": "Conn",
+    "database": "DB",
+    "noConnection": "No Conn",
+    "selectConnection": "Select Conn",
+    "selectDatabase": "Select DB",
+    "execute": "Run (Ctrl+Enter)",
+    "executeTitle": "Run (Ctrl+Enter)",
+    "executeSelected": "Run Selected",
+    "explain": "Plan",
+    "format": "Format",
+    "formatSuccess": "SQL formatted",
+    "formatFailed": "Format failed",
+    "snippets": "Snippet",
+    "clear": "Clear",
+    "transaction": "Tx",
+    "autoCommit": "Auto",
+    "manualCommit": "Manual",
+    "commit": "Commit",
+    "commitSuccess": "Committed",
+    "commitFailed": "Commit failed",
+    "rollback": "Rollback",
+    "rollbackSuccess": "Rolled back",
+    "rollbackFailed": "Rollback failed",
+    "txModeFailed": "Tx mode failed",
+    "connecting": "Connecting..."
+  },
+  "resultPanel": {
+    "title": "Result",
+    "result": "Result",
+    "noData": "No Data",
+    "copy": "Copy",
+    "copyRow": "Copy Row",
+    "showingRows": "Showing {{shown}} of {{total}} rows",
+    "page": "Page {{current}} / {{total}}",
+    "execSuccess": "Success",
+    "execFailed": "Failed",
+    "affectedRows": "Affected: {{count}}",
+    "lastInsertId": "Last ID: {{id}}",
+    "exportCsv": "Export CSV",
+    "clearResults": "Clear",
+    "emptyHint": "Execute SQL to see results here",
+    "exportTitle": "Export to CSV",
+    "exportCancelled": "Export cancelled",
+    "exportSuccess": "Exported | Time: {{time}} | Path: {{path}}",
+    "exportFailed": "Export failed: {{error}}",
+    "queryResult": "Result - {{count}} rows",
+    "queryResultSet": "Result Set {{index}} - {{count}} rows",
+    "updateResult": "Update",
+    "errorResult": "Error",
+    "explainResult": "Plan",
+    "explainSuccess": "Plan generated",
+    "explainFailed": "Plan failed",
+    "execComplete": "Done: {{success}} OK, {{error}} ERR, {{time}}ms",
+    "expand": "Expand results"
+  },
+  "userTab": {
+    "username": "User",
+    "host": "Host",
+    "plugin": "Auth Plugin",
+    "status": "Status",
+    "searchPlaceholder": "Search users...",
+    "totalCount": "{{count}} user(s)",
+    "loading": "Loading users...",
+    "empty": "No users",
+    "loadFailed": "Failed to load users: {{error}}",
+    "newUser": "New User",
+    "deleteConfirm": "Delete user <strong>{{username}}@{{host}}</strong>?",
+    "deleteWarning": "This action cannot be undone.",
+    "deleteFailed": "Failed to delete user: {{error}}"
+  },
+  "backup": {
+    "title": "Database Backup Wizard",
+    "targetDatabase": "Target Database: {{database}} @ {{host}}",
+    "ready": "Ready",
+    "basicConfig": "Basic Configuration",
+    "mysqldumpPlaceholder": "Select or enter mysqldump.exe path...",
+    "rememberConfig": "Remember configuration (mysqldump path)",
+    "selectMysqldump": "Select mysqldump.exe",
+    "executable": "Executable",
+    "file": "File",
+    "browse": "Browse",
+    "exportOptions": "Export Options",
+    "includeData": "Include data (--no-data=false)",
+    "includeViews": "Include views",
+    "includeRoutines": "Include routines (--routines)",
+    "addDropTable": "Add DROP TABLE (--add-drop-table)",
+    "incrementalTitle": "Incremental Backup (binlog)",
+    "mysqlbinlogPlaceholder": "Leave empty to use system PATH...",
+    "selectMysqlbinlog": "Select mysqlbinlog.exe",
+    "binlogIndex": "Binlog Index File",
+    "binlogIndexPlaceholder": "e.g., C:\\mysql\\data\\mysql-bin.index",
+    "selectBinlogIndex": "Select binlog index file",
+    "outputDir": "Output Directory",
+    "outputDirPlaceholder": "Select incremental backup output directory...",
+    "selectOutputDir": "Select output directory",
+    "startIncremental": "Start Incremental Backup",
+    "scheduleTitle": "Backup Schedule",
+    "cronExpression": "Cron Expression",
+    "cronPlaceholder": "e.g., 0 0 2 * * * (daily at 02:00)",
+    "scheduleId": "Schedule ID",
+    "scheduleIdPlaceholder": "e.g., profile:database",
+    "outputPath": "Output Path Template",
+    "outputPathPlaceholder": "e.g., D:\\backup\\db_{timestamp}.sql",
+    "selectOutputFile": "Select backup output file",
+    "sqlFile": "SQL File",
+    "addSchedule": "Add Schedule",
+    "removeSchedule": "Remove Schedule",
+    "listSchedule": "List Schedules",
+    "start": "Start Backup",
+    "running": "Running backup...",
+    "success": "Backup successful",
+    "failed": "Backup failed",
+    "cancelled": "Backup cancelled",
+    "preparing": "Preparing backup...",
+    "startLog": "Starting backup -> {{path}}",
+    "complete": "Backup completed in {{time}}ms",
+    "outputFile": "Output file: {{path}}",
+    "logs": "Execution Logs",
+    "noLogs": "No logs",
+    "empty": "(empty)",
+    "incremental": {
+      "running": "Running incremental backup...",
+      "success": "Incremental backup successful",
+      "failed": "Incremental backup failed",
+      "start": "Starting incremental backup",
+      "complete": "Incremental backup completed"
+    },
+    "schedule": {
+      "adding": "Adding schedule...",
+      "added": "Schedule added successfully",
+      "addFailed": "Failed to add schedule",
+      "removing": "Removing schedule...",
+      "removed": "Schedule removed successfully",
+      "removeFailed": "Failed to remove schedule",
+      "listing": "Listing schedules...",
+      "listed": "Schedule list",
+      "listFailed": "Failed to list schedules",
+      "addingLog": "Adding schedule: {{id}}",
+      "addedLog": "Schedule added",
+      "addFailedLog": "Failed to add schedule: {{error}}",
+      "removingLog": "Removing schedule: {{id}}",
+      "removedLog": "Schedule removed",
+      "removeFailedLog": "Failed to remove schedule: {{error}}",
+      "listingLog": "Listing all schedules",
+      "listedLog": "Schedule list: {{count}} items",
+      "listFailedLog": "Failed to list schedules: {{error}}"
+    },
+    "error": {
+      "missingMysqldump": "Please specify mysqldump path",
+      "missingMysqldumpLog": "Parameter error: missing mysqldump path",
+      "missingBinlogIndex": "Please specify binlog index file path",
+      "missingBinlogIndexLog": "Parameter error: missing binlog index file path",
+      "missingOutputDir": "Please specify output directory",
+      "missingOutputDirLog": "Parameter error: missing output directory",
+      "missingCron": "Please specify Cron expression",
+      "missingCronLog": "Parameter error: missing Cron expression",
+      "missingScheduleId": "Please specify schedule ID",
+      "missingScheduleIdLog": "Parameter error: missing schedule ID",
+      "missingOutputPath": "Please specify output path template",
+      "missingOutputPathLog": "Parameter error: missing output path template",
+      "message": "Error: {{message}}"
+    }
+  },
+  "restore": {
+    "title": "Database Restore Wizard",
+    "targetConnection": "Target Connection: {{name}} @ {{host}}",
+    "unnamedConnection": "Unnamed Connection",
+    "ready": "Ready",
+    "basicConfig": "Basic Configuration",
+    "mysqlPlaceholder": "Select or enter mysql.exe path...",
+    "rememberConfig": "Remember configuration (mysql path)",
+    "selectMysql": "Select mysql.exe",
+    "executable": "Executable",
+    "sqlFile": "SQL File",
+    "browse": "Browse",
+    "sqlScript": "SQL Script",
+    "sqlScriptPath": "SQL Script Path",
+    "sqlScriptPlaceholder": "Select or enter .sql file path...",
+    "selectSqlFile": "Select SQL script file",
+    "targetDatabase": "Target Database",
+    "restoreToExisting": "Restore to existing database",
+    "restoreToNew": "Restore to new database",
+    "selectDatabase": "Select database",
+    "loading": "Loading...",
+    "noDatabases": "No databases",
+    "refresh": "Refresh",
+    "newDatabaseName": "New Database Name",
+    "newDatabasePlaceholder": "Enter new database name...",
+    "start": "Start Restore",
+    "running": "Running restore...",
+    "success": "Restore successful",
+    "failed": "Restore failed",
+    "preparing": "Preparing restore...",
+    "sqlScriptLog": "SQL script: {{path}}",
+    "targetSchema": "Target database: {{schema}}",
+    "complete": "Restore completed in {{time}}ms",
+    "failedLog": "Restore failed: {{error}}",
+    "loadDatabasesFailed": "Failed to load database list: {{error}}",
+    "logs": "Execution Logs",
+    "noLogs": "No logs",
+    "cancel": "Cancel",
+    "confirmRestore": "Confirm Restore",
+    "confirmOverwrite": "Restore will overwrite existing data in database \"{{database}}\".",
+    "confirmWarning": "This action cannot be undone. Continue?",
+    "error": {
+      "missingMysql": "Please specify mysql path",
+      "missingMysqlLog": "Parameter error: missing mysql path",
+      "missingSql": "Please specify SQL script path",
+      "missingSqlLog": "Parameter error: missing SQL script path",
+      "missingDatabase": "Please select existing database",
+      "missingDatabaseLog": "Parameter error: no existing database selected",
+      "missingNewDatabase": "Please enter new database name",
+      "missingNewDatabaseLog": "Parameter error: missing new database name"
+    }
+  },
+  "metadataTree": {
+    "columns": "Columns",
+    "indexes": "Indexes",
+    "foreignKeys": "Foreign Keys",
+    "checks": "Checks",
+    "triggers": "Triggers",
+    "tables": "Tables",
+    "views": "Views",
+    "functions": "Functions",
+    "noTables": "No Tables",
+    "noViews": "No Views",
+    "noFunctions": "No Functions",
+    "noColumns": "No Columns",
+    "noIndexes": "No Indexes",
+    "noForeignKeys": "No Foreign Keys",
+    "noChecks": "No Check Constraints",
+    "noTriggers": "No Triggers",
+    "noParams": "No Parameters",
+    "loadingDatabases": "Loading databases...",
+    "databasesLoaded": "Loaded {{count}} database(s)",
+    "connectionFailed": "Connection failed",
+    "connectionFailedWithError": "Connection failed: {{error}}",
+    "connectionClosed": "Connection closed",
+    "openDatabaseFailed": "Failed to open database",
+    "databaseClosed": "Database closed",
+    "loadFailed": "Load failed",
+    "creatingDatabase": "Creating database...",
+    "databaseCreated": "Database '{{name}}' created",
+    "createDatabaseFailed": "Failed to create database",
+    "createFailed": "Create failed: {{error}}",
+    "systemDbProtected": "System database is protected and cannot be deleted!",
+    "confirmDeleteDatabase": "Confirm Delete Database",
+    "deleteDatabaseWarning": "Are you sure you want to delete database '{{name}}'?\nAll data will be permanently lost!",
+    "deletingDatabase": "Deleting database...",
+    "databaseDeleted": "Database '{{name}}' deleted",
+    "deleteDatabaseFailed": "Failed to delete database",
+    "deleteFailed": "Delete failed: {{error}}",
+    "confirmDeleteConnection": "Confirm Delete Connection",
+    "deleteConnectionWarning": "Are you sure you want to delete connection '{{name}}'?\nThis action cannot be undone.",
+    "connectionDeleted": "Connection '{{name}}' deleted",
+    "noMetadataToRefresh": "No connected metadata to refresh",
+    "refreshingMetadata": "Refreshing metadata...",
+    "metadataRefreshed": "Metadata refresh completed",
+    "openConnection": "Open Connection",
+    "closeConnection": "Close Connection",
+    "newDatabase": "New Database",
+    "editConnection": "Edit Connection",
+    "deleteConnection": "Delete Connection",
+    "systemDbWarning": "⚠️ System Database - Proceed with Caution",
+    "openDatabase": "Open Database",
+    "closeDatabase": "Close Database",
+    "deleteDatabase": "Delete Database",
+    "deleteSystemDb": "Delete Database (System DB Protected)",
+    "noConnections": "No Connections",
+    "addConnectionHint": "Click \"New Connection\" in the toolbar to add",
+    "openSystemDbTitle": "Open System Database",
+    "openSystemDbWarning": "⚠️ Warning: You are about to open a system database!\n\nSystem databases contain critical data required for MySQL server operation. Improper operations may cause the server to malfunction.\n\nPlease ensure you understand what you are doing and proceed with caution!",
+    "maxConnectionsReached": "Maximum connections reached ({{current}}/{{max}})"
+  },
+  "propertiesDialog": {
+    "title": "Properties",
+    "tabs": {
+      "general": "General",
+      "connection": "Connection",
+      "database": "Database",
+      "advanced": "Advanced"
+    },
+    "groups": {
+      "basicInfo": "Basic Information",
+      "serverInfo": "Server Information",
+      "connectionConfig": "Connection Configuration",
+      "connectionParams": "Connection Parameters",
+      "databaseInfo": "Database Information",
+      "statistics": "Statistics",
+      "connectionOptions": "Connection Options",
+      "performance": "Performance Settings"
+    },
+    "labels": {
+      "connectionName": "Connection Name",
+      "connectionType": "Connection Type",
+      "currentStatus": "Current Status",
+      "currentDatabase": "Current Database",
+      "host": "Host",
+      "port": "Port",
+      "serverVersion": "Server Version",
+      "username": "Username",
+      "password": "Password",
+      "defaultDatabase": "Default Database",
+      "charset": "Charset",
+      "connectionTimeout": "Connection Timeout",
+      "timeout": "Idle Timeout",
+      "sslMode": "SSL Mode",
+      "databaseType": "Database Type",
+      "tableCount": "Table Count",
+      "viewCount": "View Count",
+      "procedureCount": "Procedures",
+      "functionCount": "Functions",
+      "autoReconnect": "Auto Reconnect",
+      "compress": "Compression",
+      "readOnly": "Read Only Mode",
+      "poolSize": "Pool Size",
+      "queryCache": "Query Cache",
+      "maxPacketSize": "Max Packet Size"
+    },
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "notSelected": "Not Selected",
+    "notSet": "Not Set",
+    "unknown": "Unknown",
+    "enabled": "Enabled",
+    "disabled": "Disabled",
+    "default": "Default",
+    "seconds": "s",
+    "clickToCopy": "Click to copy",
+    "noActiveConnection": "No active connection. Please create a database connection first.",
+    "advancedSettingsHint": "Advanced settings only display current connection configuration. To modify, please edit the connection configuration."
+  },
+  "sidebar": {
+    "searchPlaceholder": "Search...",
+    "expandSidebar": "Expand Sidebar",
+    "collapseSidebar": "Collapse Sidebar"
+  },
+  "welcomeTab": {
+    "subtitle": "数据库工作台",
+    "startSection": "Start",
+    "newConnection": "New Connection",
+    "newQuery": "New Query",
+    "openSqlFile": "Open SQL File...",
+    "recentSection": "Recent",
+    "clearRecentFiles": "Clear Recent Files",
+    "noRecentFiles": "No recent files",
+    "sqlFiles": "SQL Files",
+    "allFiles": "All Files",
+    "untitled": "Untitled.sql",
+    "status": {
+      "openNewConnection": "Opening new connection dialog",
+      "newQuery": "New query",
+      "openFile": "Opening file: {{name}}",
+      "openFileFailed": "Failed to open file: {{error}}",
+      "clearRecentFiles": "Clearing recent files list"
+    },
+    "time": {
+      "justNow": "Just now",
+      "minutesAgo": "{{minutes}} min ago",
+      "hoursAgo": "{{hours}} hr ago",
+      "daysAgo": "{{days}} days ago"
+    }
+  },
+  "statusBar": {
+    "ready": "Ready",
+    "showSidebar": "Show Sidebar",
+    "hideSidebar": "Hide Sidebar",
+    "switchToLight": "Switch to Light Theme",
+    "switchToDark": "Switch to Dark Theme"
+  },
+  "tableDataTab": {
+    "buttons": {
+      "refresh": "Refresh",
+      "addRow": "Add Row",
+      "deleteRow": "Delete Row",
+      "preview": "Preview",
+      "withdraw": "Withdraw",
+      "submit": "Submit",
+      "reset": "Reset",
+      "confirm": "Confirm",
+      "export": "Export",
+      "import": "Import",
+      "exportCsv": "Export CSV"
+    },
+    "tooltips": {
+      "refresh": "Refresh Data",
+      "addRow": "Add New Row",
+      "deleteRow": "Delete Selected Row",
+      "preview": "Preview Commit",
+      "withdraw": "Withdraw All Changes",
+      "submit": "Submit Changes",
+      "export": "Export Data",
+      "import": "Import Data",
+      "exportCsv": "Export CSV"
+    },
+    "export": {
+      "title": "Export {{format}} File",
+      "cancelled": "Export cancelled",
+      "success": "Export successful: {{count}} rows saved to {{path}}",
+      "failed": "Export failed: {{error}}",
+      "dialogTitle": "Select Export Range",
+      "dialogMessage": "Total {{totalRows}} rows, please select export range",
+      "exportAll": "Export All",
+      "exportCurrent": "Export Current Page"
+    },
+    "import": {
+      "title": "Import {{format}} File",
+      "cancelled": "Import cancelled",
+      "success": "Import successful: {{count}} rows imported",
+      "failed": "Import failed: {{error}}"
+    },
+    "format": {
+      "csv": "CSV",
+      "txt": "TXT",
+      "json": "JSON",
+      "html": "HTML",
+      "xml": "XML",
+      "sql": "SQL",
+      "xlsx": "XLSX"
+    },
+    "changesPending": "{{count}} change(s) pending",
+    "rowsSelected": "{{count}} row(s) selected",
+    "loading": "Loading...",
+    "pagination": {
+      "showingRows": "Showing {{start}}-{{end}} of {{total}} rows",
+      "pageSize": "Page size:",
+      "pageInfo": "Page {{page}} / {{totalPages}}"
+    },
+    "errors": {
+      "connectionFailed": "Connection failed: {{error}}",
+      "loadDataFailed": "Failed to load data: {{error}}",
+      "submitFailed": "Failed to submit changes: {{error}}"
+    },
+    "contextMenu": {
+      "copy": "Copy",
+      "copyRow": "Copy Row",
+      "edit": "Edit",
+      "cancel": "Cancel"
+    }
+  },
+  "designerTab": {
+    "tabTitle": "Table Design - {{name}}",
+    "loading": "Loading table structure...",
+    "saveSuccess": {
+      "create": "Table {{name}} created successfully",
+      "modify": "Table {{name}} modified successfully"
+    },
+    "errors": {
+      "loadFailed": "Failed to load table structure: {{error}}",
+      "noTableName": "Please enter table name first",
+      "saveFailed": "Save failed: {{error}}"
+    },
+    "fields": {
+      "addField": "Add Field",
+      "insertField": "Insert Field",
+      "deleteField": "Delete Field",
+      "primaryKey": "Primary Key",
+      "moveUp": "Move Up",
+      "moveDown": "Move Down",
+      "charsetCollation": "Character Set & Collation",
+      "default": "Default",
+      "columns": {
+        "name": "Name",
+        "type": "Type",
+        "length": "Length",
+        "decimals": "Decimals",
+        "notNull": "Not Null",
+        "key": "Key",
+        "autoIncrement": "Auto Inc",
+        "default": "Default",
+        "comment": "Comment",
+        "charset": "Charset",
+        "collation": "Collation"
+      },
+      "placeholders": {
+        "name": "Field name",
+        "length": "Length",
+        "decimals": "Decimals",
+        "default": "Default",
+        "comment": "Comment"
+      }
+    },
+    "indexes": {
+      "addIndex": "Add Index",
+      "deleteIndex": "Delete Index",
+      "noIndexes": "No indexes",
+      "columns": {
+        "name": "Name",
+        "fields": "Fields",
+        "type": "Index Type",
+        "method": "Method",
+        "comment": "Comment"
+      },
+      "placeholders": {
+        "name": "Index name",
+        "fields": "Field names, comma separated",
+        "comment": "Comment"
+      }
+    },
+    "foreignKeys": {
+      "addForeignKey": "Add Foreign Key",
+      "deleteForeignKey": "Delete Foreign Key",
+      "noForeignKeys": "No foreign keys",
+      "columns": {
+        "name": "Name",
+        "fields": "Fields",
+        "refSchema": "Referenced Schema",
+        "refTable": "Referenced Table",
+        "refFields": "Referenced Fields",
+        "onDelete": "On Delete",
+        "onUpdate": "On Update"
+      },
+      "placeholders": {
+        "name": "Foreign key name",
+        "fields": "Field names, comma separated",
+        "refSchema": "Referenced schema",
+        "refTable": "Referenced table",
+        "refFields": "Referenced fields"
+      }
+    },
+    "checks": {
+      "addCheck": "Add Check",
+      "deleteCheck": "Delete Check",
+      "noChecks": "No check constraints",
+      "columns": {
+        "name": "Name",
+        "clause": "Check Clause",
+        "notEnforced": "Not Enforced"
+      },
+      "placeholders": {
+        "name": "Check name",
+        "clause": "Check condition"
+      }
+    },
+    "triggers": {
+      "addTrigger": "Add Trigger",
+      "deleteTrigger": "Delete Trigger",
+      "noTriggers": "No triggers",
+      "columns": {
+        "name": "Name",
+        "timing": "Timing",
+        "insert": "Insert",
+        "update": "Update",
+        "delete": "Delete"
+      },
+      "placeholders": {
+        "name": "Trigger name"
+      },
+      "definition": "Definition",
+      "edit": "Edit",
+      "done": "Done"
+    },
+    "options": {
+      "engine": "Storage Engine",
+      "charset": "Charset",
+      "collation": "Collation",
+      "comment": "Table Comment",
+      "autoIncrement": "Auto Increment",
+      "placeholders": {
+        "comment": "Table comment",
+        "autoIncrement": "Auto increment value"
+      }
+    },
+    "tabs": {
+      "fields": "Fields",
+      "indexes": "Indexes",
+      "foreignKeys": "Foreign Keys",
+      "checks": "Checks",
+      "triggers": "Triggers",
+      "options": "Options",
+      "sqlPreview": "SQL Preview"
+    },
+    "newTable": "New Table",
+    "designTable": "Design Table",
+    "refresh": "Refresh",
+    "save": "Save",
+    "tableNamePlaceholder": "Enter table name"
+  },
+  "viewTab": {
+    "designer": {
+      "newView": "Create New View",
+      "editView": "Edit View",
+      "database": "Database",
+      "viewNamePlaceholder": "Enter view name",
+      "save": "Save",
+      "saveAsNew": "Save As New View",
+      "format": "Format",
+      "clear": "Clear",
+      "error": "Error",
+      "success": "Success",
+      "definitionLabel": "View Definition (SELECT Statement)",
+      "loading": "Loading view definition...",
+      "errors": {
+        "loadFailed": "Failed to load definition for view \"{{name}}\"",
+        "loadDefinitionFailed": "Failed to load view definition: {{error}}",
+        "enterViewName": "Please enter view name",
+        "enterDefinition": "Please enter view definition (SELECT statement)",
+        "saveFailed": "Failed to save view: {{error}}",
+        "createFailed": "Failed to create new view: {{error}}"
+      },
+      "successes": {
+        "saved": "View \"{{name}}\" saved successfully",
+        "created": "New view \"{{name}}\" created successfully"
+      },
+      "prompts": {
+        "enterNewViewName": "Please enter new view name"
+      }
+    },
+    "data": {
+      "title": "View Data",
+      "readOnly": {
+        "title": "Read Only Mode",
+        "description": "This view is read-only and cannot be edited. The view does not meet MySQL updatable view conditions (e.g., contains aggregate functions, multiple table joins, UNION, etc.)"
+      },
+      "toolbar": {
+        "refresh": "Refresh",
+        "addRow": "Add Row",
+        "deleteRow": "Delete Row",
+        "preview": "Preview",
+        "withdraw": "Withdraw",
+        "submit": "Submit",
+        "changesPending": "changes pending",
+        "rowsSelected": "{{count}} rows selected"
+      },
+      "buttons": {
+        "reset": "Reset",
+        "confirm": "Confirm",
+        "exportCsv": "Export CSV"
+      },
+      "tooltips": {
+        "refresh": "Refresh Data",
+        "addRow": "Add New Row",
+        "deleteRow": "Delete Selected Row",
+        "preview": "Preview Commit",
+        "withdraw": "Withdraw All Changes",
+        "submit": "Submit Changes",
+        "exportCsv": "Export"
+      },
+      "export": {
+        "title": "Export {{format}} File",
+        "cancelled": "Export cancelled",
+        "success": "Export successful: {{count}} rows saved to {{path}}",
+        "failed": "Export failed: {{error}}",
+        "dialogTitle": "Select Export Range",
+        "dialogMessage": "Total {{totalRows}} rows, please select export range",
+        "exportAll": "Export All",
+        "exportCurrent": "Export Current Page"
+      },
+      "pagination": {
+        "showing": "Showing {{start}}-{{end}} of {{total}} rows",
+        "pageSize": "Page size"
+      },
+      "loading": "Loading...",
+      "errors": {
+        "connectFailed": "Connection failed: {{error}}",
+        "loadDataFailed": "Failed to load data: {{error}}",
+        "cannotDeterminePk": "Cannot update: unable to determine base table primary key",
+        "pkColumnNotFound": "Cannot find primary key column {{name}} mapping in view",
+        "submitFailed": "Failed to submit changes: {{error}}"
+      }
+    }
+  },
+  "previewCommit": {
+    "dialog": {
+      "title": "Preview Commit - {{database}}.{{tableName}}",
+      "viewTitle": "Preview Commit - {{database}}.{{viewName}} (Base Table: {{baseTableName}})",
+      "tabs": {
+        "changes": "Change Details",
+        "associations": "Preview Associations"
+      },
+      "changes": {
+        "noData": "No changes to commit",
+        "recordCount": "{{count}} change record(s)",
+        "operation": "Operation",
+        "operations": {
+          "new": "Insert",
+          "modified": "Update",
+          "deleted": "Delete"
+        },
+        "pkIndicator": "PK"
+      },
+      "associations": {
+        "loading": "Loading associations...",
+        "noAssociations": "No associated constraints or triggers found",
+        "viewNoAssociations": "No associated constraints or triggers found on base table",
+        "baseTable": "Base Table",
+        "baseTableInfo": "Association information from base table. Your changes will directly affect base table data",
+        "trigger": "Trigger",
+        "foreignKeyConstraint": "[FK Constraint] This table field '{{myColumn}}' → Parent table '{{refTable}}.{{refColumn}}'",
+        "viewForeignKeyConstraint": "[FK Constraint] Base table field '{{myColumn}}' → Parent table '{{refTable}}.{{refColumn}}'",
+        "dependencyCheck": "[Dependency Check] Child table '{{refTable}}' (FK '{{refColumn}}' → This table '{{myColumn}}') contains related data:",
+        "viewDependencyCheck": "[Dependency Check] Child table '{{refTable}}' (FK '{{refColumn}}' → Base table '{{myColumn}}') contains related data:",
+        "moreRows": "{{count}} more rows...",
+        "missingValuesWarning": "Referenced values do not exist in parent table ({{parentTable}}), commit will fail",
+        "dependencyWarning": "Dependent data exists, committing changes may cause foreign key conflicts or trigger cascade operations"
+      },
+      "viewInfo": {
+        "title": "View Operation Notice:",
+        "description": "You are modifying base table {{baseTableName}} data through view {{viewName}}. The following changes will directly affect the base table."
+      },
+      "errors": {
+        "loadAssociationsFailed": "Failed to load association information: {{error}}"
+      },
+      "close": "Close"
+    }
+  },
+  "functionTab": {
+    "newFunction": "New Function",
+    "newProcedure": "New Procedure",
+    "editFunction": "Function - {{name}}",
+    "editProcedure": "Procedure - {{name}}",
+    "toolbar": {
+      "refresh": "Refresh",
+      "new": "New",
+      "execute": "Execute",
+      "save": "Save"
+    },
+    "properties": {
+      "name": "Name",
+      "type": "Type",
+      "returnType": "Return Type",
+      "deterministic": "Deterministic",
+      "comment": "Comment",
+      "placeholders": {
+        "functionName": "Function name",
+        "procedureName": "Procedure name",
+        "returnType": "e.g., INT, VARCHAR(255)",
+        "functionComment": "Function comment",
+        "procedureComment": "Procedure comment"
+      }
+    },
+    "types": {
+      "function": "Function",
+      "procedure": "Procedure"
+    },
+    "editor": {
+      "label": "Definition:"
+    },
+    "status": {
+      "ready": "Ready",
+      "loading": "Loading...",
+      "loadComplete": "Load Complete",
+      "loadFailed": "Load Failed",
+      "saving": "Saving...",
+      "saveSuccess": "Save Successful",
+      "saveFailed": "Save Failed"
+    },
+    "loading": "Loading {{type}}...",
+    "template": {
+      "functionComment": "-- Function logic",
+      "procedureComment": "-- Procedure logic"
+    },
+    "executeDialog": {
+      "title": "Execute {{type}}: {{name}}",
+      "params": "Parameters:",
+      "result": "Result:",
+      "tabs": {
+        "message": "Message",
+        "data": "Data"
+      },
+      "noParams": "No parameters required",
+      "loadingParams": "Loading parameter information...",
+      "placeholder": "Enter {{type}} value",
+      "noData": "No data",
+      "defaultMessage": "Execution messages will appear here...",
+      "close": "Close",
+      "execute": "Execute",
+      "resultSetSelector": "Select Result Set",
+      "resultSetLabel": "Result Set {{index}} ({{count}} rows)"
+    },
+    "errors": {
+      "loadFailed": "Failed to load {{type}} definition",
+      "loadError": "Failed to load {{type}}: {{error}}",
+      "enterName": "Please enter {{type}} name",
+      "enterCode": "Please enter {{type}} definition code",
+      "saveError": "Failed to save: {{error}}",
+      "executeSaveFirst": "Please save before executing",
+      "loadParamsFailed": "Failed to load parameters: {{error}}"
+    },
+    "success": {
+      "saved": "{{type}} saved"
+    },
+    "execute": {
+      "success": "Execution successful, returned {{count}} row(s)",
+      "multiResultSuccess": "Execution successful, returned {{setCount}} result sets with {{totalRows}} total rows",
+      "outParams": "Execution successful, output parameters: {{params}}",
+      "failed": "Execution failed: {{error}}"
+    }
+  },
+  "userEditor": {
+    "newUser": "Create New User",
+    "editUser": "Edit User: {{username}}@{{host}}",
+    "tabs": {
+      "general": "General",
+      "serverPrivileges": "Server Privileges",
+      "databasePrivileges": "Database Privileges",
+      "sqlPreview": "SQL Preview"
+    },
+    "form": {
+      "username": "Username",
+      "host": "Host",
+      "password": "Password",
+      "confirmPassword": "Confirm Password",
+      "authPlugin": "Authentication Plugin",
+      "required": "(required)",
+      "placeholders": {
+        "username": "Enter username",
+        "host": "e.g., % or localhost",
+        "passwordNew": "Enter password",
+        "passwordEdit": "Leave blank to keep unchanged",
+        "confirmPassword": "Re-enter password"
+      }
+    },
+    "databasePrivileges": {
+      "add": "Add",
+      "name": "Name",
+      "operation": "Operation",
+      "hint": "Please select database, table, and column, then click \"Add\" to configure privileges by scope below."
+    },
+    "buttons": {
+      "save": "Save",
+      "saving": "Saving..."
+    },
+    "loading": "Loading user data...",
+    "systemUserConfirm": {
+      "title": "Modify System User",
+      "message": "⚠️ Warning: You are about to modify the system user {{username}}@{{host}}!\n\nSystem users are closely related to MySQL server operation and internal mechanisms. Improper modifications may cause authentication issues, privilege problems, or service unavailability.\n\nPlease confirm you understand the risks and proceed to save.",
+      "confirm": "Confirm Modify",
+      "cancel": "Cancel"
+    },
+    "errors": {
+      "loadFailed": "Failed to load user data: {{error}}",
+      "usernameRequired": "Username is required",
+      "hostRequired": "Host is required",
+      "passwordRequired": "Password is required",
+      "passwordMismatch": "Passwords do not match",
+      "saveFailed": "Failed to save: {{error}}",
+      "generateSqlFailed": "-- Failed to generate SQL: {{error}}"
+    },
+    "success": {
+      "userCreated": "User created successfully",
+      "userUpdated": "User updated successfully"
+    }
+  },
+  "tabTitles": {
+    "welcome": "Welcome",
+    "unknownConnection": "Unknown Connection",
+    "tableData": "{{tableName}}@{{database}}({{connectionName}}) - Table",
+    "viewData": "{{viewName}}@{{database}}({{connectionName}}) - View",
+    "designer": {
+      "edit": "Table Design - {{tableName}}",
+      "newWithDatabase": "New Table - {{database}}",
+      "new": "New Table"
+    },
+    "viewDesigner": "View - {{viewName}}",
+    "functionDesigner": {
+      "editFunction": "Function - {{name}}",
+      "editProcedure": "Procedure - {{name}}",
+      "newFunction": "New Function",
+      "newProcedure": "New Procedure"
+    },
+    "userEditor": {
+      "edit": "User - {{username}}@{{host}}",
+      "new": "New User"
+    },
+    "erDiagram": "ER Diagram - {{database}}"
+  },
+  "erDiagram": {
+    "toolbar": {
+      "refresh": "Refresh",
+      "zoomIn": "Zoom In",
+      "zoomOut": "Zoom Out",
+      "reset": "Reset",
+      "autoLayout": "Auto Layout",
+      "export": "Export"
+    },
+    "loading": "Generating ER Diagram...",
+    "retry": "Retry",
+    "status": {
+      "loading": "Loading ER Diagram...",
+      "loaded": "ER Diagram loaded: {{tables}} tables, {{relations}} relations ({{time}}ms)",
+      "loadFailed": "Failed to load ER Diagram: {{message}}"
+    },
+    "export": {
+      "title": "Export {{format}} File",
+      "format": {
+        "png": "PNG",
+        "jpg": "JPG",
+        "pdf": "PDF",
+        "sql": "SQL"
+      },
+      "mode": {
+        "current": "Current View",
+        "full": "Full Diagram"
+      }
+    }
+  },
+  "update": {
+    "title": "Check for Updates",
+    "checking": "Checking for updates...",
+    "upToDate": "You are using the latest version",
+    "newVersionAvailable": "New version {{version}} available",
+    "releaseDate": "Release Date",
+    "releaseNotes": "Release Notes",
+    "downloading": "Downloading update...",
+    "download": "Download Update",
+    "readyToInstall": "Update downloaded. Click \"Restart\" to install.",
+    "restart": "Restart",
+    "retry": "Retry",
+    "checkFailed": "Failed to check for updates",
+    "downloadFailed": "Failed to download update",
+    "restartFailed": "Failed to restart",
+    "unknownError": "Unknown error"
+  }
+}

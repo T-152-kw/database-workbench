@@ -1,0 +1,174 @@
+/* 添加收藏对话框样式 */
+.add-favorite-dialog .bp5-dialog-body {
+  padding: 24px;
+}
+
+.add-favorite-form {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* 类型选择器 */
+.add-favorite-type-selector {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.type-option {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 12px;
+  border: 2px solid #e1e8ed;
+  border-radius: 10px;
+  background-color: #fff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.type-option:hover {
+  border-color: #2196f3;
+  background-color: #f0f7ff;
+}
+
+.type-option.active {
+  border-color: #2196f3;
+  background-color: #e3f2fd;
+  box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+}
+
+.type-icon {
+  font-size: 24px;
+  line-height: 1;
+}
+
+.type-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: #182026;
+}
+
+.type-option.active .type-label {
+  color: #2196f3;
+}
+
+/* 表单样式 */
+.add-favorite-form .bp5-form-group {
+  margin-bottom: 0;
+}
+
+.add-favorite-form .bp5-form-group label {
+  font-weight: 500;
+  color: #182026;
+  margin-bottom: 6px;
+}
+
+.add-favorite-form .bp5-form-group .bp5-label-info {
+  color: #db3737;
+  margin-left: 4px;
+}
+
+.add-favorite-form .bp5-form-helper-text {
+  font-size: 12px;
+  color: #8a9ba8;
+  margin-top: 6px;
+}
+
+/* 输入框样式 */
+.add-favorite-form input,
+.add-favorite-form select {
+  border-radius: 6px;
+}
+
+.add-favorite-form input:focus,
+.add-favorite-form select:focus {
+  border-color: #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+/* 文本域样式 */
+.add-favorite-textarea {
+  width: 100%;
+  min-height: 160px;
+  padding: 12px;
+  border: 1px solid #ced9e0;
+  border-radius: 6px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', monospace;
+  font-size: 13px;
+  line-height: 1.6;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: #fff;
+}
+
+.add-favorite-textarea:focus {
+  outline: none;
+  border-color: #2196f3;
+  box-shadow: 0 0 0 2px rgba(33, 150, 243, 0.2);
+}
+
+.add-favorite-textarea::placeholder {
+  color: #a7b6c2;
+}
+
+/* 深色模式支持 */
+.bp5-dark .add-favorite-form .bp5-form-group label {
+  color: #f5f8fa;
+}
+
+.bp5-dark .add-favorite-form .bp5-form-helper-text {
+  color: #5c7080;
+}
+
+.bp5-dark .type-option {
+  background-color: #293742;
+  border-color: #394b59;
+}
+
+.bp5-dark .type-option:hover {
+  border-color: #2196f3;
+  background-color: #30404d;
+}
+
+.bp5-dark .type-option.active {
+  background-color: #1a3a4a;
+  border-color: #2196f3;
+}
+
+.bp5-dark .type-label {
+  color: #f5f8fa;
+}
+
+.bp5-dark .add-favorite-textarea {
+  background-color: #293742;
+  border-color: #394b59;
+  color: #f5f8fa;
+}
+
+.bp5-dark .add-favorite-textarea:focus {
+  border-color: #2196f3;
+}
+
+/* 响应式调整 */
+@media (max-width: 480px) {
+  .add-favorite-type-selector {
+    flex-direction: column;
+  }
+
+  .type-option {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 12px 16px;
+    gap: 12px;
+  }
+
+  .add-favorite-dialog {
+    width: 100% !important;
+    max-width: 100vw;
+  }
+}

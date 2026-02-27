@@ -1,0 +1,472 @@
+.er-diagram-tab {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  background: var(--bp6-app-background-color, var(--bp5-app-background-color));
+}
+
+.er-diagram-toolbar {
+  height: 40px;
+  padding: 4px 10px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  border-bottom: 1px solid var(--bp6-divider-black, var(--bp5-divider-black));
+  background: var(--bp6-menu-background-color, var(--bp5-menu-background-color));
+}
+
+/* Toolbar button styles - bp6优先，bp5兜底 */
+.bp6-dark .er-diagram-toolbar button,
+.bp5-dark .er-diagram-toolbar button,
+.bp6-dark .er-diagram-toolbar .bp6-button,
+.bp5-dark .er-diagram-toolbar .bp5-button {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: transparent !important;
+}
+
+.bp6-dark .er-diagram-toolbar button svg,
+.bp5-dark .er-diagram-toolbar button svg,
+.bp6-dark .er-diagram-toolbar .bp6-button svg,
+.bp5-dark .er-diagram-toolbar .bp5-button svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+.bp6-dark .er-diagram-toolbar button:hover,
+.bp5-dark .er-diagram-toolbar button:hover,
+.bp6-dark .er-diagram-toolbar .bp6-button:hover,
+.bp5-dark .er-diagram-toolbar .bp5-button:hover {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: var(--bp6-menu-background-color-hover, var(--bp5-menu-background-color-hover)) !important;
+}
+
+.bp6-dark .er-diagram-toolbar button:hover svg,
+.bp5-dark .er-diagram-toolbar button:hover svg,
+.bp6-dark .er-diagram-toolbar .bp6-button:hover svg,
+.bp5-dark .er-diagram-toolbar .bp5-button:hover svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+.bp6-dark .er-diagram-toolbar button:disabled,
+.bp6-dark .er-diagram-toolbar button.bp6-disabled,
+.bp5-dark .er-diagram-toolbar button:disabled,
+.bp5-dark .er-diagram-toolbar button.bp5-disabled,
+.bp6-dark .er-diagram-toolbar .bp6-button:disabled,
+.bp6-dark .er-diagram-toolbar .bp6-button.bp6-disabled,
+.bp5-dark .er-diagram-toolbar .bp5-button:disabled,
+.bp5-dark .er-diagram-toolbar .bp5-button.bp5-disabled {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+  opacity: 0.6 !important;
+}
+
+.bp6-dark .er-diagram-toolbar button:disabled svg,
+.bp6-dark .er-diagram-toolbar button.bp6-disabled svg,
+.bp5-dark .er-diagram-toolbar button:disabled svg,
+.bp5-dark .er-diagram-toolbar button.bp5-disabled svg,
+.bp6-dark .er-diagram-toolbar .bp6-button:disabled svg,
+.bp6-dark .er-diagram-toolbar .bp6-button.bp6-disabled svg,
+.bp5-dark .er-diagram-toolbar .bp5-button:disabled svg,
+.bp5-dark .er-diagram-toolbar .bp5-button.bp5-disabled svg {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+/* Toolbar spacer and export styles */
+.er-diagram-toolbar-spacer {
+  flex: 1;
+}
+
+.er-diagram-format-select {
+  margin-right: 8px;
+}
+
+.er-diagram-format-select select {
+  height: 24px;
+  padding: 0 20px 0 8px;
+  font-size: 12px;
+}
+
+.bp6-dark .er-diagram-format-select select,
+.bp5-dark .er-diagram-format-select select {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color));
+  color: var(--bp6-text-color, var(--bp5-text-color));
+  border: 1px solid var(--bp6-divider-black, var(--bp5-divider-black));
+}
+
+/* Mode select styles */
+.er-diagram-mode-select {
+  margin-right: 8px;
+}
+
+.er-diagram-mode-select select {
+  height: 24px;
+  padding: 0 20px 0 8px;
+  font-size: 12px;
+}
+
+.bp6-dark .er-diagram-mode-select select,
+.bp5-dark .er-diagram-mode-select select {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color));
+  color: var(--bp6-text-color, var(--bp5-text-color));
+  border: 1px solid var(--bp6-divider-black, var(--bp5-divider-black));
+}
+
+/* Export mode - hide controls */
+.exporting-er-diagram .er-diagram-controls,
+.exporting-er-diagram .er-diagram-minimap,
+.exporting-er-diagram .react-flow__controls,
+.exporting-er-diagram .react-flow__minimap {
+  display: none !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+}
+
+/* Flow wrapper for export */
+.er-diagram-flow-wrapper {
+  width: 100%;
+  height: 100%;
+  background: #ffffff;
+}
+
+.er-diagram-canvas {
+  flex: 1;
+  min-height: 0;
+}
+
+.er-diagram-canvas .react-flow__renderer {
+  background-image: radial-gradient(circle at 1px 1px, rgba(96, 114, 140, 0.2) 1px, transparent 0);
+  background-size: 20px 20px;
+}
+
+.er-diagram-minimap {
+  width: 220px;
+  height: 138px;
+  right: 14px;
+  top: 14px;
+  bottom: auto;
+  border: 1px solid #b9c6d8;
+  border-radius: 8px;
+  background: rgba(248, 251, 255, 0.92);
+  box-shadow: 0 4px 18px rgba(52, 77, 114, 0.16);
+  backdrop-filter: blur(2px);
+}
+
+.er-diagram-loading,
+.er-diagram-error {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  color: var(--bp5-text-color-muted);
+}
+
+.er-table-node {
+  border: 1px solid #b4bfce;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #ffffff;
+  min-width: 240px;
+  box-shadow: 0 4px 14px rgba(45, 62, 89, 0.12);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.er-table-node:hover {
+  border-color: #7fa3dc;
+  box-shadow: 0 8px 24px rgba(32, 79, 156, 0.18);
+}
+
+.er-table-header {
+  height: 36px;
+  padding: 0 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #e7ebf3;
+  border-bottom: 1px solid #d5dbe7;
+  font-weight: 600;
+  font-size: 12px;
+  color: #1f2937;
+  box-sizing: border-box;
+}
+
+.er-table-body {
+  background: #ffffff;
+}
+
+.er-table-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  height: 26px;
+  padding: 0 12px;
+  border-bottom: 1px solid #eff3f8;
+  font-size: 11px;
+  cursor: default;
+  position: relative;
+  box-sizing: border-box;
+}
+
+.er-table-row:last-child {
+  border-bottom: none;
+}
+
+.er-table-row.highlighted {
+  background: #dbeafe;
+}
+
+.er-table-col-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-weight: 600;
+  color: #111827;
+}
+
+.er-table-col-type {
+  color: #6b7280;
+  font-size: 10px;
+  margin-left: auto;
+  white-space: nowrap;
+}
+
+.er-table-pk {
+  color: #b33939;
+  margin-right: 4px;
+}
+
+.er-field-handle {
+  width: 8px;
+  height: 8px;
+  border: 0;
+  background: transparent;
+  border-radius: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.18s ease;
+}
+
+.er-field-handle-left {
+  left: -5px;
+}
+
+.er-field-handle-right {
+  right: -5px;
+}
+
+.er-field-handle.active {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.er-edge-label {
+  position: absolute;
+  pointer-events: none;
+  font-size: 10px;
+  line-height: 1;
+  color: #576174;
+  background: rgba(255, 255, 255, 0.86);
+  border: 1px solid rgba(138, 151, 171, 0.45);
+  border-radius: 999px;
+  padding: 3px 8px;
+  white-space: nowrap;
+  backdrop-filter: blur(2px);
+  transition: all 0.2s ease;
+}
+
+.er-edge-label.active {
+  color: #0d4ec2;
+  border-color: #2e78ff;
+  background: rgba(226, 239, 255, 0.96);
+  box-shadow: 0 0 0 4px rgba(46, 120, 255, 0.15);
+}
+
+.react-flow__edge.er-edge .react-flow__edge-path {
+  transition: stroke 0.2s ease, stroke-width 0.2s ease;
+}
+
+.react-flow__edge.er-edge.is-highlighted .react-flow__edge-path {
+  stroke-linecap: round;
+  animation: er-edge-flow 0.85s linear infinite;
+}
+
+@keyframes er-edge-flow {
+  to {
+    stroke-dashoffset: -20;
+  }
+}
+
+/* Dark theme for ER diagram - 使用更强势的选择器和 !important */
+html.bp6-dark .er-diagram-tab .er-table-node,
+html.bp5-dark .er-diagram-tab .er-table-node,
+.bp6-dark .er-diagram-tab .er-table-node,
+.bp5-dark .er-diagram-tab .er-table-node {
+  background: #192533 !important;
+  border-color: #3f4f67 !important;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35) !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-table-header,
+html.bp5-dark .er-diagram-tab .er-table-header,
+.bp6-dark .er-diagram-tab .er-table-header,
+.bp5-dark .er-diagram-tab .er-table-header {
+  background: #253247 !important;
+  color: #e5e7eb !important;
+  border-color: #3f4f67 !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-table-body,
+html.bp5-dark .er-diagram-tab .er-table-body,
+.bp6-dark .er-diagram-tab .er-table-body,
+.bp5-dark .er-diagram-tab .er-table-body {
+  background: #192533 !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-table-row,
+html.bp5-dark .er-diagram-tab .er-table-row,
+.bp6-dark .er-diagram-tab .er-table-row,
+.bp5-dark .er-diagram-tab .er-table-row {
+  border-color: #374151 !important;
+  background: transparent !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-table-row:last-child,
+html.bp5-dark .er-diagram-tab .er-table-row:last-child,
+.bp6-dark .er-diagram-tab .er-table-row:last-child,
+.bp5-dark .er-diagram-tab .er-table-row:last-child {
+  border-bottom: none !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-table-row.highlighted,
+html.bp5-dark .er-diagram-tab .er-table-row.highlighted,
+.bp6-dark .er-diagram-tab .er-table-row.highlighted,
+.bp5-dark .er-diagram-tab .er-table-row.highlighted {
+  background: rgba(61, 132, 255, 0.24) !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-table-col-name,
+html.bp5-dark .er-diagram-tab .er-table-col-name,
+.bp6-dark .er-diagram-tab .er-table-col-name,
+.bp5-dark .er-diagram-tab .er-table-col-name {
+  color: #f3f4f6 !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-table-col-type,
+html.bp5-dark .er-diagram-tab .er-table-col-type,
+.bp6-dark .er-diagram-tab .er-table-col-type,
+.bp5-dark .er-diagram-tab .er-table-col-type {
+  color: #9ca3af !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-table-pk,
+html.bp5-dark .er-diagram-tab .er-table-pk,
+.bp6-dark .er-diagram-tab .er-table-pk,
+.bp5-dark .er-diagram-tab .er-table-pk {
+  color: #ff6b6b !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-field-handle,
+html.bp5-dark .er-diagram-tab .er-field-handle,
+.bp6-dark .er-diagram-tab .er-field-handle,
+.bp5-dark .er-diagram-tab .er-field-handle {
+  border-color: transparent !important;
+  background: transparent !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-field-handle.active,
+html.bp5-dark .er-diagram-tab .er-field-handle.active,
+.bp6-dark .er-diagram-tab .er-field-handle.active,
+.bp5-dark .er-diagram-tab .er-field-handle.active {
+  border-color: transparent !important;
+  background: transparent !important;
+  box-shadow: none !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-edge-label,
+html.bp5-dark .er-diagram-tab .er-edge-label,
+.bp6-dark .er-diagram-tab .er-edge-label,
+.bp5-dark .er-diagram-tab .er-edge-label {
+  color: #9fb6d6 !important;
+  background: rgba(18, 30, 46, 0.88) !important;
+  border-color: rgba(108, 134, 173, 0.55) !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-edge-label.active,
+html.bp5-dark .er-diagram-tab .er-edge-label.active,
+.bp6-dark .er-diagram-tab .er-edge-label.active,
+.bp5-dark .er-diagram-tab .er-edge-label.active {
+  color: #6fd4ff !important;
+  border-color: #44b9ff !important;
+  background: rgba(18, 48, 79, 0.92) !important;
+  box-shadow: 0 0 0 4px rgba(51, 174, 255, 0.15) !important;
+}
+
+html.bp6-dark .er-diagram-tab .er-diagram-minimap,
+html.bp5-dark .er-diagram-tab .er-diagram-minimap,
+.bp6-dark .er-diagram-tab .er-diagram-minimap,
+.bp5-dark .er-diagram-tab .er-diagram-minimap {
+  border-color: #4a6284 !important;
+  background: rgba(20, 33, 52, 0.9) !important;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.38) !important;
+}
+
+/* Keep old selectors for backward compatibility */
+.main-layout.bp5-dark .er-table-node {
+  background: #192533;
+  border-color: #3f4f67;
+  box-shadow: 0 6px 22px rgba(0, 0, 0, 0.35);
+}
+
+.main-layout.bp5-dark .er-table-header {
+  background: #253247;
+  color: #e5e7eb;
+  border-color: #3f4f67;
+}
+
+.main-layout.bp5-dark .er-table-row {
+  border-color: #374151;
+}
+
+.main-layout.bp5-dark .er-table-row.highlighted {
+  background: rgba(61, 132, 255, 0.24);
+}
+
+.main-layout.bp5-dark .er-table-col-name {
+  color: #f3f4f6;
+}
+
+.main-layout.bp5-dark .er-table-col-type {
+  color: #9ca3af;
+}
+
+.main-layout.bp5-dark .er-field-handle {
+  border-color: transparent;
+  background: transparent;
+}
+
+.main-layout.bp5-dark .er-field-handle.active {
+  border-color: transparent;
+  background: transparent;
+  box-shadow: none;
+}
+
+.main-layout.bp5-dark .er-edge-label {
+  color: #9fb6d6;
+  background: rgba(18, 30, 46, 0.88);
+  border-color: rgba(108, 134, 173, 0.55);
+}
+
+.main-layout.bp5-dark .er-edge-label.active {
+  color: #6fd4ff;
+  border-color: #44b9ff;
+  background: rgba(18, 48, 79, 0.92);
+  box-shadow: 0 0 0 4px rgba(51, 174, 255, 0.15);
+}
+
+.main-layout.bp5-dark .er-diagram-minimap {
+  border-color: #4a6284;
+  background: rgba(20, 33, 52, 0.9);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.38);
+}

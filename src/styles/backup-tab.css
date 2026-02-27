@@ -1,0 +1,250 @@
+.backup-tab {
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--bp5-app-background-color);
+}
+
+.backup-tab-scroll {
+  height: 100%;
+  overflow: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.backup-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.backup-title {
+  margin: 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--bp5-text-color);
+}
+
+.backup-subtitle {
+  margin: 0;
+  font-size: 13px;
+  color: var(--bp5-text-color-muted);
+}
+
+.backup-card {
+  background-color: var(--bp5-panel-background-color, var(--bp5-app-background-color));
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 6px;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.backup-card-title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--bp5-text-color);
+}
+
+.backup-form-grid {
+  display: grid;
+  grid-template-columns: 140px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px 12px;
+}
+
+.backup-label {
+  font-size: 13px;
+  color: var(--bp5-text-color-muted);
+}
+
+.backup-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(260px, 1fr));
+  gap: 8px 16px;
+}
+
+.backup-inline-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.backup-action-card {
+  gap: 10px;
+}
+
+.backup-main-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.backup-status-line {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.backup-status-text {
+  font-size: 13px;
+  color: var(--bp5-text-color);
+}
+
+.backup-log-box {
+  min-height: 180px;
+  max-height: 260px;
+  overflow: auto;
+  padding: 10px;
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 4px;
+  background-color: var(--bp5-app-background-color);
+  color: var(--bp5-text-color);
+  font-size: 12px;
+  font-family: Consolas, 'Courier New', monospace;
+  white-space: pre-wrap;
+  line-height: 1.5;
+}
+
+@media (max-width: 1100px) {
+  .backup-form-grid {
+    grid-template-columns: 120px minmax(0, 1fr);
+  }
+
+  .backup-form-grid > :nth-child(3n) {
+    justify-self: start;
+  }
+
+  .backup-options-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .backup-main-actions {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}
+
+/* Dark theme for backup tab - bp6优先，bp5兜底 */
+html.bp6-dark .backup-tab input,
+html.bp5-dark .backup-tab input,
+.bp6-dark .backup-tab input,
+.bp5-dark .backup-tab input,
+html.bp6-dark .backup-tab .bp6-input,
+html.bp5-dark .backup-tab .bp5-input,
+.bp6-dark .backup-tab .bp6-input,
+.bp5-dark .backup-tab .bp5-input,
+html.bp6-dark .backup-tab .bp6-input-group input,
+html.bp5-dark .backup-tab .bp5-input-group input,
+.bp6-dark .backup-tab .bp6-input-group input,
+.bp5-dark .backup-tab .bp5-input-group input {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+html.bp6-dark .backup-tab input::placeholder,
+html.bp5-dark .backup-tab input::placeholder,
+.bp6-dark .backup-tab input::placeholder,
+.bp5-dark .backup-tab input::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+html.bp6-dark .backup-tab button,
+html.bp5-dark .backup-tab button,
+.bp6-dark .backup-tab button,
+.bp5-dark .backup-tab button,
+html.bp6-dark .backup-tab .bp6-button,
+html.bp5-dark .backup-tab .bp5-button,
+.bp6-dark .backup-tab .bp6-button,
+.bp5-dark .backup-tab .bp5-button {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+html.bp6-dark .backup-tab button svg,
+html.bp5-dark .backup-tab button svg,
+.bp6-dark .backup-tab button svg,
+.bp5-dark .backup-tab button svg,
+html.bp6-dark .backup-tab .bp6-button svg,
+html.bp5-dark .backup-tab .bp5-button svg,
+.bp6-dark .backup-tab .bp6-button svg,
+.bp5-dark .backup-tab .bp5-button svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .backup-tab button:hover,
+html.bp5-dark .backup-tab button:hover,
+.bp6-dark .backup-tab button:hover,
+.bp5-dark .backup-tab button:hover,
+html.bp6-dark .backup-tab .bp6-button:hover,
+html.bp5-dark .backup-tab .bp5-button:hover,
+.bp6-dark .backup-tab .bp6-button:hover,
+.bp5-dark .backup-tab .bp5-button:hover {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: var(--bp6-menu-background-color-hover, var(--bp5-menu-background-color-hover)) !important;
+}
+
+html.bp6-dark .backup-tab button:hover svg,
+html.bp5-dark .backup-tab button:hover svg,
+.bp6-dark .backup-tab button:hover svg,
+.bp5-dark .backup-tab button:hover svg,
+html.bp6-dark .backup-tab .bp6-button:hover svg,
+html.bp5-dark .backup-tab .bp5-button:hover svg,
+.bp6-dark .backup-tab .bp6-button:hover svg,
+.bp5-dark .backup-tab .bp5-button:hover svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .backup-tab button.bp6-intent-primary,
+html.bp5-dark .backup-tab button.bp5-intent-primary,
+.bp6-dark .backup-tab button.bp6-intent-primary,
+.bp5-dark .backup-tab button.bp5-intent-primary,
+html.bp6-dark .backup-tab .bp6-button.bp6-intent-primary,
+html.bp5-dark .backup-tab .bp5-button.bp5-intent-primary,
+.bp6-dark .backup-tab .bp6-button.bp6-intent-primary,
+.bp5-dark .backup-tab .bp5-button.bp5-intent-primary {
+  color: #ffffff !important;
+  background-color: var(--bp6-intent-primary, var(--bp5-intent-primary)) !important;
+}
+
+html.bp6-dark .backup-tab button.bp6-intent-success,
+html.bp5-dark .backup-tab button.bp5-intent-success,
+.bp6-dark .backup-tab button.bp6-intent-success,
+.bp5-dark .backup-tab button.bp5-intent-success,
+html.bp6-dark .backup-tab .bp6-button.bp6-intent-success,
+html.bp5-dark .backup-tab .bp5-button.bp5-intent-success,
+.bp6-dark .backup-tab .bp6-button.bp6-intent-success,
+.bp5-dark .backup-tab .bp5-button.bp5-intent-success {
+  color: #ffffff !important;
+  background-color: var(--bp6-intent-success, var(--bp5-intent-success)) !important;
+}
+
+html.bp6-dark .backup-label,
+html.bp5-dark .backup-label,
+.bp6-dark .backup-label,
+.bp5-dark .backup-label {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+html.bp6-dark .backup-card-title,
+html.bp5-dark .backup-card-title,
+.bp6-dark .backup-card-title,
+.bp5-dark .backup-card-title {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .backup-log-box,
+html.bp5-dark .backup-log-box,
+.bp6-dark .backup-log-box,
+.bp5-dark .backup-log-box {
+  background-color: var(--bp6-app-background-color, var(--bp5-app-background-color)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}

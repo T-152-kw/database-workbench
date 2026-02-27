@@ -1,0 +1,45 @@
+[package]
+name = "database-workbench"
+version = "0.1.1"
+description = "A Tauri App"
+authors = ["you"]
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[lib]
+# The `_lib` suffix may seem redundant but it is necessary
+# to make the lib name unique and wouldn't conflict with the bin name.
+# This seems to be only an issue on Windows, see https://github.com/rust-lang/cargo/issues/8519
+name = "database_workbench_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = [] }
+tauri-plugin-dialog = "2"
+tauri-plugin-fs = "2"
+tauri-plugin-opener = "2"
+tauri-plugin-process = "2"
+tauri-plugin-shell = "2"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+base64 = "0.21"
+async-trait = "0.1"
+calamine = "0.24"
+chrono = { version = "0.4", features = ["serde"] }
+cron = "0.12"
+csv = "1"
+dashmap = "5"
+deadpool = { version = "0.10", features = ["managed", "rt_tokio_1"] }
+flate2 = { version = "1", default-features = false, features = ["rust_backend"] }
+mysql = { version = "24", default-features = false, features = ["rustls-tls"] }
+once_cell = "1"
+rust_xlsxwriter = "0.73"
+sqlparser = "0.44"
+tokio = { version = "1", features = ["rt-multi-thread", "time"] }
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+tauri-plugin-updater = "2"

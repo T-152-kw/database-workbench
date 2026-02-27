@@ -1,0 +1,422 @@
+.user-editor-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.user-editor-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  background-color: var(--bp5-app-background-color);
+  border-bottom: 1px solid var(--bp5-divider-black);
+  flex-shrink: 0;
+}
+
+.user-editor-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--bp5-text-color);
+}
+
+.user-editor-message {
+  margin: 8px 16px;
+  flex-shrink: 0;
+}
+
+.user-editor-tabs {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.user-editor-tabs > .bp5-tab-list,
+.user-editor-tabs > .bp6-tab-list {
+  padding: 0 16px;
+  background-color: var(--bp5-app-background-color);
+  border-bottom: 1px solid var(--bp5-divider-black);
+  flex-shrink: 0;
+}
+
+.user-editor-tabs > .bp5-tab-panel,
+.user-editor-tabs > .bp6-tab-panel {
+  flex: 1;
+  min-height: 0;
+  margin-top: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-editor-tab-content {
+  padding: 16px;
+  overflow-y: auto;
+}
+
+.user-editor-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  gap: 16px;
+  color: var(--bp5-text-color-muted);
+}
+
+.user-editor-callout {
+  margin-bottom: 16px;
+}
+
+.user-editor-privileges-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 8px 16px;
+  padding: 8px 0;
+}
+
+.user-editor-database-selector {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.user-editor-database-selector .bp5-html-select,
+.user-editor-database-selector .bp6-html-select {
+  min-width: 180px;
+}
+
+.user-editor-database-privileges {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.user-editor-database-item {
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 4px;
+  padding: 12px;
+  background-color: var(--bp5-app-background-color);
+}
+
+.user-editor-db-table-wrapper {
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 4px;
+  overflow: auto;
+  max-height: 520px;
+}
+
+.user-editor-db-privilege-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.user-editor-db-privilege-table th,
+.user-editor-db-privilege-table td {
+  border-bottom: 1px solid var(--bp5-divider-black);
+  border-right: 1px solid var(--bp5-divider-black);
+  padding: 6px 8px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+.user-editor-db-privilege-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background-color: var(--bp5-app-background-color);
+  font-weight: 600;
+}
+
+.user-editor-db-privilege-table th:first-child,
+.user-editor-db-privilege-table td:first-child {
+  text-align: left;
+}
+
+.user-editor-db-scope-cell {
+  min-width: 220px;
+  font-weight: 500;
+}
+
+.user-editor-db-privilege-table td .bp5-control,
+.user-editor-db-privilege-table td .bp6-control {
+  margin: 0;
+}
+
+.user-editor-database-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--bp5-divider-black);
+}
+
+.user-editor-database-name {
+  font-weight: 600;
+  font-size: 14px;
+  color: var(--bp5-text-color);
+}
+
+.user-editor-sql-preview-container {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.user-editor-sql-preview {
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  min-height: 300px;
+  resize: none;
+}
+
+.user-editor-footer {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 12px 16px;
+  background-color: var(--bp5-app-background-color);
+  border-top: 1px solid var(--bp5-divider-black);
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .user-editor-database-item {
+  background-color: var(--bp5-app-background-color);
+}
+
+/* Dark theme for UserEditorTab - bp6优先，bp5兜底 */
+html.bp6-dark .user-editor-tab input,
+html.bp5-dark .user-editor-tab input,
+.bp6-dark .user-editor-tab input,
+.bp5-dark .user-editor-tab input,
+html.bp6-dark .user-editor-tab .bp6-input,
+html.bp5-dark .user-editor-tab .bp5-input,
+.bp6-dark .user-editor-tab .bp6-input,
+.bp5-dark .user-editor-tab .bp5-input,
+html.bp6-dark .user-editor-tab .bp6-input-group input,
+html.bp5-dark .user-editor-tab .bp5-input-group input,
+.bp6-dark .user-editor-tab .bp6-input-group input,
+.bp5-dark .user-editor-tab .bp5-input-group input {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+html.bp6-dark .user-editor-tab input::placeholder,
+html.bp5-dark .user-editor-tab input::placeholder,
+.bp6-dark .user-editor-tab input::placeholder,
+.bp5-dark .user-editor-tab input::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+html.bp6-dark .user-editor-tab select,
+html.bp5-dark .user-editor-tab select,
+.bp6-dark .user-editor-tab select,
+.bp5-dark .user-editor-tab select,
+html.bp6-dark .user-editor-tab .bp6-html-select select,
+html.bp5-dark .user-editor-tab .bp5-html-select select,
+.bp6-dark .user-editor-tab .bp6-html-select select,
+.bp5-dark .user-editor-tab .bp5-html-select select {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+html.bp6-dark .user-editor-tab textarea,
+html.bp5-dark .user-editor-tab textarea,
+.bp6-dark .user-editor-tab textarea,
+.bp5-dark .user-editor-tab textarea,
+html.bp6-dark .user-editor-tab .bp6-text-area,
+html.bp5-dark .user-editor-tab .bp5-text-area,
+.bp6-dark .user-editor-tab .bp6-text-area,
+.bp5-dark .user-editor-tab .bp5-text-area {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+html.bp6-dark .user-editor-tab textarea::placeholder,
+html.bp5-dark .user-editor-tab textarea::placeholder,
+.bp6-dark .user-editor-tab textarea::placeholder,
+.bp5-dark .user-editor-tab textarea::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+html.bp6-dark .user-editor-tab label,
+html.bp5-dark .user-editor-tab label,
+.bp6-dark .user-editor-tab label,
+.bp5-dark .user-editor-tab label,
+html.bp6-dark .user-editor-tab .bp6-label,
+html.bp5-dark .user-editor-tab .bp5-label,
+.bp6-dark .user-editor-tab .bp6-label,
+.bp5-dark .user-editor-tab .bp5-label {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .user-editor-database-selector .bp6-html-select select,
+html.bp5-dark .user-editor-database-selector .bp6-html-select select,
+.bp6-dark .user-editor-database-selector .bp6-html-select select,
+.bp5-dark .user-editor-database-selector .bp6-html-select select,
+html.bp6-dark .user-editor-database-selector .bp5-html-select select,
+html.bp5-dark .user-editor-database-selector .bp5-html-select select,
+.bp6-dark .user-editor-database-selector .bp5-html-select select,
+.bp5-dark .user-editor-database-selector .bp5-html-select select {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+html.bp6-dark .user-editor-database-item,
+html.bp5-dark .user-editor-database-item,
+.bp6-dark .user-editor-database-item,
+.bp5-dark .user-editor-database-item {
+  background-color: var(--bp6-app-background-color, var(--bp5-app-background-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+html.bp6-dark .user-editor-database-name,
+html.bp5-dark .user-editor-database-name,
+.bp6-dark .user-editor-database-name,
+.bp5-dark .user-editor-database-name {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .user-editor-db-privilege-table th,
+html.bp5-dark .user-editor-db-privilege-table th,
+.bp6-dark .user-editor-db-privilege-table th,
+.bp5-dark .user-editor-db-privilege-table th {
+  background-color: var(--bp6-app-background-color, var(--bp5-app-background-color)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+html.bp6-dark .user-editor-db-privilege-table td,
+html.bp5-dark .user-editor-db-privilege-table td,
+.bp6-dark .user-editor-db-privilege-table td,
+.bp5-dark .user-editor-db-privilege-table td {
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+/* Button styles for dark theme - bp6优先，bp5兜底 */
+html.bp6-dark .user-editor-tab button,
+html.bp5-dark .user-editor-tab button,
+.bp6-dark .user-editor-tab button,
+.bp5-dark .user-editor-tab button,
+html.bp6-dark .user-editor-tab .bp6-button,
+html.bp5-dark .user-editor-tab .bp5-button,
+.bp6-dark .user-editor-tab .bp6-button,
+.bp5-dark .user-editor-tab .bp5-button {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: transparent !important;
+}
+
+html.bp6-dark .user-editor-tab button svg,
+html.bp5-dark .user-editor-tab button svg,
+.bp6-dark .user-editor-tab button svg,
+.bp5-dark .user-editor-tab button svg,
+html.bp6-dark .user-editor-tab .bp6-button svg,
+html.bp5-dark .user-editor-tab .bp5-button svg,
+.bp6-dark .user-editor-tab .bp6-button svg,
+.bp5-dark .user-editor-tab .bp5-button svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .user-editor-tab button:hover,
+html.bp5-dark .user-editor-tab button:hover,
+.bp6-dark .user-editor-tab button:hover,
+.bp5-dark .user-editor-tab button:hover,
+html.bp6-dark .user-editor-tab .bp6-button:hover,
+html.bp5-dark .user-editor-tab .bp5-button:hover,
+.bp6-dark .user-editor-tab .bp6-button:hover,
+.bp5-dark .user-editor-tab .bp5-button:hover {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: var(--bp6-menu-background-color-hover, var(--bp5-menu-background-color-hover)) !important;
+}
+
+html.bp6-dark .user-editor-tab button:hover svg,
+html.bp5-dark .user-editor-tab button:hover svg,
+.bp6-dark .user-editor-tab button:hover svg,
+.bp5-dark .user-editor-tab button:hover svg,
+html.bp6-dark .user-editor-tab .bp6-button:hover svg,
+html.bp5-dark .user-editor-tab .bp5-button:hover svg,
+.bp6-dark .user-editor-tab .bp6-button:hover svg,
+.bp5-dark .user-editor-tab .bp5-button:hover svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .user-editor-tab button:disabled,
+html.bp6-dark .user-editor-tab button.bp6-disabled,
+html.bp5-dark .user-editor-tab button:disabled,
+html.bp5-dark .user-editor-tab button.bp5-disabled,
+.bp6-dark .user-editor-tab button:disabled,
+.bp6-dark .user-editor-tab button.bp6-disabled,
+.bp5-dark .user-editor-tab button:disabled,
+.bp5-dark .user-editor-tab button.bp5-disabled,
+html.bp6-dark .user-editor-tab .bp6-button:disabled,
+html.bp6-dark .user-editor-tab .bp6-button.bp6-disabled,
+html.bp5-dark .user-editor-tab .bp5-button:disabled,
+html.bp5-dark .user-editor-tab .bp5-button.bp5-disabled,
+.bp6-dark .user-editor-tab .bp6-button:disabled,
+.bp6-dark .user-editor-tab .bp6-button.bp6-disabled,
+.bp5-dark .user-editor-tab .bp5-button:disabled,
+.bp5-dark .user-editor-tab .bp5-button.bp5-disabled {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+  opacity: 0.6 !important;
+}
+
+html.bp6-dark .user-editor-tab button:disabled svg,
+html.bp6-dark .user-editor-tab button.bp6-disabled svg,
+html.bp5-dark .user-editor-tab button:disabled svg,
+html.bp5-dark .user-editor-tab button.bp5-disabled svg,
+.bp6-dark .user-editor-tab button:disabled svg,
+.bp6-dark .user-editor-tab button.bp6-disabled svg,
+.bp5-dark .user-editor-tab button:disabled svg,
+.bp5-dark .user-editor-tab button.bp5-disabled svg,
+html.bp6-dark .user-editor-tab .bp6-button:disabled svg,
+html.bp6-dark .user-editor-tab .bp6-button.bp6-disabled svg,
+html.bp5-dark .user-editor-tab .bp5-button:disabled svg,
+html.bp5-dark .user-editor-tab .bp5-button.bp5-disabled svg,
+.bp6-dark .user-editor-tab .bp6-button:disabled svg,
+.bp6-dark .user-editor-tab .bp6-button.bp6-disabled svg,
+.bp5-dark .user-editor-tab .bp5-button:disabled svg,
+.bp5-dark .user-editor-tab .bp5-button.bp5-disabled svg {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+/* Footer button styles */
+html.bp6-dark .user-editor-footer button,
+html.bp5-dark .user-editor-footer button,
+.bp6-dark .user-editor-footer button,
+.bp5-dark .user-editor-footer button,
+html.bp6-dark .user-editor-footer .bp6-button,
+html.bp5-dark .user-editor-footer .bp5-button,
+.bp6-dark .user-editor-footer .bp6-button,
+.bp5-dark .user-editor-footer .bp5-button {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+html.bp6-dark .user-editor-footer button.bp6-intent-primary,
+html.bp5-dark .user-editor-footer button.bp5-intent-primary,
+.bp6-dark .user-editor-footer button.bp6-intent-primary,
+.bp5-dark .user-editor-footer button.bp5-intent-primary,
+html.bp6-dark .user-editor-footer .bp6-button.bp6-intent-primary,
+html.bp5-dark .user-editor-footer .bp5-button.bp5-intent-primary,
+.bp6-dark .user-editor-footer .bp6-button.bp6-intent-primary,
+.bp5-dark .user-editor-footer .bp5-button.bp5-intent-primary {
+  color: #ffffff !important;
+  background-color: var(--bp6-intent-primary, var(--bp5-intent-primary)) !important;
+}

@@ -1,0 +1,410 @@
+.database-object-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+  width: 100%;
+  overflow: hidden;
+}
+
+.database-object-toolbar {
+  display: flex;
+  flex-direction: column;
+  background-color: var(--bp5-app-background-color);
+  border-bottom: 1px solid var(--bp5-divider-black);
+  padding: 4px 8px;
+  flex-shrink: 0;
+}
+
+.database-object-toolbar-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 2px 0;
+}
+
+.database-object-toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.database-object-toolbar-spacer {
+  flex: 1;
+}
+
+.database-object-search {
+  width: 200px;
+}
+
+/* 搜索框样式 - 参考Sidebar的search-box设计 */
+.database-object-search-box {
+  display: flex;
+  align-items: center;
+  position: relative;
+  width: 200px;
+  height: 28px;
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #fff));
+  border: 1px solid var(--bp6-divider-black, var(--bp5-divider-black));
+  border-radius: 3px;
+  padding: 0 8px;
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.database-object-search-box:focus-within {
+  border-color: var(--bp6-intent-primary, var(--bp5-intent-primary));
+  box-shadow: 0 0 0 1px var(--bp6-intent-primary, var(--bp5-intent-primary));
+}
+
+.database-object-search-icon {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted));
+  flex-shrink: 0;
+  margin-right: 6px;
+}
+
+.database-object-search-input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 13px;
+  color: var(--bp6-text-color, var(--bp5-text-color));
+  padding: 0;
+  height: 100%;
+}
+
+.database-object-search-input::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted));
+}
+
+.database-object-search-clear {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  padding: 2px;
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted));
+  border-radius: 2px;
+  transition: color 0.15s ease, background-color 0.15s ease;
+}
+
+.database-object-search-clear:hover {
+  color: var(--bp6-text-color, var(--bp5-text-color));
+  background-color: var(--bp6-hover-background, var(--bp5-hover-background));
+}
+
+/* Dark theme for search box */
+.bp6-dark .database-object-search-box,
+.bp5-dark .database-object-search-box {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30));
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black));
+}
+
+.bp6-dark .database-object-search-input,
+.bp5-dark .database-object-search-input {
+  color: var(--bp6-text-color, var(--bp5-text-color));
+}
+
+.bp6-dark .database-object-search-input::placeholder,
+.bp5-dark .database-object-search-input::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted));
+}
+
+/* 内联统计信息 */
+.database-object-info-inline {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
+  color: var(--bp5-text-color-muted);
+  margin-left: 4px;
+}
+
+.database-object-info {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--bp5-text-color-muted);
+}
+
+.database-object-count {
+  white-space: nowrap;
+}
+
+.database-object-database {
+  white-space: nowrap;
+}
+
+.database-object-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  position: relative;
+}
+
+.database-object-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  color: var(--bp5-text-color-muted);
+  font-size: 14px;
+}
+
+.database-object-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  height: 100%;
+  color: #dc3545;
+  font-size: 14px;
+  padding: 24px;
+}
+
+.database-object-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--bp5-text-color-muted);
+  font-size: 14px;
+}
+
+.database-object-table-wrapper {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 8px;
+}
+
+.database-object-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+}
+
+.database-object-table th,
+.database-object-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--bp5-divider-black);
+  white-space: nowrap;
+  color: var(--bp5-text-color);
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.database-object-table th {
+  background-color: var(--bp5-app-background-color);
+  font-weight: 600;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  user-select: none;
+  border-bottom: 1px solid var(--bp5-divider-black);
+}
+
+.database-object-row {
+  background-color: var(--bp5-app-background-color);
+  cursor: pointer;
+  transition: background-color 0.1s ease;
+}
+
+.database-object-row:hover {
+  background-color: var(--bp5-hover-background);
+}
+
+.database-object-row.selected {
+  background-color: var(--bp5-intent-primary);
+}
+
+.database-object-row.selected td {
+  color: white;
+}
+
+.database-object-name {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: 500;
+}
+
+.database-object-name svg {
+  flex-shrink: 0;
+}
+
+.database-object-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  justify-content: flex-end;
+}
+
+.database-object-actions button {
+  opacity: 0.6;
+  transition: opacity 0.1s ease;
+}
+
+.database-object-row:hover .database-object-actions button,
+.database-object-actions button:hover {
+  opacity: 1;
+}
+
+[data-theme="dark"] .database-object-row.selected {
+  background-color: #1d4ed8;
+}
+
+[data-theme="dark"] .database-object-row.selected td {
+  color: #ffffff;
+}
+
+.database-object-table-wrapper::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+
+.database-object-table-wrapper::-webkit-scrollbar-track {
+  background: var(--bp5-app-background-color);
+}
+
+.database-object-table-wrapper::-webkit-scrollbar-thumb {
+  background: var(--bp5-text-color-muted);
+  border-radius: 4px;
+}
+
+.database-object-table-wrapper::-webkit-scrollbar-thumb:hover {
+  background: var(--bp5-text-color);
+}
+
+/* Resizable column styles */
+.resizable-header {
+  position: relative;
+  padding: 0 !important;
+  overflow: hidden;
+}
+
+.header-content {
+  padding: 8px 12px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-weight: 600;
+}
+
+.resize-handle {
+  position: absolute;
+  right: 0;
+  top: 0;
+  bottom: 0;
+  width: 6px;
+  cursor: col-resize;
+  background-color: transparent;
+  transition: background-color 0.15s ease;
+  z-index: 10;
+}
+
+.resize-handle:hover,
+.resize-handle.resizing {
+  background-color: var(--bp5-intent-primary);
+}
+
+.resize-handle::after {
+  content: '';
+  position: absolute;
+  right: 2px;
+  top: 25%;
+  bottom: 25%;
+  width: 1px;
+  background-color: var(--bp5-divider-black);
+}
+
+.resize-handle:hover::after,
+.resize-handle.resizing::after {
+  background-color: transparent;
+}
+
+/* Resizable table styles */
+.resizable-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-family: "Microsoft YaHei", "Segoe UI", sans-serif;
+  table-layout: fixed;
+}
+
+.resizable-table th,
+.resizable-table td {
+  padding: 8px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--bp5-divider-black);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: var(--bp5-text-color);
+}
+
+.resizable-table th {
+  background-color: var(--bp5-app-background-color);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  user-select: none;
+  border-bottom: 2px solid var(--bp5-divider-black);
+}
+
+.resizable-table td {
+  border-bottom: 1px solid var(--bp5-divider-black);
+}
+
+/* Ensure toolbar alignment */
+.database-object-toolbar-row .bp5-input-group {
+  margin: 0;
+}
+
+/* Toolbar button styles - bp6优先，bp5兜底 */
+.database-object-toolbar-row .bp6-button,
+.database-object-toolbar-row .bp5-button {
+  margin: 0;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+.database-object-toolbar-row .bp6-button svg,
+.database-object-toolbar-row .bp5-button svg {
+  color: var(--bp6-text-color, var(--bp5-text-color));
+}
+
+.database-object-toolbar-row .bp6-button:hover,
+.database-object-toolbar-row .bp5-button:hover {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: var(--bp6-menu-background-color-hover, var(--bp5-menu-background-color-hover)) !important;
+}
+
+.database-object-toolbar-row .bp6-button:hover svg,
+.database-object-toolbar-row .bp5-button:hover svg {
+  color: var(--bp6-text-color, var(--bp5-text-color));
+}
+
+.database-object-toolbar-row .bp6-button:disabled,
+.database-object-toolbar-row .bp6-button.bp6-disabled,
+.database-object-toolbar-row .bp5-button:disabled,
+.database-object-toolbar-row .bp5-button.bp5-disabled {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+  opacity: 0.6;
+}
+
+.database-object-toolbar-row .bp6-button:disabled svg,
+.database-object-toolbar-row .bp6-button.bp6-disabled svg,
+.database-object-toolbar-row .bp5-button:disabled svg,
+.database-object-toolbar-row .bp5-button.bp5-disabled svg {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted));
+}

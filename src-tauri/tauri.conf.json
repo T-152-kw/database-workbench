@@ -1,0 +1,49 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Database Workbench",
+  "version": "0.1.0",
+  "identifier": "com.database-workbench.app",
+  "build": {
+    "beforeDevCommand": "npm run dev",
+    "devUrl": "http://localhost:1420",
+    "beforeBuildCommand": "npm run build",
+    "frontendDist": "../dist"
+  },
+  "app": {
+    "windows": [
+      {
+        "title": "Database Workbench",
+        "width": 1350,
+        "height": 900,
+        "center": true,
+        "transparent": true,
+        "shadow": true,
+        "decorations": false
+      }
+    ],
+    "security": {
+      "csp": null
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": "all",
+    "createUpdaterArtifacts": true,
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ]
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IEI2OTRDMEQ0NDA0MUI1QUQKUldTdHRVRkExTUNVdHRQNHFmUTlyaEF6a2dObWFEVUg4SHlrbk9UUmx2TDJYT3ZiVFhkU251T3QK",
+      "endpoints": [
+        "https://raw.githubusercontent.com/T-152-kw/database-workbench/main/latest.json",
+        "https://gitee.com/nick4487617348/database-workbench/raw/master/latest.json"
+      ]
+    }
+  }
+}

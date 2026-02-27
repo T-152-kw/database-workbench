@@ -1,0 +1,209 @@
+.view-designer-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+  background-color: var(--background-color, #f5f5f5);
+}
+
+.view-designer-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--divider-color, #e1e1e1);
+}
+
+.view-designer-title {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-color, #1c1c1c);
+}
+
+.view-designer-database {
+  font-size: 12px;
+  color: var(--text-muted-color, #666);
+  background-color: var(--background-alt-color, #e8e8e8);
+  padding: 2px 8px;
+  border-radius: 3px;
+}
+
+.view-designer-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.view-name-input {
+  width: 250px;
+}
+
+.view-designer-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.view-designer-message {
+  margin-bottom: 12px;
+}
+
+.view-designer-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+
+.view-designer-editor-label {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-muted-color, #666);
+  margin-bottom: 6px;
+}
+
+.view-designer-sql-editor {
+  flex: 1;
+  min-height: 200px;
+  border: 1px solid var(--divider-color, #e1e1e1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.view-designer-sql-editor .monaco-editor {
+  padding: 0;
+}
+
+.view-designer-sql-editor .monaco-editor .margin {
+  background-color: transparent;
+}
+
+.view-designer-loading {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(255, 255, 255, 0.8);
+  z-index: 10;
+}
+
+.view-designer-loading span {
+  padding: 12px 24px;
+  background-color: var(--background-color, #fff);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+/* Dark Theme - Blueprint 6 (优先) */
+.bp6-dark .view-designer-tab {
+  --background-color: #1e1e1e;
+  --divider-color: #3c3c3c;
+  --text-color: #cccccc;
+  --text-muted-color: #a0a0a0;
+  --background-alt-color: #2d2d30;
+}
+
+/* Dark Theme - Blueprint 5 (兜底) */
+.bp5-dark .view-designer-tab {
+  --background-color: #1e1e1e;
+  --divider-color: #3c3c3c;
+  --text-color: #cccccc;
+  --text-muted-color: #a0a0a0;
+  --background-alt-color: #2d2d30;
+}
+
+.bp6-dark .view-designer-title,
+.bp5-dark .view-designer-title {
+  color: var(--bp6-text-color, var(--bp5-text-color));
+}
+
+.bp6-dark .view-designer-database,
+.bp5-dark .view-designer-database {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted));
+  background-color: var(--bp6-menu-background-color, var(--bp5-menu-background-color));
+}
+
+.bp6-dark .view-designer-editor-label,
+.bp5-dark .view-designer-editor-label {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted));
+}
+
+.bp6-dark .view-designer-sql-editor,
+.bp5-dark .view-designer-sql-editor {
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black));
+}
+
+.bp6-dark .view-designer-loading,
+.bp5-dark .view-designer-loading {
+  background-color: rgba(0, 0, 0, 0.7);
+}
+
+.bp6-dark .view-designer-loading span,
+.bp5-dark .view-designer-loading span {
+  background-color: var(--bp6-menu-background-color, var(--bp5-menu-background-color));
+  color: var(--bp6-text-color, var(--bp5-text-color));
+}
+
+/* Toolbar button styles for dark theme - bp6优先，bp5兜底 */
+.bp6-dark .view-designer-toolbar .bp6-button,
+.bp5-dark .view-designer-toolbar .bp5-button {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+.bp6-dark .view-designer-toolbar .bp6-button svg,
+.bp5-dark .view-designer-toolbar .bp5-button svg {
+  color: var(--bp6-text-color, var(--bp5-text-color));
+}
+
+.bp6-dark .view-designer-toolbar .bp6-button:hover,
+.bp5-dark .view-designer-toolbar .bp5-button:hover {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: var(--bp6-menu-background-color-hover, var(--bp5-menu-background-color-hover)) !important;
+}
+
+.bp6-dark .view-designer-toolbar .bp6-button:hover svg,
+.bp5-dark .view-designer-toolbar .bp5-button:hover svg {
+  color: var(--bp6-text-color, var(--bp5-text-color));
+}
+
+.bp6-dark .view-designer-toolbar .bp6-button:disabled,
+.bp6-dark .view-designer-toolbar .bp6-button.bp6-disabled,
+.bp5-dark .view-designer-toolbar .bp5-button:disabled,
+.bp5-dark .view-designer-toolbar .bp5-button.bp5-disabled {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+  opacity: 0.6;
+}
+
+.bp6-dark .view-designer-toolbar .bp6-button:disabled svg,
+.bp6-dark .view-designer-toolbar .bp6-button.bp6-disabled svg,
+.bp5-dark .view-designer-toolbar .bp5-button:disabled svg,
+.bp5-dark .view-designer-toolbar .bp5-button.bp5-disabled svg {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted));
+}
+
+/* Input fields dark theme - 覆盖所有可能的Blueprint输入框类名 */
+.bp6-dark .view-name-input input,
+.bp5-dark .view-name-input input,
+.bp6-dark .view-name-input .bp6-input,
+.bp5-dark .view-name-input .bp5-input,
+.bp6-dark .view-name-input .bp6-input-group input,
+.bp5-dark .view-name-input .bp5-input-group input {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+.bp6-dark .view-name-input input::placeholder,
+.bp5-dark .view-name-input input::placeholder,
+.bp6-dark .view-name-input .bp6-input::placeholder,
+.bp5-dark .view-name-input .bp5-input::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}

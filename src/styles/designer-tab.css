@@ -1,0 +1,688 @@
+.designer-tab {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+}
+
+.designer-tab.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  height: 100%;
+}
+
+.designer-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 12px;
+  background-color: var(--bp5-app-background-color);
+  border-bottom: 1px solid var(--bp5-divider-black);
+  flex-shrink: 0;
+}
+
+.designer-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.designer-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--bp5-text-color);
+}
+
+.designer-database {
+  font-size: 12px;
+  color: var(--bp5-text-color-muted);
+  padding: 2px 8px;
+  background-color: var(--bp5-input-background);
+  border-radius: 3px;
+}
+
+.designer-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.designer-error {
+  margin: 8px 12px;
+  flex-shrink: 0;
+}
+
+.designer-content {
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.designer-content .bp5-tabs,
+.designer-content .bp6-tabs {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  min-height: 0;
+}
+
+.designer-content .bp5-tab-list,
+.designer-content .bp6-tab-list {
+  padding: 0 12px;
+  border-bottom: 1px solid var(--bp5-divider-black);
+  flex-shrink: 0;
+}
+
+.designer-content .bp5-tab-panel,
+.designer-content .bp6-tab-panel {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  margin-top: 0;
+}
+
+/* Fields Tab */
+.designer-fields {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+}
+
+/* Field Charset/Collation Section */
+.designer-field-charset-section {
+  margin-top: 12px;
+  padding: 12px;
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 4px;
+  background-color: var(--bp5-app-background-color);
+  flex-shrink: 0;
+}
+
+.designer-field-charset-title {
+  font-weight: 500;
+  color: var(--bp5-text-color);
+  margin-bottom: 12px;
+  font-size: 13px;
+}
+
+.designer-field-charset-row {
+  display: flex;
+  gap: 16px;
+}
+
+.charset-form-group,
+.collation-form-group {
+  flex: 1;
+  margin-bottom: 0 !important;
+}
+
+.charset-form-group .bp5-html-select,
+.charset-form-group .bp6-html-select,
+.collation-form-group .bp5-html-select,
+.collation-form-group .bp6-html-select {
+  width: 100%;
+}
+
+/* Dark theme for charset section */
+.bp6-dark .designer-field-charset-section,
+.bp5-dark .designer-field-charset-section {
+  background-color: var(--bp6-app-background-color, var(--bp5-app-background-color));
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black));
+}
+
+.bp6-dark .designer-field-charset-title,
+.bp5-dark .designer-field-charset-title {
+  color: var(--bp6-text-color, var(--bp5-text-color));
+}
+
+.designer-fields-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bp5-divider-black);
+}
+
+.toolbar-separator {
+  width: 1px;
+  height: 20px;
+  background-color: var(--bp5-divider-black);
+  margin: 0 4px;
+}
+
+.designer-fields-table {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 4px;
+  background-color: var(--bp5-app-background-color);
+}
+
+.designer-fields-table table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.designer-fields-table th {
+  background-color: var(--bp5-input-background);
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 500;
+  color: var(--bp5-text-color);
+  border-bottom: 1px solid var(--bp5-divider-black);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.designer-fields-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--bp5-divider-black);
+  vertical-align: middle;
+}
+
+.designer-fields-table tr:hover {
+  background-color: rgba(66, 153, 225, 0.05);
+}
+
+.designer-fields-table tr.new-row {
+  background-color: rgba(40, 167, 69, 0.08);
+}
+
+.designer-fields-table tr.modified-row {
+  background-color: rgba(255, 193, 7, 0.08);
+}
+
+.designer-fields-table tr.selected-row {
+  background-color: rgba(66, 153, 225, 0.15);
+}
+
+.designer-fields-table tr.selected-row:hover {
+  background-color: rgba(66, 153, 225, 0.2);
+}
+
+.designer-fields-table .bp5-input-group,
+.designer-fields-table .bp6-input-group {
+  width: 100%;
+}
+
+.designer-fields-table .bp5-html-select,
+.designer-fields-table .bp6-html-select {
+  width: 100%;
+}
+
+.designer-fields-table .key-cell {
+  text-align: center;
+}
+
+.designer-fields-table .key-icon {
+  font-size: 14px;
+}
+
+/* Common Table Styles for Indexes, FK, Checks, Triggers */
+.designer-indexes,
+.designer-foreign-keys,
+.designer-checks,
+.designer-triggers {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+}
+
+.designer-indexes-toolbar,
+.designer-fk-toolbar,
+.designer-checks-toolbar,
+.designer-triggers-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  flex-shrink: 0;
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--bp5-divider-black);
+}
+
+.designer-table-container {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 4px;
+  background-color: var(--bp5-app-background-color);
+}
+
+.designer-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.designer-data-table th {
+  background-color: var(--bp5-input-background);
+  padding: 8px 10px;
+  text-align: left;
+  font-weight: 500;
+  color: var(--bp5-text-color);
+  border-bottom: 1px solid var(--bp5-divider-black);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  white-space: nowrap;
+}
+
+.designer-data-table td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--bp5-divider-black);
+  vertical-align: middle;
+}
+
+.designer-data-table tr:hover {
+  background-color: rgba(66, 153, 225, 0.05);
+}
+
+.designer-data-table tr.new-row {
+  background-color: rgba(40, 167, 69, 0.08);
+}
+
+.designer-data-table tr.modified-row {
+  background-color: rgba(255, 193, 7, 0.08);
+}
+
+.designer-data-table tr.selected-row {
+  background-color: rgba(66, 153, 225, 0.15);
+}
+
+.designer-data-table tr.selected-row:hover {
+  background-color: rgba(66, 153, 225, 0.2);
+}
+
+.designer-data-table .bp5-input-group,
+.designer-data-table .bp6-input-group {
+  width: 100%;
+}
+
+.designer-data-table .bp5-html-select,
+.designer-data-table .bp6-html-select {
+  width: 100%;
+}
+
+.designer-data-table .bp5-checkbox,
+.designer-data-table .bp6-checkbox {
+  margin: 0;
+}
+
+.designer-data-table .checkbox-cell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+}
+
+.designer-data-table .checkbox-cell .bp5-checkbox,
+.designer-data-table .checkbox-cell .bp6-checkbox {
+  margin: 0;
+}
+
+/* Trigger specific styles */
+.designer-triggers-content {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
+  gap: 12px;
+}
+
+.designer-trigger-definition {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  border-top: 1px solid var(--bp5-divider-black);
+  padding-top: 12px;
+}
+
+.designer-trigger-definition .definition-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.designer-trigger-definition .definition-label {
+  font-weight: 500;
+  color: var(--bp5-text-color);
+  font-size: 13px;
+}
+
+.designer-trigger-definition .definition-editor {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.designer-trigger-definition .definition-textarea {
+  flex: 1;
+  min-height: 0;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  resize: none;
+  background-color: var(--bp5-input-background);
+  border-color: var(--bp5-divider-black);
+}
+
+.designer-trigger-definition .definition-textarea:focus {
+  outline: none;
+}
+
+/* Empty state */
+.designer-empty {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px;
+  color: var(--bp5-text-color-muted);
+  font-size: 14px;
+}
+
+/* Options Tab */
+.designer-options {
+  padding: 16px;
+  max-width: 500px;
+}
+
+.designer-options .bp5-form-group,
+.designer-options .bp6-form-group {
+  margin-bottom: 16px;
+}
+
+/* Dark theme for Options Tab */
+.bp6-dark .designer-options,
+.bp5-dark .designer-options {
+  background-color: var(--bp6-app-background-color, var(--bp5-app-background-color));
+}
+
+.bp6-dark .designer-options .bp6-form-group label,
+.bp5-dark .designer-options .bp5-form-group label,
+.bp6-dark .designer-options .bp6-form-group .bp6-label,
+.bp5-dark .designer-options .bp5-form-group .bp5-label {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+.bp6-dark .designer-options input,
+.bp5-dark .designer-options input,
+.bp6-dark .designer-options .bp6-input,
+.bp5-dark .designer-options .bp5-input,
+.bp6-dark .designer-options .bp6-input-group input,
+.bp5-dark .designer-options .bp5-input-group input {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+.bp6-dark .designer-options input::placeholder,
+.bp5-dark .designer-options input::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+.bp6-dark .designer-options select,
+.bp5-dark .designer-options select,
+.bp6-dark .designer-options .bp6-html-select select,
+.bp5-dark .designer-options .bp5-html-select select {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+.bp6-dark .designer-options textarea,
+.bp5-dark .designer-options textarea,
+.bp6-dark .designer-options .bp6-text-area,
+.bp5-dark .designer-options .bp5-text-area {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+.bp6-dark .designer-options textarea::placeholder,
+.bp5-dark .designer-options textarea::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+/* SQL Preview & DDL Tabs */
+.designer-sql-preview,
+.designer-ddl {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 12px;
+}
+
+.sql-preview-header,
+.ddl-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  font-weight: 500;
+  color: var(--bp5-text-color);
+  flex-shrink: 0;
+}
+
+.sql-preview-actions,
+.ddl-actions {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.sql-preview-editor,
+.ddl-editor {
+  flex: 1;
+  min-height: 0;
+  border: 1px solid var(--bp5-divider-black);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+/* Legacy textarea styles (kept for reference) */
+.sql-preview-textarea,
+.ddl-textarea {
+  flex: 1;
+  min-height: 0;
+  font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
+  font-size: 13px;
+  resize: none;
+  background-color: var(--bp5-input-background);
+  border-color: var(--bp5-divider-black);
+}
+
+.sql-preview-textarea:focus,
+.ddl-textarea:focus {
+  outline: none;
+}
+
+/* Dark mode adjustments - bp6优先，bp5兜底 */
+.bp6-dark .designer-fields-table tr.new-row,
+.bp5-dark .designer-fields-table tr.new-row,
+.bp6-dark .designer-data-table tr.new-row,
+.bp5-dark .designer-data-table tr.new-row {
+  background-color: rgba(40, 167, 69, 0.15);
+}
+
+.bp6-dark .designer-fields-table tr.modified-row,
+.bp5-dark .designer-fields-table tr.modified-row,
+.bp6-dark .designer-data-table tr.modified-row,
+.bp5-dark .designer-data-table tr.modified-row {
+  background-color: rgba(255, 193, 7, 0.15);
+}
+
+.bp6-dark .designer-fields-table tr.selected-row,
+.bp5-dark .designer-fields-table tr.selected-row,
+.bp6-dark .designer-data-table tr.selected-row,
+.bp5-dark .designer-data-table tr.selected-row {
+  background-color: rgba(66, 153, 225, 0.25);
+}
+
+.bp6-dark .designer-fields-table tr:hover,
+.bp5-dark .designer-fields-table tr:hover,
+.bp6-dark .designer-data-table tr:hover,
+.bp5-dark .designer-data-table tr:hover {
+  background-color: rgba(66, 153, 225, 0.1);
+}
+
+.bp6-dark .designer-fields-table tr.selected-row:hover,
+.bp5-dark .designer-fields-table tr.selected-row:hover,
+.bp6-dark .designer-data-table tr.selected-row:hover,
+.bp5-dark .designer-data-table tr.selected-row:hover {
+  background-color: rgba(66, 153, 225, 0.3);
+}
+
+.bp6-dark .designer-table-container,
+.bp5-dark .designer-table-container,
+.bp6-dark .designer-fields-table,
+.bp5-dark .designer-fields-table {
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black, #374151));
+}
+
+.bp6-dark .designer-data-table th,
+.bp5-dark .designer-data-table th,
+.bp6-dark .designer-fields-table th,
+.bp5-dark .designer-fields-table th {
+  background-color: var(--bp6-menu-background-color, var(--bp5-menu-background-color, #1f2937));
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black, #374151));
+}
+
+.bp6-dark .designer-data-table td,
+.bp5-dark .designer-data-table td,
+.bp6-dark .designer-fields-table td,
+.bp5-dark .designer-fields-table td {
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black, #374151));
+}
+
+.bp6-dark .sql-preview-textarea,
+.bp5-dark .sql-preview-textarea,
+.bp6-dark .ddl-textarea,
+.bp5-dark .ddl-textarea,
+.bp6-dark .definition-textarea,
+.bp5-dark .definition-textarea {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #1f2937));
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black, #374151));
+  color: var(--bp6-text-color, var(--bp5-text-color, #e5e7eb));
+}
+
+/* Input fields dark theme - 覆盖所有可能的Blueprint输入框类名 */
+.bp6-dark .designer-fields-table input,
+.bp5-dark .designer-fields-table input,
+.bp6-dark .designer-data-table input,
+.bp5-dark .designer-data-table input,
+.bp6-dark .designer-fields-table .bp6-input,
+.bp5-dark .designer-fields-table .bp5-input,
+.bp6-dark .designer-data-table .bp6-input,
+.bp5-dark .designer-data-table .bp5-input,
+.bp6-dark .designer-fields-table .bp6-input-group input,
+.bp5-dark .designer-fields-table .bp5-input-group input,
+.bp6-dark .designer-data-table .bp6-input-group input,
+.bp5-dark .designer-data-table .bp5-input-group input {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+.bp6-dark .designer-fields-table input::placeholder,
+.bp5-dark .designer-fields-table input::placeholder,
+.bp6-dark .designer-data-table input::placeholder,
+.bp5-dark .designer-data-table input::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+.bp6-dark .designer-fields-table select,
+.bp5-dark .designer-fields-table select,
+.bp6-dark .designer-data-table select,
+.bp5-dark .designer-data-table select,
+.bp6-dark .designer-fields-table .bp6-html-select select,
+.bp5-dark .designer-fields-table .bp5-html-select select,
+.bp6-dark .designer-data-table .bp6-html-select select,
+.bp5-dark .designer-data-table .bp5-html-select select {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+/* Toolbar input dark theme - 覆盖所有可能的Blueprint输入框类名 */
+.bp6-dark .designer-toolbar input,
+.bp5-dark .designer-toolbar input,
+.bp6-dark .designer-toolbar .bp6-input,
+.bp5-dark .designer-toolbar .bp5-input,
+.bp6-dark .designer-toolbar .bp6-input-group input,
+.bp5-dark .designer-toolbar .bp5-input-group input {
+  background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
+}
+
+.bp6-dark .designer-toolbar input::placeholder,
+.bp5-dark .designer-toolbar input::placeholder {
+  color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
+}
+
+/* Toolbar button dark theme */
+.bp6-dark .designer-toolbar .bp6-button,
+.bp5-dark .designer-toolbar .bp5-button,
+.bp6-dark .designer-fields-toolbar .bp6-button,
+.bp5-dark .designer-fields-toolbar .bp5-button,
+.bp6-dark .designer-indexes-toolbar .bp6-button,
+.bp5-dark .designer-indexes-toolbar .bp5-button,
+.bp6-dark .designer-fk-toolbar .bp6-button,
+.bp5-dark .designer-fk-toolbar .bp5-button,
+.bp6-dark .designer-checks-toolbar .bp6-button,
+.bp5-dark .designer-checks-toolbar .bp5-button,
+.bp6-dark .designer-triggers-toolbar .bp6-button,
+.bp5-dark .designer-triggers-toolbar .bp5-button {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+.bp6-dark .designer-toolbar .bp6-button svg,
+.bp5-dark .designer-toolbar .bp5-button svg,
+.bp6-dark .designer-fields-toolbar .bp6-button svg,
+.bp5-dark .designer-fields-toolbar .bp5-button svg,
+.bp6-dark .designer-indexes-toolbar .bp6-button svg,
+.bp5-dark .designer-indexes-toolbar .bp5-button svg,
+.bp6-dark .designer-fk-toolbar .bp6-button svg,
+.bp5-dark .designer-fk-toolbar .bp5-button svg,
+.bp6-dark .designer-checks-toolbar .bp6-button svg,
+.bp5-dark .designer-checks-toolbar .bp5-button svg,
+.bp6-dark .designer-triggers-toolbar .bp6-button svg,
+.bp5-dark .designer-triggers-toolbar .bp5-button svg {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+}
+
+.bp6-dark .designer-toolbar .bp6-button:hover,
+.bp5-dark .designer-toolbar .bp5-button:hover,
+.bp6-dark .designer-fields-toolbar .bp6-button:hover,
+.bp5-dark .designer-fields-toolbar .bp5-button:hover,
+.bp6-dark .designer-indexes-toolbar .bp6-button:hover,
+.bp5-dark .designer-indexes-toolbar .bp5-button:hover,
+.bp6-dark .designer-fk-toolbar .bp6-button:hover,
+.bp5-dark .designer-fk-toolbar .bp5-button:hover,
+.bp6-dark .designer-checks-toolbar .bp6-button:hover,
+.bp5-dark .designer-checks-toolbar .bp5-button:hover,
+.bp6-dark .designer-triggers-toolbar .bp6-button:hover,
+.bp5-dark .designer-triggers-toolbar .bp5-button:hover {
+  color: var(--bp6-text-color, var(--bp5-text-color)) !important;
+  background-color: var(--bp6-menu-background-color-hover, var(--bp5-menu-background-color-hover)) !important;
+}

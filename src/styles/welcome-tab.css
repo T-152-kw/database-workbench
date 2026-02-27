@@ -1,0 +1,278 @@
+/* ============ 欢迎页样式 - VS Code 风格 ============ */
+
+.welcome-tab {
+  width: 100%;
+  height: 100%;
+  overflow: auto;
+  background-color: var(--bp5-app-background-color);
+}
+
+.welcome-container {
+  max-width: 1200px;
+  height: 100%;
+  margin: 0 auto;
+  padding: 0 48px;
+  display: flex;
+  align-items: center;
+  gap: 80px;
+}
+
+@media (max-width: 900px) {
+  .welcome-container {
+    flex-direction: column;
+    padding: 48px 24px;
+    gap: 48px;
+    align-items: flex-start;
+  }
+}
+
+/* ============ 左侧：Logo 和标题 ============ */
+.welcome-left {
+  flex: 0 0 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (max-width: 900px) {
+  .welcome-left {
+    flex: none;
+    width: 100%;
+  }
+}
+
+.welcome-brand {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 16px;
+}
+
+.welcome-logo-large {
+  width: 128px;
+  height: 128px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #007acc 0%, #005a9e 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 8px 32px rgba(0, 122, 204, 0.25);
+  margin-bottom: 8px;
+}
+
+.welcome-logo-large img {
+  width: 70%;
+  height: 70%;
+  object-fit: contain;
+  filter: brightness(0) invert(1);
+}
+
+.welcome-title-large {
+  font-size: 28px;
+  font-weight: 600;
+  color: var(--bp5-text-color);
+  margin: 0;
+  letter-spacing: -0.5px;
+}
+
+.welcome-subtitle-large {
+  font-size: 14px;
+  color: var(--bp5-text-color-muted);
+  margin: 0;
+  font-weight: 400;
+}
+
+/* ============ 右侧：开始和最近 ============ */
+.welcome-right {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+  max-width: 500px;
+}
+
+@media (max-width: 900px) {
+  .welcome-right {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* ============ 区域样式 ============ */
+.welcome-section {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.welcome-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.welcome-section-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--bp5-text-color-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin: 0;
+}
+
+.welcome-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+/* ============ 链接样式 ============ */
+.welcome-link {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  color: var(--bp5-text-color);
+}
+
+.welcome-link:hover {
+  background-color: var(--bp5-menu-background-color-hover);
+}
+
+.welcome-link svg {
+  color: var(--bp5-intent-primary);
+  flex-shrink: 0;
+}
+
+.welcome-link span {
+  font-size: 14px;
+  flex: 1;
+}
+
+.welcome-link-hint {
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', monospace;
+  font-size: 12px;
+  color: var(--bp5-text-color-muted);
+  flex-shrink: 0;
+}
+
+/* ============ 最近文件链接样式 ============ */
+.welcome-recent-link {
+  padding: 10px 12px;
+}
+
+.welcome-recent-link-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.welcome-recent-link-name {
+  font-size: 14px;
+  color: var(--bp5-text-color);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.welcome-recent-link-path {
+  font-size: 12px;
+  color: var(--bp5-text-color-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.welcome-recent-link-time {
+  font-size: 11px;
+  color: var(--bp5-text-color-muted);
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* ============ 清除链接样式 ============ */
+.welcome-clear-link {
+  font-size: 12px;
+  color: var(--bp5-intent-primary);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 2px 6px;
+  border-radius: 4px;
+  transition: all 0.15s ease;
+}
+
+.welcome-clear-link:hover {
+  background-color: var(--bp5-menu-background-color-hover);
+  text-decoration: underline;
+}
+
+/* ============ 空状态样式 ============ */
+.welcome-empty-text {
+  padding: 16px 12px;
+  font-size: 14px;
+  color: var(--bp5-text-color-muted);
+  font-style: italic;
+}
+
+/* ============ 暗色主题特定样式 ============ */
+.bp5-dark .welcome-tab,
+.bp6-dark .welcome-tab {
+  background-color: #1e1e1e;
+}
+
+.bp5-dark .welcome-logo-large,
+.bp6-dark .welcome-logo-large {
+  box-shadow: 0 8px 32px rgba(0, 122, 204, 0.35);
+}
+
+.bp5-dark .welcome-link:hover,
+.bp6-dark .welcome-link:hover {
+  background-color: #2a2d2e;
+}
+
+.bp5-dark .welcome-clear-link:hover,
+.bp6-dark .welcome-clear-link:hover {
+  background-color: #2a2d2e;
+}
+
+/* ============ 浅色主题特定样式 ============ */
+.bp5-light .welcome-tab,
+.bp6-light .welcome-tab {
+  background-color: #f8f9fa;
+}
+
+.bp5-light .welcome-link:hover,
+.bp6-light .welcome-link:hover {
+  background-color: #e8e8e8;
+}
+
+.bp5-light .welcome-clear-link:hover,
+.bp6-light .welcome-clear-link:hover {
+  background-color: #e8e8e8;
+}
+
+/* ============ 滚动条样式 ============ */
+.welcome-tab::-webkit-scrollbar {
+  width: 8px;
+}
+
+.welcome-tab::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.welcome-tab::-webkit-scrollbar-thumb {
+  background: var(--bp5-divider-black);
+  border-radius: 4px;
+}
+
+.welcome-tab::-webkit-scrollbar-thumb:hover {
+  background: var(--bp5-text-color-muted);
+}
