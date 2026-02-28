@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
 import { MainLayout } from './components';
 import { useKeyboardShortcuts } from './hooks';
@@ -22,6 +22,7 @@ function App() {
   const { t } = useTranslation();
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [isManualCheck, setIsManualCheck] = useState(false);
+  const hasAutoCreatedWelcomeRef = useRef(false);
 
   useEffect(() => {
     const handleContextMenu = (event: MouseEvent) => {
@@ -49,7 +50,8 @@ function App() {
       if (parsed.statusBarVisible !== undefined) {
         setStatusBarVisible(parsed.statusBarVisible);
       }
-      if (parsed.showWelcomePage && tabs.length === 0) {
+      if (parsed.showWelcomePage && tabs.length === 0 && !hasAutoCreatedWelcomeRef.current) {
+        hasAutoCreatedWelcomeRef.current = true;
         addTab({
           type: 'welcome',
           title: t('tabTitles.welcome'),
