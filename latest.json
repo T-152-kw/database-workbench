@@ -1,7 +1,7 @@
 {
-  "version": "0.1.0",
-  "notes": "初始版本 基础数据库管理功能 测试阶段支持 MySQL 连接",
-  "pub_date": "2026-02-27T10:00:00Z",
+  "version": "0.1.1",
+  "notes": "小版本更新 Bug修复与体验优化",
+  "pub_date": "2026-03-04T10:00:00Z",
   "platforms": {
     "windows-x86_64": {
       "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdHRVRkExTUNVdGtYMUNCWmZGdGpIZDVVOExBZU5uUTNmcFVCWUJFWkZ6NFM4YlBxMVBYdWJNY2pXMXhBRWtaT09oQml2eDI5V09KSjQraFJuK3BGODVZN1Y3bnVwUmdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcyNjM0NzI4CWZpbGU6RGF0YWJhc2UgV29ya2JlbmNoXzAuMS4xX3g2NC1zZXR1cC5leGUKMlFId1JaYnhjc25uS2FGVWpkcTdUODN1U1JNODVkQ0hRcXZPOG1FaDZPSHQvMjN3OFlVMkJBV0RneHdnMmhBS0ZSQ3M0MzAxck9TM0s3Q2dJVjJZQnc9PQo=",
