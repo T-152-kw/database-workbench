@@ -17,7 +17,7 @@ import {
   TriggerIcon,
   ParamIcon,
 } from '../icons';
-import { useConnectionStore, useAppStore } from '../../stores';
+import { useConnectionStore, useAppStore, useTabStore } from '../../stores';
 import { tauriApi } from '../../hooks';
 import type { ConnectionProfile } from '../../types';
 import { ConfirmDialog, CreateDatabaseDialog, ConnectionDialog } from '../dialogs';
@@ -123,6 +123,7 @@ const applySelectionToNodes = (treeNodes: TreeNode[], selectedId: string | null)
 export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const { t } = useTranslation();
   const { theme, setStatusMessage } = useAppStore();
+  const { addTab } = useTabStore();
   const {
     connections,
     setActiveConnection,
@@ -1147,6 +1148,23 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
         disabled={!isOpened}
         onClick={() => closeDatabase(node)}
       />,
+      <MenuItem
+        key="dictionary"
+        text={t('metadataTree.dataDictionary')}
+        onClick={() => {
+          const profile = node.nodeData?.connection;
+          const database = node.nodeData?.database;
+          if (!profile || !database) return;
+
+          addTab({
+            type: 'dataDictionary',
+            title: t('tabTitles.dataDictionary', { database }),
+            connectionId: profile.name,
+            connectionProfile: profile,
+            database,
+          });
+        }}
+      />,
       <Divider key="div1" />,
       <MenuItem
         key="create"
@@ -1179,7 +1197,7 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
       content: menu,
       targetOffset: { left: e.clientX, top: e.clientY },
     });
-  }, [isDatabaseOpened, connectDatabase, closeDatabase, nodes, handleDeleteDatabase, t]);
+  }, [isDatabaseOpened, connectDatabase, closeDatabase, addTab, nodes, handleDeleteDatabase, t]);
 
   const handleNodeContextMenu = useCallback((node: TreeNode, _nodePath: number[], e: React.MouseEvent<HTMLElement>) => {
     e.preventDefault();

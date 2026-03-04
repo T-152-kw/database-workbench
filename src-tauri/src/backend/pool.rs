@@ -1570,19 +1570,40 @@ fn value_to_json(value: Value) -> JsonValue {
         Value::Double(v) => serde_json::Number::from_f64(v)
             .map(JsonValue::Number)
             .unwrap_or(JsonValue::Number(0.into())),
-        Value::Date(y, m, d, hh, mm, ss, us) => JsonValue::String(format!(
-            "{y:04}-{m:02}-{d:02} {hh:02}:{mm:02}:{ss:02}.{:06}",
-            us
-        )),
-        Value::Time(neg, days, hours, mins, secs, us) => JsonValue::String(format!(
-            "{}{:02}:{:02}:{:02}.{:06} ({} days)",
-            if neg { "-" } else { "" },
-            hours,
-            mins,
-            secs,
-            us,
-            days
-        )),
+        Value::Date(y, m, d, hh, mm, ss, us) => {
+            if us > 0 {
+                JsonValue::String(format!(
+                    "{y:04}-{m:02}-{d:02} {hh:02}:{mm:02}:{ss:02}.{:06}",
+                    us
+                ))
+            } else {
+                JsonValue::String(format!(
+                    "{y:04}-{m:02}-{d:02} {hh:02}:{mm:02}:{ss:02}"
+                ))
+            }
+        }
+        Value::Time(neg, days, hours, mins, secs, us) => {
+            if us > 0 {
+                JsonValue::String(format!(
+                    "{}{:02}:{:02}:{:02}.{:06} ({} days)",
+                    if neg { "-" } else { "" },
+                    hours,
+                    mins,
+                    secs,
+                    us,
+                    days
+                ))
+            } else {
+                JsonValue::String(format!(
+                    "{}{:02}:{:02}:{:02} ({} days)",
+                    if neg { "-" } else { "" },
+                    hours,
+                    mins,
+                    secs,
+                    days
+                ))
+            }
+        }
     }
 }
 

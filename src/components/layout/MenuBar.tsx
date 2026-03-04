@@ -325,6 +325,22 @@ export const MenuBar: React.FC = () => {
     setActiveMenu(null);
   }, [activeConnection, activeDatabase, addTab, t]);
 
+  const handleDataDictionary = useCallback(() => {
+    if (!activeConnection?.profile || !activeDatabase) {
+      void showToolbarRequirementNotice(t('database.dataDictionary'), 'database');
+      setActiveMenu(null);
+      return;
+    }
+    addTab({
+      type: 'dataDictionary',
+      title: t('tabTitles.dataDictionary', { database: activeDatabase }),
+      connectionId: activeConnection.profile.name,
+      connectionProfile: activeConnection.profile,
+      database: activeDatabase,
+    });
+    setActiveMenu(null);
+  }, [activeConnection, activeDatabase, addTab, t]);
+
   const handleImportConnections = useCallback(async () => {
     try {
       const selected = await open({
@@ -564,6 +580,10 @@ export const MenuBar: React.FC = () => {
     }
 
     // 工具菜单
+    if (label === t('menu.tools.dataDictionary')) {
+      handleDataDictionary();
+      return;
+    }
     if (label === t('menu.tools.backup')) {
       handleBackupDatabase();
       return;

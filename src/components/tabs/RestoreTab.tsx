@@ -195,7 +195,7 @@ export const RestoreTab: React.FC<RestoreTabProps> = ({
               onChange={(e) => setMysqlPath(e.target.value)}
               placeholder={t('restore.mysqlPlaceholder')}
             />
-            <Button onClick={pickMysqlPath} disabled={isBusy}>{t('restore.browse')}</Button>
+            <Button className="restore-browse-btn" onClick={pickMysqlPath} disabled={isBusy}>{t('restore.browse')}</Button>
 
             <div className="restore-label" />
             <label className="restore-check-label">
@@ -219,7 +219,7 @@ export const RestoreTab: React.FC<RestoreTabProps> = ({
               onChange={(e) => setSqlScriptPath(e.target.value)}
               placeholder={t('restore.sqlScriptPlaceholder')}
             />
-            <Button onClick={pickSqlFile} disabled={isBusy}>{t('restore.browse')}</Button>
+            <Button className="restore-browse-btn" onClick={pickSqlFile} disabled={isBusy}>{t('restore.browse')}</Button>
           </div>
         </section>
 

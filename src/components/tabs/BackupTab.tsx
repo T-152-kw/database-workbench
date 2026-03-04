@@ -350,6 +350,7 @@ export const BackupTab: React.FC<BackupTabProps> = ({
               placeholder={t('backup.mysqldumpPlaceholder')}
             />
             <Button
+              className="backup-browse-btn"
               onClick={() => pickExecutablePath(t('backup.selectMysqldump'), setMysqldumpPath)}
               disabled={isBusy}
             >
@@ -402,6 +403,7 @@ export const BackupTab: React.FC<BackupTabProps> = ({
               placeholder={t('backup.mysqlbinlogPlaceholder')}
             />
             <Button
+              className="backup-browse-btn"
               onClick={() => pickExecutablePath(t('backup.selectMysqlbinlog'), setMysqlbinlogPath)}
               disabled={isBusy}
             >
@@ -415,6 +417,7 @@ export const BackupTab: React.FC<BackupTabProps> = ({
               placeholder={t('backup.binlogIndexPlaceholder')}
             />
             <Button
+              className="backup-browse-btn"
               onClick={() => pickFilePath(t('backup.selectBinlogIndex'), setBinlogIndexPath, ['index', 'txt'])}
               disabled={isBusy}
             >
@@ -428,6 +431,7 @@ export const BackupTab: React.FC<BackupTabProps> = ({
               placeholder={t('backup.outputDirPlaceholder')}
             />
             <Button
+              className="backup-browse-btn"
               onClick={() => pickDirectoryPath(t('backup.selectOutputDir'), setIncrementalOutputDir)}
               disabled={isBusy}
             >
@@ -471,6 +475,7 @@ export const BackupTab: React.FC<BackupTabProps> = ({
               placeholder={t('backup.outputPathPlaceholder')}
             />
             <Button
+              className="backup-browse-btn"
               onClick={async () => {
                 const selectedPath = await save({
                   title: t('backup.selectOutputFile'),

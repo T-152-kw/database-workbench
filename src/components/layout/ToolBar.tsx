@@ -105,7 +105,7 @@ const ToolbarIcon: React.FC<{ type: ToolButton['iconType']; size?: number }> = (
             </text>
           </svg>
         );
-      
+
       case 'backup':
         // Java版: 紫色圆角矩形 + 白色横线 + 绿色向下箭头
         return (

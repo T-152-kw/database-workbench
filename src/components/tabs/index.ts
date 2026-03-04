@@ -7,6 +7,7 @@ export { UserTab } from './UserTab';
 export { UserEditorTab } from './UserEditorTab';
 export { DesignerTab } from './DesignerTab';
 export { ERDiagramTab } from './ERDiagramTab';
+export { DataDictionaryTab } from './DataDictionaryTab';
 export { BackupTab } from './BackupTab';
 export { RestoreTab } from './RestoreTab';
 export { WelcomeTab } from './WelcomeTab';

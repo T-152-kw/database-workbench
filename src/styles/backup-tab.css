@@ -155,75 +155,35 @@ html.bp5-dark .backup-tab input::placeholder,
   color: var(--bp6-text-color-muted, var(--bp5-text-color-muted)) !important;
 }
 
-html.bp6-dark .backup-tab button,
-html.bp5-dark .backup-tab button,
-.bp6-dark .backup-tab button,
-.bp5-dark .backup-tab button,
-html.bp6-dark .backup-tab .bp6-button,
-html.bp5-dark .backup-tab .bp5-button,
-.bp6-dark .backup-tab .bp6-button,
-.bp5-dark .backup-tab .bp5-button {
+html.bp6-dark .backup-tab .backup-browse-btn,
+html.bp5-dark .backup-tab .backup-browse-btn,
+.bp6-dark .backup-tab .backup-browse-btn,
+.bp5-dark .backup-tab .backup-browse-btn {
   color: var(--bp6-text-color, var(--bp5-text-color)) !important;
   background-color: var(--bp6-input-background-color, var(--bp5-input-background-color, #2d2d30)) !important;
   border-color: var(--bp6-divider-black, var(--bp5-divider-black)) !important;
 }
 
-html.bp6-dark .backup-tab button svg,
-html.bp5-dark .backup-tab button svg,
-.bp6-dark .backup-tab button svg,
-.bp5-dark .backup-tab button svg,
-html.bp6-dark .backup-tab .bp6-button svg,
-html.bp5-dark .backup-tab .bp5-button svg,
-.bp6-dark .backup-tab .bp6-button svg,
-.bp5-dark .backup-tab .bp5-button svg {
+html.bp6-dark .backup-tab .backup-browse-btn svg,
+html.bp5-dark .backup-tab .backup-browse-btn svg,
+.bp6-dark .backup-tab .backup-browse-btn svg,
+.bp5-dark .backup-tab .backup-browse-btn svg {
   color: var(--bp6-text-color, var(--bp5-text-color)) !important;
 }
 
-html.bp6-dark .backup-tab button:hover,
-html.bp5-dark .backup-tab button:hover,
-.bp6-dark .backup-tab button:hover,
-.bp5-dark .backup-tab button:hover,
-html.bp6-dark .backup-tab .bp6-button:hover,
-html.bp5-dark .backup-tab .bp5-button:hover,
-.bp6-dark .backup-tab .bp6-button:hover,
-.bp5-dark .backup-tab .bp5-button:hover {
+html.bp6-dark .backup-tab .backup-browse-btn:hover,
+html.bp5-dark .backup-tab .backup-browse-btn:hover,
+.bp6-dark .backup-tab .backup-browse-btn:hover,
+.bp5-dark .backup-tab .backup-browse-btn:hover {
   color: var(--bp6-text-color, var(--bp5-text-color)) !important;
   background-color: var(--bp6-menu-background-color-hover, var(--bp5-menu-background-color-hover)) !important;
 }
 
-html.bp6-dark .backup-tab button:hover svg,
-html.bp5-dark .backup-tab button:hover svg,
-.bp6-dark .backup-tab button:hover svg,
-.bp5-dark .backup-tab button:hover svg,
-html.bp6-dark .backup-tab .bp6-button:hover svg,
-html.bp5-dark .backup-tab .bp5-button:hover svg,
-.bp6-dark .backup-tab .bp6-button:hover svg,
-.bp5-dark .backup-tab .bp5-button:hover svg {
+html.bp6-dark .backup-tab .backup-browse-btn:hover svg,
+html.bp5-dark .backup-tab .backup-browse-btn:hover svg,
+.bp6-dark .backup-tab .backup-browse-btn:hover svg,
+.bp5-dark .backup-tab .backup-browse-btn:hover svg {
   color: var(--bp6-text-color, var(--bp5-text-color)) !important;
-}
-
-html.bp6-dark .backup-tab button.bp6-intent-primary,
-html.bp5-dark .backup-tab button.bp5-intent-primary,
-.bp6-dark .backup-tab button.bp6-intent-primary,
-.bp5-dark .backup-tab button.bp5-intent-primary,
-html.bp6-dark .backup-tab .bp6-button.bp6-intent-primary,
-html.bp5-dark .backup-tab .bp5-button.bp5-intent-primary,
-.bp6-dark .backup-tab .bp6-button.bp6-intent-primary,
-.bp5-dark .backup-tab .bp5-button.bp5-intent-primary {
-  color: #ffffff !important;
-  background-color: var(--bp6-intent-primary, var(--bp5-intent-primary)) !important;
-}
-
-html.bp6-dark .backup-tab button.bp6-intent-success,
-html.bp5-dark .backup-tab button.bp5-intent-success,
-.bp6-dark .backup-tab button.bp6-intent-success,
-.bp5-dark .backup-tab button.bp5-intent-success,
-html.bp6-dark .backup-tab .bp6-button.bp6-intent-success,
-html.bp5-dark .backup-tab .bp5-button.bp5-intent-success,
-.bp6-dark .backup-tab .bp6-button.bp6-intent-success,
-.bp5-dark .backup-tab .bp5-button.bp5-intent-success {
-  color: #ffffff !important;
-  background-color: var(--bp6-intent-success, var(--bp5-intent-success)) !important;
 }
 
 html.bp6-dark .backup-label,

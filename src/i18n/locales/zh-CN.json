@@ -75,6 +75,7 @@
     },
     "tools": {
       "title": "工具",
+      "dataDictionary": "数据字典...",
       "options": "选项",
       "backup": "备份数据库...",
       "restore": "还原数据库...",
@@ -105,6 +106,7 @@
     "table": "表",
     "view": "视图",
     "function": "函数",
+    "dataDictionary": "数据字典",
     "backup": "备份",
     "restore": "还原",
     "refresh": "刷新",
@@ -369,6 +371,7 @@
     "triggers": "触发器",
     "events": "事件",
     "users": "用户",
+    "dataDictionary": "数据字典",
     "backup": "备份",
     "restore": "恢复",
     "createTable": "新建表",
@@ -712,6 +715,7 @@
     "systemDbWarning": "⚠️ 系统数据库 - 谨慎操作",
     "openDatabase": "打开数据库",
     "closeDatabase": "关闭数据库",
+    "dataDictionary": "数据字典",
     "deleteDatabase": "删除数据库",
     "deleteSystemDb": "删除数据库 (系统数据库受保护)",
     "noConnections": "暂无连接",
@@ -1311,7 +1315,45 @@
       "edit": "用户 - {{username}}@{{host}}",
       "new": "新建用户"
     },
-    "erDiagram": "ER图 - {{database}}"
+    "erDiagram": "ER图 - {{database}}",
+    "dataDictionary": "数据字典 - {{database}}"
+  },
+  "dataDictionary": {
+    "title": "数据字典",
+    "subtitle": "连接: {{connection}} | 数据库: {{database}}",
+    "scope": {
+      "title": "内容范围",
+      "tableGroup": "表",
+      "viewGroup": "视图",
+      "routineGroup": "函数/存储过程",
+      "includeTables": "包含表结构",
+      "includeViews": "包含视图",
+      "includeRoutines": "包含函数/存储过程",
+      "includeRoutineDdl": "包含函数/存储过程 DDL"
+    },
+    "actions": {
+      "loadObjects": "加载对象",
+      "generate": "生成数据字典",
+      "export": "导出"
+    },
+    "preview": {
+      "title": "预览（Markdown）",
+      "empty": "尚未生成数据字典"
+    },
+    "export": {
+      "title": "导出数据字典"
+    },
+    "status": {
+      "loadingObjects": "正在加载可选对象...",
+      "objectsLoaded": "对象加载完成：{{tables}} 张表，{{views}} 个视图，{{routines}} 个函数/存储过程",
+      "loadObjectsFailed": "加载对象失败：{{error}}",
+      "noObjectSelected": "请至少勾选一个对象",
+      "generating": "正在生成数据字典...",
+      "generated": "生成完成：{{tables}} 张表，{{views}} 个视图，{{routines}} 个函数/存储过程",
+      "generateFailed": "生成失败：{{error}}",
+      "exported": "导出完成：{{path}}",
+      "exportFailed": "导出失败：{{error}}"
+    }
   },
   "erDiagram": {
     "toolbar": {

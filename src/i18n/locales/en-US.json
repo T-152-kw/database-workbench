@@ -75,6 +75,7 @@
     },
     "tools": {
       "title": "Tools",
+      "dataDictionary": "Data Dictionary...",
       "options": "Options",
       "backup": "Backup Database...",
       "restore": "Restore Database...",
@@ -105,6 +106,7 @@
     "table": "Table",
     "view": "View",
     "function": "Function",
+    "dataDictionary": "Dictionary",
     "backup": "Backup",
     "restore": "Restore",
     "refresh": "Refresh",
@@ -369,6 +371,7 @@
     "triggers": "Triggers",
     "events": "Events",
     "users": "Users",
+    "dataDictionary": "Data Dictionary",
     "backup": "Backup",
     "restore": "Restore",
     "createTable": "New Table",
@@ -712,6 +715,7 @@
     "systemDbWarning": "⚠️ System Database - Proceed with Caution",
     "openDatabase": "Open Database",
     "closeDatabase": "Close Database",
+    "dataDictionary": "Data Dictionary",
     "deleteDatabase": "Delete Database",
     "deleteSystemDb": "Delete Database (System DB Protected)",
     "noConnections": "No Connections",
@@ -1311,7 +1315,45 @@
       "edit": "User - {{username}}@{{host}}",
       "new": "New User"
     },
-    "erDiagram": "ER Diagram - {{database}}"
+    "erDiagram": "ER Diagram - {{database}}",
+    "dataDictionary": "Data Dictionary - {{database}}"
+  },
+  "dataDictionary": {
+    "title": "Data Dictionary",
+    "subtitle": "Connection: {{connection}} | Database: {{database}}",
+    "scope": {
+      "title": "Content Scope",
+      "tableGroup": "Tables",
+      "viewGroup": "Views",
+      "routineGroup": "Routines",
+      "includeTables": "Include Tables",
+      "includeViews": "Include Views",
+      "includeRoutines": "Include Functions/Procedures",
+      "includeRoutineDdl": "Include Function/Procedure DDL"
+    },
+    "actions": {
+      "loadObjects": "Load Objects",
+      "generate": "Generate Dictionary",
+      "export": "Export"
+    },
+    "preview": {
+      "title": "Preview (Markdown)",
+      "empty": "No data dictionary generated yet"
+    },
+    "export": {
+      "title": "Export Data Dictionary"
+    },
+    "status": {
+      "loadingObjects": "Loading selectable objects...",
+      "objectsLoaded": "Objects loaded: {{tables}} tables, {{views}} views, {{routines}} routines",
+      "loadObjectsFailed": "Failed to load objects: {{error}}",
+      "noObjectSelected": "Please select at least one object",
+      "generating": "Generating data dictionary...",
+      "generated": "Generated: {{tables}} tables, {{views}} views, {{routines}} routines",
+      "generateFailed": "Generate failed: {{error}}",
+      "exported": "Exported: {{path}}",
+      "exportFailed": "Export failed: {{error}}"
+    }
   },
   "erDiagram": {
     "toolbar": {

@@ -239,6 +239,7 @@ export type TabType =
   | 'tableList' 
   | 'viewList' 
   | 'functionList' 
+  | 'dataDictionary'
   | 'backup'
   | 'restore'
   | 'tableData' 
