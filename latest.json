@@ -4,8 +4,8 @@
   "pub_date": "2026-02-27T10:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdHRVRkExTUNVdHUxUzkzN0IwL1RzdWdCbnc2SThPUWt3NXA4c1kyY1V2ZlNWQU45SGkxWjZxWWovTXA3RzkwNFBMMTErUE45emxhTXZNWTdMS3hkcWxLVDRxS0hEcWc4PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcyMTc2MTgzCWZpbGU6RGF0YWJhc2UgV29ya2JlbmNoXzAuMS4wX3g2NC1zZXR1cC5leGUKWllmZXdkN2huZXQzY2tiQnQ1dFVXTWl3NWUzc2dhaGFsTm1NdHYxYndhNVFSQlhmSDkrRXAycEFNVDIwdjJYVy9GZCs1eHJ1NVZNSVo3R0RlVTNVQkE9PQo=",
-      "url": "https://github.com/T-152-kw/database-workbench/releases/download/v0.1.0/Database.Workbench_0.1.0_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdHRVRkExTUNVdGtYMUNCWmZGdGpIZDVVOExBZU5uUTNmcFVCWUJFWkZ6NFM4YlBxMVBYdWJNY2pXMXhBRWtaT09oQml2eDI5V09KSjQraFJuK3BGODVZN1Y3bnVwUmdZPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcyNjM0NzI4CWZpbGU6RGF0YWJhc2UgV29ya2JlbmNoXzAuMS4xX3g2NC1zZXR1cC5leGUKMlFId1JaYnhjc25uS2FGVWpkcTdUODN1U1JNODVkQ0hRcXZPOG1FaDZPSHQvMjN3OFlVMkJBV0RneHdnMmhBS0ZSQ3M0MzAxck9TM0s3Q2dJVjJZQnc9PQo=",
+      "url": "https://github.com/T-152-kw/database-workbench/releases/download/v0.1.1/Database.Workbench_0.1.1_x64-setup.exe"
     }
   }
 }
