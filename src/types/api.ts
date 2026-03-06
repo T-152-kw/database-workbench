@@ -280,17 +280,22 @@ export interface QueryResultColumn {
 export interface QueryResultData {
   columns: QueryResultColumn[];
   rows: unknown[][];
+  query_time_secs?: number;
+  fetch_time_secs?: number;
 }
 
 export interface MultiQueryResultData {
   result_sets: QueryResultData[];
   affected_rows: number;
   last_insert_id: number;
+  query_time_secs?: number;
+  fetch_time_secs?: number;
 }
 
 export interface ExecResultData {
   affected_rows: number;
   last_insert_id: number;
+  query_time_secs?: number;
 }
 
 export type ResultTabType = 'query' | 'update' | 'error';
@@ -301,7 +306,12 @@ export interface ResultTab {
   title: string;
   data: QueryResultData | ExecResultData | string;
   sql: string;
-  executionTime?: number;
+  executionTimeSec?: number;
+  fetchTimeSec?: number;
+  statementOrder?: number;
+  startedAt?: string;
+  finishedAt?: string;
+  statusText?: string;
 }
 
 export interface QueryTabState {

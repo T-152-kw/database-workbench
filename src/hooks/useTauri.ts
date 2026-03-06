@@ -51,6 +51,87 @@ export interface ErDiagramData {
   foreignKeys: ErDiagramForeignKeyRecord[];
 }
 
+type MetadataInvokeArgs = Record<string, unknown>;
+
+interface MetadataCacheEntry {
+  value: unknown;
+  expiresAt: number;
+}
+
+const METADATA_DEFAULT_TTL_MS = 5000;
+const metadataResultCache = new Map<string, MetadataCacheEntry>();
+const metadataInFlightCache = new Map<string, Promise<unknown>>();
+
+const getProfileCacheKey = (profile: ConnectionProfile): string => {
+  return [
+    profile.host,
+    profile.port,
+    profile.username,
+    profile.database ?? '',
+    profile.sslMode ?? '',
+    profile.sslCaPath ?? '',
+  ].join('|');
+};
+
+const normalizeMetadataArgs = (args: MetadataInvokeArgs): MetadataInvokeArgs => {
+  const normalized = { ...args };
+  if (normalized.profile && typeof normalized.profile === 'object') {
+    const profile = normalized.profile as ConnectionProfile;
+    normalized.profile = getProfileCacheKey(profile);
+  }
+  return normalized;
+};
+
+const getMetadataCacheKey = (command: string, args: MetadataInvokeArgs): string => {
+  return `${command}:${JSON.stringify(normalizeMetadataArgs(args))}`;
+};
+
+export const clearMetadataCache = (): void => {
+  metadataResultCache.clear();
+  metadataInFlightCache.clear();
+};
+
+if (typeof window !== 'undefined' && !(window as Window & { __dbwMetadataCacheHooked?: boolean }).__dbwMetadataCacheHooked) {
+  window.addEventListener('dbw:global-refresh', clearMetadataCache);
+  (window as Window & { __dbwMetadataCacheHooked?: boolean }).__dbwMetadataCacheHooked = true;
+}
+
+const invokeMetadataCached = async <T>(
+  command: string,
+  args: MetadataInvokeArgs,
+  ttlMs = METADATA_DEFAULT_TTL_MS,
+): Promise<T> => {
+  const key = getMetadataCacheKey(command, args);
+  const now = Date.now();
+
+  const cached = metadataResultCache.get(key);
+  if (cached && cached.expiresAt > now) {
+    return cached.value as T;
+  }
+
+  const inFlight = metadataInFlightCache.get(key);
+  if (inFlight) {
+    return inFlight as Promise<T>;
+  }
+
+  const request = invoke<T>(command, args)
+    .then((result) => {
+      if (ttlMs > 0) {
+        metadataResultCache.set(key, {
+          value: result,
+          expiresAt: Date.now() + ttlMs,
+        });
+      }
+      return result;
+    })
+    .finally(() => {
+      metadataInFlightCache.delete(key);
+    });
+
+  metadataInFlightCache.set(key, request as Promise<unknown>);
+  return request;
+};
+
 // ============ 连接池 API ============
 
 export const poolApi = {
@@ -95,76 +176,78 @@ export const poolApi = {
 
 export const metadataApi = {
   listDatabases: (profile: ConnectionProfile): Promise<string[]> =>
-    invoke('metadata_list_databases', { profile }),
+    invokeMetadataCached('metadata_list_databases', { profile }),
   
   listTables: (profile: ConnectionProfile, database: string): Promise<string[]> =>
-    invoke('metadata_list_tables', { profile, database }),
+    invokeMetadataCached('metadata_list_tables', { profile, database }),
   
   listTableDetails: (profile: ConnectionProfile, database: string): Promise<TableDetail[]> =>
-    invoke('metadata_list_table_details', { profile, database }),
+    invokeMetadataCached('metadata_list_table_details', { profile, database }),
   
   listViews: (profile: ConnectionProfile, database: string): Promise<string[]> =>
-    invoke('metadata_list_views', { profile, database }),
+    invokeMetadataCached('metadata_list_views', { profile, database }),
   
   listViewDetails: (profile: ConnectionProfile, database: string): Promise<ViewDetail[]> =>
-    invoke('metadata_list_view_details', { profile, database }),
+    invokeMetadataCached('metadata_list_view_details', { profile, database }),
   
   listFunctions: (profile: ConnectionProfile, database: string): Promise<string[]> =>
-    invoke('metadata_list_functions', { profile, database }),
+    invokeMetadataCached('metadata_list_functions', { profile, database }),
   
   listRoutinesWithDetails: (profile: ConnectionProfile, database: string): Promise<RoutineDetail[]> =>
-    invoke('metadata_list_routines_with_details', { profile, database }),
+    invokeMetadataCached('metadata_list_routines_with_details', { profile, database }),
   
   listFunctionDetails: (profile: ConnectionProfile, database: string): Promise<FunctionDetail[]> =>
-    invoke('metadata_list_function_details', { profile, database }),
+    invokeMetadataCached('metadata_list_function_details', { profile, database }),
   
   getFunctionDdl: (profile: ConnectionProfile, database: string, name: string, routineType: string): Promise<string> =>
-    invoke('metadata_get_function_ddl', { profile, database, name, routineType }),
+    invokeMetadataCached('metadata_get_function_ddl', { profile, database, name, routineType }),
   
   getRoutineParams: (profile: ConnectionProfile, database: string, name: string): Promise<RoutineParamInfo[]> =>
-    invoke('metadata_get_routine_params', { profile, database, name }),
+    invokeMetadataCached('metadata_get_routine_params', { profile, database, name }),
   
   listColumns: (profile: ConnectionProfile, database: string, table: string): Promise<MetadataRecord[]> =>
-    invoke('metadata_list_columns', { profile, database, table }),
+    invokeMetadataCached('metadata_list_columns', { profile, database, table }),
   
   listForeignKeys: (profile: ConnectionProfile, database: string, table: string): Promise<MetadataRecord[]> =>
-    invoke('metadata_list_foreign_keys', { profile, database, table }),
+    invokeMetadataCached('metadata_list_foreign_keys', { profile, database, table }),
 
   getErDiagramData: (profile: ConnectionProfile, database: string): Promise<ErDiagramData> =>
-    invoke('metadata_get_er_diagram_data', { profile, database }),
+    invokeMetadataCached('metadata_get_er_diagram_data', { profile, database }),
   
   listIndexes: (profile: ConnectionProfile, database: string, table: string): Promise<MetadataRecord[]> =>
-    invoke('metadata_list_indexes', { profile, database, table }),
+    invokeMetadataCached('metadata_list_indexes', { profile, database, table }),
   
   listTriggers: (profile: ConnectionProfile, database: string, table: string): Promise<MetadataRecord[]> =>
-    invoke('metadata_list_triggers', { profile, database, table }),
+    invokeMetadataCached('metadata_list_triggers', { profile, database, table }),
   
   listChecks: (profile: ConnectionProfile, database: string, table: string): Promise<MetadataRecord[]> =>
-    invoke('metadata_list_checks', { profile, database, table }),
+    invokeMetadataCached('metadata_list_checks', { profile, database, table }),
   
   loadDdl: (profile: ConnectionProfile, database: string, table: string): Promise<string> =>
-    invoke('metadata_load_ddl', { profile, database, table }),
+    invokeMetadataCached('metadata_load_ddl', { profile, database, table }),
   
   getCurrentUserInfo: (profile: ConnectionProfile): Promise<string> =>
-    invoke('metadata_get_current_user_info', { profile }),
+    invokeMetadataCached('metadata_get_current_user_info', { profile }),
   
   getAllUsers: (profile: ConnectionProfile): Promise<UserSummary[]> =>
-    invoke('metadata_get_all_users', { profile }),
+    invokeMetadataCached('metadata_get_all_users', { profile }),
   
   getUserDetail: (profile: ConnectionProfile, username: string, host: string): Promise<string> =>
-    invoke('metadata_get_user_detail', { profile, username, host }),
+    invokeMetadataCached('metadata_get_user_detail', { profile, username, host }),
   
   getUserModel: (profile: ConnectionProfile, username: string, host: string): Promise<UserModelPayload> =>
-    invoke('metadata_get_user_model', { profile, username, host }),
+    invokeMetadataCached('metadata_get_user_model', { profile, username, host }),
   
   getAllDatabases: (profile: ConnectionProfile): Promise<string[]> =>
-    invoke('metadata_get_all_databases', { profile }),
+    invokeMetadataCached('metadata_get_all_databases', { profile }),
   
   generateUserSql: (user: UserModel, isNewUser: boolean, original?: UserModel): Promise<string> =>
     invoke('metadata_generate_user_sql', { user, isNewUser, original }),
   
   executeSql: (profile: ConnectionProfile, sql: string, database?: string): Promise<void> =>
-    invoke('metadata_execute_sql', { profile, sql, database }),
+    invoke('metadata_execute_sql', { profile, sql, database }).then(() => {
+      clearMetadataCache();
+    }),
 };
 
 // ============ 配置 API ============

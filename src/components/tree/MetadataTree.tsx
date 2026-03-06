@@ -21,6 +21,7 @@ import { useConnectionStore, useAppStore, useTabStore } from '../../stores';
 import { tauriApi } from '../../hooks';
 import type { ConnectionProfile } from '../../types';
 import { ConfirmDialog, CreateDatabaseDialog, ConnectionDialog } from '../dialogs';
+import { ViewDefinitionDialog } from '../dialogs/ViewDefinitionDialog';
 import { showEditConnectionNotice } from '../../utils';
 
 const SYSTEM_DATABASES = new Set(['mysql', 'information_schema', 'performance_schema', 'sys']);
@@ -31,6 +32,7 @@ interface TreeNodeData {
   connectionId?: string;
   database?: string;
   table?: string;
+  objectName?: string;
   routineType?: 'FUNCTION' | 'PROCEDURE';
   isSystemDb?: boolean;
   folderType?: 'tables' | 'views' | 'functions' | 'columns' | 'indexes' | 'foreignKeys' | 'checks' | 'triggers';
@@ -169,6 +171,13 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
     isOpen: boolean;
     node?: TreeNode;
   }>({ isOpen: false });
+
+  const [viewDefinitionDialog, setViewDefinitionDialog] = useState<{
+    isOpen: boolean;
+    connectionProfile?: ConnectionProfile;
+    database: string;
+    viewName: string;
+  }>({ isOpen: false, database: '', viewName: '' });
 
   const isConnectionConnected = useCallback((node: TreeNode): boolean => {
     return !!(node.childNodes && node.childNodes.length > 0);
@@ -605,6 +614,7 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
               connection: node.nodeData?.connection,
               database: node.nodeData?.database,
               table: item,
+              objectName: item,
               itemType: 'table',
             },
           };
@@ -626,6 +636,7 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
             nodeData: {
               connection: node.nodeData?.connection,
               database: node.nodeData?.database,
+              objectName: item,
               itemType: 'view',
             },
           }));
@@ -672,6 +683,7 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
             nodeData: {
               connection: node.nodeData?.connection,
               database: node.nodeData?.database,
+              objectName: routine.name,
               itemType: 'function',
               routineType: routine.type as 'FUNCTION' | 'PROCEDURE',
             },
@@ -808,8 +820,176 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
     }
   }, [loadingNodes, buildTableCategoryNodes, buildParamLabel, renderRoutineLabel]);
 
+  const getConnectionName = useCallback((profile?: ConnectionProfile): string => {
+    return profile?.name || `${profile?.host}:${profile?.port}`;
+  }, []);
+
+  const openTableDataTab = useCallback((profile: ConnectionProfile, database: string, tableName: string) => {
+    addTab({
+      type: 'tableData',
+      title: t('tabTitles.tableData', {
+        tableName,
+        database,
+        connectionName: getConnectionName(profile),
+      }),
+      connectionId: profile.name,
+      connectionProfile: profile,
+      database,
+      table: tableName,
+    });
+  }, [addTab, getConnectionName, t]);
+
+  const openViewDataTab = useCallback((profile: ConnectionProfile, database: string, viewName: string) => {
+    addTab({
+      type: 'viewData',
+      title: t('tabTitles.viewData', {
+        viewName,
+        database,
+        connectionName: getConnectionName(profile),
+      }),
+      connectionId: profile.name,
+      connectionProfile: profile,
+      database,
+      objectName: viewName,
+    });
+  }, [addTab, getConnectionName, t]);
+
+  const openTableDesignerTab = useCallback((profile: ConnectionProfile, database?: string, tableName?: string) => {
+    let title = t('tabTitles.designer.new');
+    if (tableName) {
+      title = t('tabTitles.designer.edit', { tableName });
+    } else if (database) {
+      title = t('tabTitles.designer.newWithDatabase', { database });
+    }
+
+    addTab({
+      type: 'designer',
+      title,
+      connectionId: profile.name,
+      connectionProfile: profile,
+      database,
+      table: tableName,
+    });
+  }, [addTab, t]);
+
+  const openViewDesignerTab = useCallback((profile: ConnectionProfile, database: string, viewName: string) => {
+    addTab({
+      type: 'viewDesigner',
+      title: t('tabTitles.viewDesigner', { viewName }),
+      connectionId: profile.name,
+      connectionProfile: profile,
+      database,
+      objectName: viewName,
+    });
+  }, [addTab, t]);
+
+  const openFunctionDesignerTab = useCallback((
+    profile: ConnectionProfile,
+    database: string,
+    functionName?: string,
+    functionType: 'FUNCTION' | 'PROCEDURE' = 'FUNCTION',
+    autoExecute?: boolean,
+  ) => {
+    const title = functionName
+      ? (functionType === 'PROCEDURE'
+        ? t('tabTitles.functionDesigner.editProcedure', { name: functionName })
+        : t('tabTitles.functionDesigner.editFunction', { name: functionName }))
+      : (functionType === 'PROCEDURE'
+        ? t('tabTitles.functionDesigner.newProcedure')
+        : t('tabTitles.functionDesigner.newFunction'));
+
+    addTab({
+      type: 'functionDesigner',
+      title,
+      connectionId: profile.name,
+      connectionProfile: profile,
+      database,
+      objectName: functionName || undefined,
+      data: { functionType, autoExecute },
+    });
+  }, [addTab, t]);
+
+  const refreshFolderById = useCallback(async (folderId: string) => {
+    const path = findNodePathById(nodesRef.current, folderId);
+    const folderNode = path?.[path.length - 1]?.node;
+    if (!folderNode?.nodeData?.folderType) return;
+    await loadFolder(folderNode);
+  }, [loadFolder]);
+
+  const getParentFolderId = useCallback((nodeId: string): string | undefined => {
+    const path = findNodePathById(nodesRef.current, nodeId);
+    if (!path || path.length < 2) return undefined;
+    const parentNode = path[path.length - 2].node;
+    if (parentNode.nodeData?.folderType) {
+      return String(parentNode.id);
+    }
+    return undefined;
+  }, []);
+
+  const handleDeleteMetadataObject = useCallback((node: TreeNode) => {
+    const profile = node.nodeData?.connection;
+    const database = node.nodeData?.database;
+    const itemType = node.nodeData?.itemType;
+    const objectName = node.nodeData?.objectName || node.nodeData?.table;
+
+    if (!profile || !database || !itemType || !objectName) return;
+
+    const escapedObject = objectName.replace(/`/g, '``');
+    let sql = '';
+    let objectTypeText = '';
+
+    if (itemType === 'table') {
+      sql = `DROP TABLE \`${escapedObject}\``;
+      objectTypeText = t('metadataTree.objectTypeTable');
+    } else if (itemType === 'view') {
+      sql = `DROP VIEW \`${escapedObject}\``;
+      objectTypeText = t('metadataTree.objectTypeView');
+    } else if (itemType === 'function') {
+      const routineType = node.nodeData?.routineType === 'PROCEDURE' ? 'PROCEDURE' : 'FUNCTION';
+      sql = `DROP ${routineType} \`${escapedObject}\``;
+      objectTypeText = routineType === 'PROCEDURE'
+        ? t('metadataTree.objectTypeProcedure')
+        : t('metadataTree.objectTypeFunction');
+    } else {
+      return;
+    }
+
+    setConfirmDialog({
+      isOpen: true,
+      title: t('metadataTree.confirmDeleteObjectTitle'),
+      message: t('metadataTree.confirmDeleteObjectMessage', {
+        objectType: objectTypeText,
+        name: objectName,
+      }),
+      intent: 'danger',
+      onConfirm: async () => {
+        try {
+          await tauriApi.metadata.executeSql(profile, sql, database);
+          setStatusMessage(t('metadataTree.objectDeleted', {
+            objectType: objectTypeText,
+            name: objectName,
+          }));
+
+          const parentFolderId = getParentFolderId(String(node.id));
+          if (parentFolderId) {
+            await refreshFolderById(parentFolderId);
+          }
+        } catch (error) {
+          console.error(t('metadataTree.objectDeleteFailed'), error);
+          setStatusMessage(t('metadataTree.objectDeleteFailedWithError', {
+            error: String(error),
+          }));
+        }
+      },
+    });
+  }, [getParentFolderId, refreshFolderById, setStatusMessage, t]);
+
   const handleNodeDoubleClick = useCallback((node: TreeNode) => {
     if (!node.nodeData) return;
+
+    const profile = node.nodeData.connection;
+    const database = node.nodeData.database;
+
     if (node.nodeData.connectionId && (!node.childNodes || node.childNodes.length === 0)) {
       connectConnection(node);
     } else if (node.nodeData.database && node.nodeData.isDbOpened === false && !node.nodeData.folderType && !node.nodeData.itemType) {
@@ -818,15 +998,26 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
       } else {
         connectDatabase(node);
       }
+    } else if (node.nodeData.itemType === 'table' && profile && database) {
+      const tableName = node.nodeData.table || node.nodeData.objectName;
+      if (tableName) {
+        openTableDataTab(profile, database, tableName);
+      }
+    } else if (node.nodeData.itemType === 'view' && profile && database) {
+      const viewName = node.nodeData.objectName;
+      if (viewName) {
+        openViewDataTab(profile, database, viewName);
+      }
+    } else if (node.nodeData.itemType === 'function' && profile && database) {
+      const functionName = node.nodeData.objectName;
+      const functionType = node.nodeData.routineType === 'PROCEDURE' ? 'PROCEDURE' : 'FUNCTION';
+      if (functionName) {
+        openFunctionDesignerTab(profile, database, functionName, functionType);
+      }
     }
-  }, [connectConnection, connectDatabase]);
+  }, [connectConnection, connectDatabase, openFunctionDesignerTab, openTableDataTab, openViewDataTab]);
 
-  const handleNodeClick = useCallback((node: TreeNode, _nodePath: number[], e: React.MouseEvent<HTMLElement>) => {
-    if (e.detail === 2) {
-      handleNodeDoubleClick(node);
-      return;
-    }
-
+  const handleNodeClick = useCallback((node: TreeNode, _nodePath: number[], _e: React.MouseEvent<HTMLElement>) => {
     const clickedNodeId = String(node.id);
     setSelectedNodeId(clickedNodeId);
     setNodes(prev => applySelectionToNodes(prev, clickedNodeId));
@@ -870,7 +1061,6 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
       });
     }
   }, [
-    handleNodeDoubleClick,
     nodes,
     setActiveConnection,
     setActiveDatabase,
@@ -1199,15 +1389,143 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
     });
   }, [isDatabaseOpened, connectDatabase, closeDatabase, addTab, nodes, handleDeleteDatabase, t]);
 
+  const showFolderMenu = useCallback((node: TreeNode, e: React.MouseEvent<HTMLElement>) => {
+    const profile = node.nodeData?.connection;
+    const database = node.nodeData?.database;
+    const folderType = node.nodeData?.folderType;
+    if (!profile || !database || !folderType) return;
+
+    const handleNewObject = () => {
+      if (folderType === 'tables') {
+        openTableDesignerTab(profile, database);
+      } else if (folderType === 'views') {
+        openViewDesignerTab(profile, database, 'new_view');
+      } else if (folderType === 'functions') {
+        openFunctionDesignerTab(profile, database, undefined, 'FUNCTION');
+      }
+    };
+
+    const menu = (
+      <Menu className="tree-context-menu">
+        <MenuItem text={t('metadataTree.newObject')} onClick={handleNewObject} />
+        <MenuItem text={t('common.refresh')} onClick={() => void loadFolder(node)} />
+      </Menu>
+    );
+
+    showContextMenu({
+      content: menu,
+      targetOffset: { left: e.clientX, top: e.clientY },
+    });
+  }, [loadFolder, openFunctionDesignerTab, openTableDesignerTab, openViewDesignerTab, t]);
+
+  const showMetadataItemMenu = useCallback((node: TreeNode, e: React.MouseEvent<HTMLElement>) => {
+    const profile = node.nodeData?.connection;
+    const database = node.nodeData?.database;
+    const itemType = node.nodeData?.itemType;
+    if (!profile || !database || !itemType) return;
+
+    const objectName = node.nodeData?.objectName || node.nodeData?.table;
+    const routineType = node.nodeData?.routineType === 'PROCEDURE' ? 'PROCEDURE' : 'FUNCTION';
+
+    const parentFolderId = getParentFolderId(String(node.id));
+    const refreshParentFolder = () => {
+      if (parentFolderId) {
+        void refreshFolderById(parentFolderId);
+      }
+    };
+
+    let menu: React.ReactNode = null;
+
+    if (itemType === 'table' && objectName) {
+      menu = (
+        <Menu className="tree-context-menu">
+          <MenuItem text={t('metadataTree.openTable')} onClick={() => openTableDataTab(profile, database, objectName)} />
+          <MenuItem text={t('metadataTree.newTable')} onClick={() => openTableDesignerTab(profile, database)} />
+          <MenuItem text={t('metadataTree.designTable')} onClick={() => openTableDesignerTab(profile, database, objectName)} />
+          <MenuItem text={t('metadataTree.deleteTable')} onClick={() => handleDeleteMetadataObject(node)} />
+          <Divider />
+          <MenuItem text={t('common.refresh')} onClick={refreshParentFolder} />
+        </Menu>
+      );
+    } else if (itemType === 'view' && objectName) {
+      menu = (
+        <Menu className="tree-context-menu">
+          <MenuItem text={t('metadataTree.openView')} onClick={() => openViewDataTab(profile, database, objectName)} />
+          <MenuItem text={t('metadataTree.newView')} onClick={() => openViewDesignerTab(profile, database, 'new_view')} />
+          <MenuItem text={t('metadataTree.editView')} onClick={() => openViewDesignerTab(profile, database, objectName)} />
+          <MenuItem text={t('metadataTree.deleteView')} onClick={() => handleDeleteMetadataObject(node)} />
+          <MenuItem
+            text={t('metadataTree.viewDefinition')}
+            onClick={() => {
+              setViewDefinitionDialog({
+                isOpen: true,
+                connectionProfile: profile,
+                database,
+                viewName: objectName,
+              });
+            }}
+          />
+          <Divider />
+          <MenuItem text={t('common.refresh')} onClick={refreshParentFolder} />
+        </Menu>
+      );
+    } else if (itemType === 'function' && objectName) {
+      menu = (
+        <Menu className="tree-context-menu">
+          <MenuItem
+            text={t('metadataTree.newFunction')}
+            onClick={() => openFunctionDesignerTab(profile, database, undefined, 'FUNCTION')}
+          />
+          <MenuItem
+            text={t('metadataTree.editFunction')}
+            onClick={() => openFunctionDesignerTab(profile, database, objectName, routineType)}
+          />
+          <MenuItem
+            text={t('metadataTree.executeFunction')}
+            onClick={() => openFunctionDesignerTab(profile, database, objectName, routineType, true)}
+          />
+          <MenuItem text={t('metadataTree.deleteFunction')} onClick={() => handleDeleteMetadataObject(node)} />
+          <Divider />
+          <MenuItem text={t('common.refresh')} onClick={refreshParentFolder} />
+        </Menu>
+      );
+    }
+
+    if (!menu) return;
+
+    showContextMenu({
+      content: menu,
+      targetOffset: { left: e.clientX, top: e.clientY },
+    });
+  }, [
+    getParentFolderId,
+    handleDeleteMetadataObject,
+    openFunctionDesignerTab,
+    openTableDataTab,
+    openTableDesignerTab,
+    openViewDataTab,
+    openViewDesignerTab,
+    refreshFolderById,
+    t,
+  ]);
+
   const handleNodeContextMenu = useCallback((node: TreeNode, _nodePath: number[], e: React.MouseEvent<HTMLElement>) => {
     e.preventDefault();
+
+    const clickedNodeId = String(node.id);
+    setSelectedNodeId(clickedNodeId);
+    setNodes(prev => applySelectionToNodes(prev, clickedNodeId));
     
     if (node.nodeData?.connectionId && !node.nodeData?.database) {
       showConnectionMenu(node, e);
     } else if (node.nodeData?.database && !node.nodeData?.folderType && !node.nodeData?.itemType) {
       showDatabaseMenu(node, e);
+    } else if (node.nodeData?.folderType && ['tables', 'views', 'functions'].includes(node.nodeData.folderType)) {
+      showFolderMenu(node, e);
+    } else if (node.nodeData?.itemType && ['table', 'view', 'function'].includes(node.nodeData.itemType)) {
+      showMetadataItemMenu(node, e);
     }
-  }, [showConnectionMenu, showDatabaseMenu]);
+  }, [showConnectionMenu, showDatabaseMenu, showFolderMenu, showMetadataItemMenu]);
 
   const filterNodes = (nodes: TreeNode[], query: string): TreeNode[] => {
     if (!query) return nodes;
@@ -1295,6 +1613,16 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
         message={t('metadataTree.openSystemDbWarning')}
         intent="warning"
       />
+
+      {viewDefinitionDialog.connectionProfile && (
+        <ViewDefinitionDialog
+          isOpen={viewDefinitionDialog.isOpen}
+          onClose={() => setViewDefinitionDialog({ isOpen: false, database: '', viewName: '' })}
+          connectionProfile={viewDefinitionDialog.connectionProfile}
+          database={viewDefinitionDialog.database}
+          viewName={viewDefinitionDialog.viewName}
+        />
+      )}
     </div>
   );
 };

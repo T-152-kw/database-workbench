@@ -16,7 +16,7 @@ use serde::{Deserialize, Serialize};
 use serde_json::Value as JsonValue;
 use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, RwLock};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::runtime::Runtime;
 use tokio::sync::Mutex;
 use tokio::task::JoinHandle;
@@ -771,6 +771,7 @@ impl ConnectionPool {
 struct PoolManager {
     pools: DashMap<u64, Arc<ConnectionPool>>,
     connection_key_to_pool_id: DashMap<String, u64>,
+    pool_id_to_connection_key: DashMap<u64, String>,
 }
 
 impl PoolManager {
@@ -778,15 +779,18 @@ impl PoolManager {
         Self {
             pools: DashMap::new(),
             connection_key_to_pool_id: DashMap::new(),
+            pool_id_to_connection_key: DashMap::new(),
         }
     }
 
     fn create_pool(&self, config: PoolConfig) -> Result<u64, String> {
+        let connection_key = config.connection_key();
         let pool_id = POOL_ID_COUNTER.fetch_add(1, Ordering::SeqCst);
         let pool = ConnectionPool::new(pool_id, config.clone())?;
         self.pools.insert(pool_id, Arc::new(pool));
         self.connection_key_to_pool_id
-            .insert(config.connection_key(), pool_id);
+            .insert(connection_key.clone(), pool_id);
+        self.pool_id_to_connection_key.insert(pool_id, connection_key);
         Ok(pool_id)
     }
 
@@ -800,6 +804,8 @@ impl PoolManager {
             if self.pools.contains_key(&pool_id) {
                 return Ok(pool_id);
             }
+            self.connection_key_to_pool_id.remove(&key);
+            self.pool_id_to_connection_key.remove(&pool_id);
         }
         self.create_pool(config)
     }
@@ -807,6 +813,10 @@ impl PoolManager {
     fn close_pool(&self, pool_id: u64) {
         if let Some((_, pool)) = self.pools.remove(&pool_id) {
             pool.close();
+        }
+
+        if let Some((_, key)) = self.pool_id_to_connection_key.remove(&pool_id) {
+            self.connection_key_to_pool_id.remove(&key);
         }
     }
 
@@ -860,6 +870,8 @@ pub struct ColumnMeta {
 pub struct QueryResult {
     pub columns: Vec<ColumnMeta>,
     pub rows: Vec<Vec<JsonValue>>,
+    pub query_time_secs: f64,
+    pub fetch_time_secs: f64,
 }
 
 #[derive(Debug, Serialize)]
@@ -867,12 +879,15 @@ pub struct MultiQueryResult {
     pub result_sets: Vec<QueryResult>,
     pub affected_rows: u64,
     pub last_insert_id: u64,
+    pub query_time_secs: f64,
+    pub fetch_time_secs: f64,
 }
 
 #[derive(Debug, Serialize)]
 pub struct ExecResult {
     pub affected_rows: u64,
     pub last_insert_id: u64,
+    pub query_time_secs: f64,
 }
 
 #[derive(Debug, Serialize)]
@@ -1442,9 +1457,12 @@ fn execute_query(
     sql: &str,
     params: Option<Vec<Value>>,
 ) -> Result<QueryResult, String> {
+    let statement_start = Instant::now();
     let mut result = QueryResult {
         columns: Vec::new(),
         rows: Vec::new(),
+        query_time_secs: 0.0,
+        fetch_time_secs: 0.0,
     };
 
     let mut rows = if let Some(p) = params {
@@ -1455,9 +1473,10 @@ fn execute_query(
             .map_err(|e| format!("Query failed: {e}"))?
     };
 
-    result.columns = rows
-        .columns()
-        .as_ref()
+    let columns_binding = rows.columns();
+    let columns = columns_binding.as_ref();
+
+    result.columns = columns
         .iter()
         .map(|c: &mysql::Column| ColumnMeta {
             name: c.name_str().to_string(),
@@ -1466,10 +1485,21 @@ fn execute_query(
         })
         .collect();
 
+    let column_type_hints: Vec<(String, u8)> = columns
+        .iter()
+        .map(|c| (format!("{:?}", c.column_type()), c.decimals()))
+        .collect();
+
+    let query_elapsed = statement_start.elapsed().as_secs_f64();
+    let fetch_start = Instant::now();
+
     for row in rows.by_ref() {
         let row = row.map_err(|e| format!("Row read failed: {e}"))?;
-        result.rows.push(row_to_json(row));
+        result.rows.push(row_to_json(row, &column_type_hints));
     }
+
+    result.query_time_secs = query_elapsed;
+    result.fetch_time_secs = fetch_start.elapsed().as_secs_f64();
 
     Ok(result)
 }
@@ -1479,6 +1509,7 @@ fn execute_query_multi(
     sql: &str,
     params: Option<Vec<Value>>,
 ) -> Result<MultiQueryResult, String> {
+    let statement_start = Instant::now();
     let mut result_sets: Vec<QueryResult> = Vec::new();
 
     // Use exec_iter to get a QueryResult that supports multiple result sets
@@ -1494,6 +1525,8 @@ fn execute_query_multi(
     // These need to be retrieved before the rows iterator is consumed
     let affected_rows = rows.affected_rows();
     let last_insert_id = rows.last_insert_id().unwrap_or(0);
+    let query_elapsed = statement_start.elapsed().as_secs_f64();
+    let fetch_start = Instant::now();
 
     // Use QueryResult::iter to iterate over all result sets
     // iter() returns Option<ResultSet>, iterating until None (no more result sets)
@@ -1501,12 +1534,15 @@ fn execute_query_multi(
         let mut result = QueryResult {
             columns: Vec::new(),
             rows: Vec::new(),
+            query_time_secs: 0.0,
+            fetch_time_secs: 0.0,
         };
 
+        let columns_binding = result_set.columns();
+        let columns = columns_binding.as_ref();
+
         // Get columns for this result set
-        result.columns = result_set
-            .columns()
-            .as_ref()
+        result.columns = columns
             .iter()
             .map(|c: &mysql::Column| ColumnMeta {
                 name: c.name_str().to_string(),
@@ -1515,23 +1551,37 @@ fn execute_query_multi(
             })
             .collect();
 
+        let column_type_hints: Vec<(String, u8)> = columns
+            .iter()
+            .map(|c| (format!("{:?}", c.column_type()), c.decimals()))
+            .collect();
+
         // Collect all rows for this result set
         for row in result_set {
             let row = row.map_err(|e| format!("Row read failed: {e}"))?;
-            result.rows.push(row_to_json(row));
+            result.rows.push(row_to_json(row, &column_type_hints));
         }
 
         // Skip empty result sets (no columns and no rows)
         // This can happen with stored procedures that have multiple SELECT statements
         if !result.columns.is_empty() || !result.rows.is_empty() {
+            result.query_time_secs = query_elapsed;
             result_sets.push(result);
         }
+    }
+
+    let fetch_elapsed = fetch_start.elapsed().as_secs_f64();
+
+    for result_set in &mut result_sets {
+        result_set.fetch_time_secs = fetch_elapsed;
     }
 
     Ok(MultiQueryResult {
         result_sets,
         affected_rows,
         last_insert_id,
+        query_time_secs: query_elapsed,
+        fetch_time_secs: fetch_elapsed,
     })
 }
 
@@ -1540,6 +1590,7 @@ fn execute_update(
     sql: &str,
     params: Option<Vec<Value>>,
 ) -> Result<ExecResult, String> {
+    let statement_start = Instant::now();
     if let Some(p) = params {
         conn.exec_drop(sql, Params::Positional(p))
             .map_err(|e| format!("Execute failed: {e}"))?;
@@ -1551,14 +1602,25 @@ fn execute_update(
     Ok(ExecResult {
         affected_rows: conn.affected_rows(),
         last_insert_id: conn.last_insert_id(),
+        query_time_secs: statement_start.elapsed().as_secs_f64(),
     })
 }
 
-fn row_to_json(row: mysql::Row) -> Vec<JsonValue> {
-    row.unwrap().into_iter().map(value_to_json).collect()
+fn row_to_json(row: mysql::Row, column_type_hints: &[(String, u8)]) -> Vec<JsonValue> {
+    row.unwrap()
+        .into_iter()
+        .enumerate()
+        .map(|(index, value)| {
+            let (type_name, datetime_precision) = column_type_hints
+                .get(index)
+                .map(|(name, precision)| (name.as_str(), *precision))
+                .unwrap_or(("", 0));
+            value_to_json(value, type_name, datetime_precision)
+        })
+        .collect()
 }
 
-fn value_to_json(value: Value) -> JsonValue {
+fn value_to_json(value: Value, type_name: &str, datetime_precision: u8) -> JsonValue {
     match value {
         Value::NULL => JsonValue::Null,
         Value::Bytes(bytes) => JsonValue::String(String::from_utf8_lossy(&bytes).to_string()),
@@ -1571,37 +1633,44 @@ fn value_to_json(value: Value) -> JsonValue {
             .map(JsonValue::Number)
             .unwrap_or(JsonValue::Number(0.into())),
         Value::Date(y, m, d, hh, mm, ss, us) => {
-            if us > 0 {
-                JsonValue::String(format!(
-                    "{y:04}-{m:02}-{d:02} {hh:02}:{mm:02}:{ss:02}.{:06}",
-                    us
-                ))
+            let normalized_type = type_name.to_ascii_uppercase();
+
+            if normalized_type.contains("MYSQL_TYPE_DATE") {
+                JsonValue::String(format!("{y:04}-{m:02}-{d:02}"))
             } else {
-                JsonValue::String(format!(
-                    "{y:04}-{m:02}-{d:02} {hh:02}:{mm:02}:{ss:02}"
-                ))
+                let precision = datetime_precision.min(6) as usize;
+                let show_fraction = us > 0 || precision > 0;
+
+                if show_fraction {
+                    let fraction = format!("{us:06}");
+                    let fraction_digits = if precision > 0 { precision } else { 6 };
+                    let rendered_fraction = &fraction[..fraction_digits.min(6)];
+                    JsonValue::String(format!(
+                        "{y:04}-{m:02}-{d:02} {hh:02}:{mm:02}:{ss:02}.{}",
+                        rendered_fraction
+                    ))
+                } else {
+                    JsonValue::String(format!("{y:04}-{m:02}-{d:02} {hh:02}:{mm:02}:{ss:02}"))
+                }
             }
         }
         Value::Time(neg, days, hours, mins, secs, us) => {
-            if us > 0 {
+            let total_hours = days.saturating_mul(24).saturating_add(u32::from(hours));
+            let precision = datetime_precision.min(6) as usize;
+            let show_fraction = us > 0 || precision > 0;
+
+            let sign = if neg { "-" } else { "" };
+
+            if show_fraction {
+                let fraction = format!("{us:06}");
+                let fraction_digits = if precision > 0 { precision } else { 6 };
+                let rendered_fraction = &fraction[..fraction_digits.min(6)];
                 JsonValue::String(format!(
-                    "{}{:02}:{:02}:{:02}.{:06} ({} days)",
-                    if neg { "-" } else { "" },
-                    hours,
-                    mins,
-                    secs,
-                    us,
-                    days
+                    "{}{:02}:{:02}:{:02}.{}",
+                    sign, total_hours, mins, secs, rendered_fraction
                 ))
             } else {
-                JsonValue::String(format!(
-                    "{}{:02}:{:02}:{:02} ({} days)",
-                    if neg { "-" } else { "" },
-                    hours,
-                    mins,
-                    secs,
-                    days
-                ))
+                JsonValue::String(format!("{}{:02}:{:02}:{:02}", sign, total_hours, mins, secs))
             }
         }
     }

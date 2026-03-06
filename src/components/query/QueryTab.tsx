@@ -518,7 +518,9 @@ export const QueryTab: React.FC<QueryTabProps> = ({
 
       let successCount = 0;
       let errorCount = 0;
-      const startTime = Date.now();
+      let statementOrder = 0;
+      let totalSqlTimeSec = 0;
+      let hasActivatedResultTab = false;
 
       for (let i = 0; i < statements.length; i++) {
         const statement = statements[i].trim();
@@ -526,6 +528,10 @@ export const QueryTab: React.FC<QueryTabProps> = ({
 
         const statementWithoutLeadingComments = stripLeadingSqlComments(statement).trim();
         if (!statementWithoutLeadingComments) continue;
+
+        statementOrder += 1;
+        const startedAtIso = new Date().toISOString();
+        const statementTimerStart = performance.now();
 
         try {
           if (isStoredProcedureCall(statement)) {
@@ -545,9 +551,19 @@ export const QueryTab: React.FC<QueryTabProps> = ({
                 title: t('resultPanel.updateResult'),
                 data: { affected_rows: result.affected_rows, last_insert_id: result.last_insert_id },
                 sql: statement,
+                executionTimeSec: result.query_time_secs,
+                fetchTimeSec: result.fetch_time_secs,
+                statementOrder,
+                startedAt: startedAtIso,
+                finishedAt: new Date().toISOString(),
+                statusText: 'OK',
               };
               setResultTabs(prev => [...prev, resultTab]);
-              setActiveResultTabId(resultTab.id);
+              if (!hasActivatedResultTab) {
+                setActiveResultTabId(resultTab.id);
+                hasActivatedResultTab = true;
+              }
+              totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
             } else if (result.result_sets.length === 1) {
               // Single result set
               const resultTab: ResultTab = {
@@ -556,9 +572,19 @@ export const QueryTab: React.FC<QueryTabProps> = ({
                 title: t('resultPanel.queryResult', { count: result.result_sets[0].rows.length }),
                 data: result.result_sets[0],
                 sql: statement,
+                executionTimeSec: result.query_time_secs,
+                fetchTimeSec: result.fetch_time_secs,
+                statementOrder,
+                startedAt: startedAtIso,
+                finishedAt: new Date().toISOString(),
+                statusText: 'OK',
               };
               setResultTabs(prev => [...prev, resultTab]);
-              setActiveResultTabId(resultTab.id);
+              if (!hasActivatedResultTab) {
+                setActiveResultTabId(resultTab.id);
+                hasActivatedResultTab = true;
+              }
+              totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
             } else {
               // Multiple result sets - create a tab for each
               result.result_sets.forEach((resultSet, setIndex) => {
@@ -568,10 +594,20 @@ export const QueryTab: React.FC<QueryTabProps> = ({
                   title: t('resultPanel.queryResultSet', { index: setIndex + 1, count: resultSet.rows.length }),
                   data: resultSet,
                   sql: statement,
+                  executionTimeSec: setIndex === 0 ? result.query_time_secs : 0,
+                  fetchTimeSec: setIndex === 0 ? result.fetch_time_secs : 0,
+                  statementOrder,
+                  startedAt: startedAtIso,
+                  finishedAt: new Date().toISOString(),
+                  statusText: 'OK',
                 };
                 setResultTabs(prev => [...prev, resultTab]);
-                setActiveResultTabId(resultTab.id);
+                if (!hasActivatedResultTab) {
+                  setActiveResultTabId(resultTab.id);
+                  hasActivatedResultTab = true;
+                }
               });
+              totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
             }
             successCount++;
           } else if (isQuerySql(statement)) {
@@ -588,10 +624,20 @@ export const QueryTab: React.FC<QueryTabProps> = ({
               title: t('resultPanel.queryResult', { count: result.rows.length }),
               data: result,
               sql: statement,
+              executionTimeSec: result.query_time_secs,
+              fetchTimeSec: result.fetch_time_secs,
+              statementOrder,
+              startedAt: startedAtIso,
+              finishedAt: new Date().toISOString(),
+              statusText: 'OK',
             };
 
             setResultTabs(prev => [...prev, resultTab]);
-            setActiveResultTabId(resultTab.id);
+            if (!hasActivatedResultTab) {
+              setActiveResultTabId(resultTab.id);
+              hasActivatedResultTab = true;
+            }
+            totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
             successCount++;
           } else {
             // Execute update
@@ -607,10 +653,20 @@ export const QueryTab: React.FC<QueryTabProps> = ({
               title: t('resultPanel.updateResult'),
               data: result,
               sql: statement,
+              executionTimeSec: result.query_time_secs,
+              fetchTimeSec: 0,
+              statementOrder,
+              startedAt: startedAtIso,
+              finishedAt: new Date().toISOString(),
+              statusText: 'OK',
             };
 
             setResultTabs(prev => [...prev, resultTab]);
-            setActiveResultTabId(resultTab.id);
+            if (!hasActivatedResultTab) {
+              setActiveResultTabId(resultTab.id);
+              hasActivatedResultTab = true;
+            }
+            totalSqlTimeSec += result.query_time_secs || 0;
             successCount++;
           }
 
@@ -624,20 +680,31 @@ export const QueryTab: React.FC<QueryTabProps> = ({
           }
         } catch (error) {
           errorCount++;
+          const fallbackDurationSec = (performance.now() - statementTimerStart) / 1000;
           const errorTab: ResultTab = {
             id: `result_${Date.now()}_${i}`,
             type: 'error',
             title: t('resultPanel.errorResult'),
             data: String(error),
             sql: statement,
+            executionTimeSec: fallbackDurationSec,
+            fetchTimeSec: 0,
+            statementOrder,
+            startedAt: startedAtIso,
+            finishedAt: new Date().toISOString(),
+            statusText: String(error),
           };
           setResultTabs(prev => [...prev, errorTab]);
-          setActiveResultTabId(errorTab.id);
+          if (!hasActivatedResultTab) {
+            setActiveResultTabId(errorTab.id);
+            hasActivatedResultTab = true;
+          }
+          totalSqlTimeSec += fallbackDurationSec;
         }
       }
 
-      const duration = Date.now() - startTime;
-      setStatusMessage(t('resultPanel.execComplete', { success: successCount, error: errorCount, time: duration }));
+      const durationSec = totalSqlTimeSec.toFixed(3);
+      setStatusMessage(t('resultPanel.execComplete', { success: successCount, error: errorCount, time: durationSec }));
     } catch (error) {
       setStatusMessage(t('query.executionFailed'));
     } finally {

@@ -157,6 +157,29 @@ DELIMITER ;`;
     return sqlCode;
   }, [database, type]);
 
+  const syncRoutineCommentInCode = useCallback((sqlCode: string, routineComment: string) => {
+    if (!sqlCode) return sqlCode;
+
+    const normalizedComment = routineComment.trim();
+    const escapedComment = normalizedComment.replace(/'/g, "''");
+    const nextClause = normalizedComment ? `\nCOMMENT '${escapedComment}'` : '';
+    const commentClauseRegex = /\n\s*COMMENT\s+'(?:''|[^'])*'/i;
+
+    if (commentClauseRegex.test(sqlCode)) {
+      return sqlCode.replace(commentClauseRegex, nextClause);
+    }
+
+    if (!normalizedComment) {
+      return sqlCode;
+    }
+
+    if (/\n\s*BEGIN\b/i.test(sqlCode)) {
+      return sqlCode.replace(/\n\s*BEGIN\b/i, `${nextClause}\nBEGIN`);
+    }
+
+    return sqlCode;
+  }, []);
+
   const loadFunction = useCallback(async () => {
     if (!connectionProfile || !database || !initialFunctionName) return;
 
@@ -207,16 +230,23 @@ DELIMITER ;`;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [initialFunctionName]);
 
-  // 当名称变化时，只更新 CREATE 头部中的对象名，不重新生成整个模板
+  // 名称变化时，同步更新 CREATE 头部中的对象名
   useEffect(() => {
-    if (isNew && !initialFunctionName) {
-      setCode((previousCode) => {
-        const newCode = syncRoutineNameInCode(previousCode, name);
-        return newCode === previousCode ? previousCode : newCode;
-      });
-    }
+    setCode((previousCode) => {
+      const newCode = syncRoutineNameInCode(previousCode, name);
+      return newCode === previousCode ? previousCode : newCode;
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [name, isNew, initialFunctionName, type, syncRoutineNameInCode]);
+  }, [name, type, syncRoutineNameInCode]);
+
+  // 注释变化时，同步更新 SQL 中的 COMMENT 子句
+  useEffect(() => {
+    setCode((previousCode) => {
+      const newCode = syncRoutineCommentInCode(previousCode, comment);
+      return newCode === previousCode ? previousCode : newCode;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [comment, syncRoutineCommentInCode]);
 
   useEffect(() => {
     const initConnection = async () => {
@@ -589,26 +619,8 @@ DELIMITER ;`;
               onChange={(e) => {
                 const newType = e.target.value as 'FUNCTION' | 'PROCEDURE';
                 setType(newType);
-                // 类型切换时只替换 CREATE FUNCTION/PROCEDURE 关键字，保留用户代码
-                if (code) {
-                  let newCode = code;
-                  if (newType === 'FUNCTION') {
-                    newCode = code.replace(/CREATE\s+PROCEDURE/i, 'CREATE FUNCTION');
-                    // 如果没有 RETURNS 子句，添加一个默认的
-                    if (!newCode.includes('RETURNS')) {
-                      newCode = newCode.replace(
-                        /(CREATE\s+FUNCTION\s+[^)]+\))/i,
-                        `$1\nRETURNS ${returnType}`
-                      );
-                    }
-                  } else {
-                    newCode = code.replace(/CREATE\s+FUNCTION/i, 'CREATE PROCEDURE');
-                    // 移除 RETURNS 子句和 DETERMINISTIC
-                    newCode = newCode.replace(/\s*RETURNS\s+\w+(?:\([^)]+\))?/i, '');
-                    newCode = newCode.replace(/\s*(NOT\s+)?DETERMINISTIC/i, '');
-                  }
-                  setCode(newCode);
-                }
+                // 新建模式切换类型时重新生成模板，避免函数/存储过程语句混杂
+                setCode(generateTemplate(name, newType, returnType, isDeterministic, comment));
               }}
               disabled={!isNew}
             >

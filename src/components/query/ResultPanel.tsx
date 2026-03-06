@@ -1,14 +1,10 @@
 import React from 'react';
-import { Button, Tab, Tabs } from '@blueprintjs/core';
+import { Button } from '@blueprintjs/core';
 import { invoke } from '@tauri-apps/api/core';
 import { save } from '@tauri-apps/plugin-dialog';
 import { useTranslation } from 'react-i18next';
 import type { ResultTab, QueryResultData, ExecResultData } from '../../types';
 import {
-  TableIcon,
-  UpdateIcon,
-  ErrorIcon,
-  CloseIcon,
   ClearResultsIcon,
 } from './QueryIcons';
 import {
@@ -29,6 +25,11 @@ interface ResultPanelProps {
   onClearAll: () => void;
 }
 
+interface SummaryDetailState {
+  content: string;
+  kind: 'sql' | 'info';
+}
+
 interface ResultContextMenuState {
   x: number;
   y: number;
@@ -41,6 +42,20 @@ interface CsvExportInfo {
   exported_at: string;
   row_count: number;
 }
+
+const formatSeconds = (seconds?: number): string => {
+  if (seconds === undefined || Number.isNaN(seconds)) {
+    return '0.000';
+  }
+  return Math.max(0, seconds).toFixed(3);
+};
+
+const formatDateTime = (iso?: string): string => {
+  if (!iso) return '-';
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return '-';
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')} ${String(date.getHours()).padStart(2, '0')}:${String(date.getMinutes()).padStart(2, '0')}:${String(date.getSeconds()).padStart(2, '0')}`;
+};
 
 const formatCellValue = (value: unknown): string => {
   if (value === null || value === undefined) return '(Null)';
@@ -398,76 +413,199 @@ const QueryResultTable: React.FC<{ data: QueryResultData }> = ({ data }) => {
   );
 };
 
-// Update Result Component
-const UpdateResult: React.FC<{ data: ExecResultData }> = ({ data }) => {
-  const { t } = useTranslation();
-  return (
-    <div className="result-update">
-      <div className="result-update-content">
-        <div className="result-update-icon">
-          <UpdateIcon size={48} color="#28a745" />
-        </div>
-        <div className="result-update-text">
-          <p className="result-update-title">{t('resultPanel.execSuccess')}</p>
-          <p className="result-update-detail">{t('resultPanel.affectedRows', { count: data.affected_rows })}</p>
-          {data.last_insert_id > 0 && (
-            <p className="result-update-detail">{t('resultPanel.lastInsertId', { id: data.last_insert_id })}</p>
-          )}
-        </div>
-      </div>
-    </div>
-  );
+const normalizeSqlForMessage = (sql: string): string => {
+  return sql.trim().replace(/[;\s]+$/, '');
 };
 
-// Error Result Component
-const ErrorResult: React.FC<{ message: string }> = ({ message }) => {
-  const { t } = useTranslation();
-  return (
-    <div className="result-error">
-      <div className="result-error-content">
-        <div className="result-error-icon">
-          <ErrorIcon size={48} />
-        </div>
-        <div className="result-error-text">
-          <p className="result-error-title">{t('resultPanel.execFailed')}</p>
-          <p className="result-error-detail">{message}</p>
-        </div>
-      </div>
-    </div>
-  );
+const getSqlKeyword = (sql: string): string => {
+  const stripped = sql
+    .replace(/^\s*(?:--.*(?:\r?\n|$)|#.*(?:\r?\n|$)|\/\*[\s\S]*?\*\/\s*)*/g, '')
+    .trim()
+    .toLowerCase();
+  const keyword = stripped.match(/^([a-z]+)/)?.[1];
+  return keyword || '';
 };
 
-// Result Tab Title Component
-const ResultTabTitle: React.FC<{
-  tab: ResultTab;
-  onClose: () => void;
-}> = ({ tab, onClose }) => {
-  const getIcon = () => {
-    switch (tab.type) {
-      case 'query':
-        return <TableIcon size={14} />;
-      case 'update':
-        return <UpdateIcon size={14} />;
-      case 'error':
-        return <ErrorIcon size={14} />;
-      default:
-        return null;
+const getSummaryInfoMessage = (tab: ResultTab, t: (key: string, opts?: Record<string, unknown>) => string): string => {
+  if (tab.type === 'error') {
+    return tab.statusText || (typeof tab.data === 'string' ? tab.data : t('resultPanel.execFailed'));
+  }
+
+  if (tab.type === 'update') {
+    const keyword = getSqlKeyword(tab.sql);
+    const updateData = tab.data as ExecResultData;
+    if (keyword === 'update' || keyword === 'delete' || keyword === 'insert' || keyword === 'replace') {
+      return t('resultPanel.affectedRows', { count: updateData.affected_rows });
     }
-  };
+
+    if (keyword === 'create') {
+      return 'OK';
+    }
+
+    if (typeof updateData.affected_rows === 'number' && updateData.affected_rows > 0) {
+      return t('resultPanel.affectedRows', { count: updateData.affected_rows });
+    }
+
+    return 'OK';
+  }
+
+  return 'OK';
+};
+
+const MessageView: React.FC<{ tabs: ResultTab[] }> = ({ tabs }) => {
+  const { t } = useTranslation();
 
   return (
-    <div className="result-tab-title">
-      {getIcon()}
-      <span className="result-tab-label">{tab.title}</span>
-      <button
-        className="result-tab-close"
-        onClick={(e) => {
-          e.stopPropagation();
-          onClose();
-        }}
-      >
-        <CloseIcon size={12} />
-      </button>
+    <div className="result-message-view">
+      {tabs.map((tab, index) => (
+        <div key={tab.id} className="result-message-block">
+          <p className="result-message-sql">{normalizeSqlForMessage(tab.sql) || tab.title}</p>
+          <p className="result-message-line">&gt; {tab.type === 'error' ? tab.statusText || t('resultPanel.execFailed') : 'OK'}</p>
+          <p className="result-message-line">
+            &gt; {t('resultPanel.queryTime', { time: formatSeconds(tab.executionTimeSec) })}
+          </p>
+          {index < tabs.length - 1 && <div className="result-message-divider" />}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const SummaryView: React.FC<{
+  tabs: ResultTab[];
+  onlyErrors: boolean;
+  onToggleOnlyErrors: (checked: boolean) => void;
+  onOpenQueryResult: (tabId: string) => void;
+}> = ({ tabs, onlyErrors, onToggleOnlyErrors, onOpenQueryResult }) => {
+  const { t } = useTranslation();
+  const [detailState, setDetailState] = React.useState<SummaryDetailState | null>(null);
+
+  const sortedTabs = React.useMemo(
+    () => [...tabs].sort((a, b) => (a.statementOrder || 0) - (b.statementOrder || 0) || a.id.localeCompare(b.id)),
+    [tabs],
+  );
+
+  const processed = sortedTabs.length;
+  const success = sortedTabs.filter((tab) => tab.type !== 'error').length;
+  const error = processed - success;
+  const startAt = sortedTabs[0]?.startedAt;
+  const endAt = sortedTabs[sortedTabs.length - 1]?.finishedAt;
+  const runtimeSec = sortedTabs
+    .reduce((acc, tab) => acc + (tab.executionTimeSec || 0) + (tab.fetchTimeSec || 0), 0)
+    .toFixed(3);
+  const tableRows = onlyErrors
+    ? sortedTabs.filter((tab) => tab.type === 'error')
+    : sortedTabs;
+
+  return (
+    <div className="result-summary-view">
+      <div className="result-summary-top">
+        <div className="result-summary-grid">
+          <div>{t('resultPanel.processed', { count: processed })}</div>
+          <div>{t('resultPanel.startTime', { time: formatDateTime(startAt) })}</div>
+          <div>{t('resultPanel.successCount', { count: success })}</div>
+          <div>{t('resultPanel.endTime', { time: formatDateTime(endAt) })}</div>
+          <div>{t('resultPanel.errorCount', { count: error })}</div>
+          <div>{t('resultPanel.runtime', { time: runtimeSec })}</div>
+        </div>
+        <label className="result-summary-only-errors">
+          <input
+            type="checkbox"
+            checked={onlyErrors}
+            onChange={(event) => onToggleOnlyErrors(event.target.checked)}
+          />
+          <span>{t('resultPanel.onlyErrors')}</span>
+        </label>
+      </div>
+
+      <div className="result-summary-table-wrap">
+        <table className="result-summary-table">
+          <thead>
+            <tr>
+              <th>{t('resultPanel.summarySql')}</th>
+              <th>{t('resultPanel.summaryMessage')}</th>
+              <th>{t('resultPanel.summaryQueryTime')}</th>
+              <th>{t('resultPanel.summaryFetchTime')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {tableRows.map((tab) => (
+              <tr key={`summary_${tab.id}`}>
+                <td
+                  className="result-summary-sql-cell"
+                  onDoubleClick={() => {
+                    if (tab.type === 'query') {
+                      onOpenQueryResult(tab.id);
+                    }
+                  }}
+                >
+                  <div className="result-summary-info-wrap">
+                    <span className="result-summary-info-text" title={tab.sql}>
+                      {tab.sql}
+                    </span>
+                    <button
+                      className="result-summary-info-more"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDetailState({ content: tab.sql, kind: 'sql' });
+                      }}
+                      aria-label={t('resultPanel.viewDetail')}
+                    >
+                      ...
+                    </button>
+                  </div>
+                </td>
+                <td className="result-summary-message-cell">
+                  <div className="result-summary-info-wrap">
+                    <span className="result-summary-info-text" title={getSummaryInfoMessage(tab, t)}>
+                      {getSummaryInfoMessage(tab, t)}
+                    </span>
+                    <button
+                      className="result-summary-info-more"
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        setDetailState({ content: getSummaryInfoMessage(tab, t), kind: 'info' });
+                      }}
+                      aria-label={t('resultPanel.viewDetail')}
+                    >
+                      ...
+                    </button>
+                  </div>
+                </td>
+                <td>{formatSeconds(tab.executionTimeSec)}s</td>
+                <td>{formatSeconds(tab.fetchTimeSec)}s</td>
+              </tr>
+            ))}
+            {tableRows.length === 0 && (
+              <tr>
+                <td colSpan={4}>{t('resultPanel.noData')}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+
+      {detailState && (
+        <div className="result-summary-detail-overlay" onClick={() => setDetailState(null)}>
+          <div className="result-summary-detail-dialog" onClick={(event) => event.stopPropagation()}>
+            <div className="result-summary-detail-body">
+              <textarea
+                className="result-summary-detail-textarea"
+                value={detailState.content}
+                readOnly
+                spellCheck={false}
+              />
+            </div>
+            <div className="result-summary-detail-actions">
+              <button type="button" className="result-summary-detail-confirm" onClick={() => setDetailState(null)}>
+                {t('common.confirm')}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
@@ -481,10 +619,51 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
 }) => {
   const { t } = useTranslation();
   const [exportNotice, setExportNotice] = React.useState<string | null>(null);
+  const [activeViewId, setActiveViewId] = React.useState<string>('');
+  const [pinMetaView, setPinMetaView] = React.useState(false);
+  const [summaryOnlyErrors, setSummaryOnlyErrors] = React.useState(false);
+
+  void onTabClose;
+
+  const sortedTabs = React.useMemo(
+    () => [...tabs].sort((a, b) => (a.statementOrder || 0) - (b.statementOrder || 0) || a.id.localeCompare(b.id)),
+    [tabs],
+  );
+
+  const resultViews = React.useMemo(
+    () => sortedTabs.filter((tab) => tab.type === 'query'),
+    [sortedTabs],
+  );
+  const hasQueryResults = resultViews.length > 0;
+
+  React.useEffect(() => {
+    if (tabs.length === 0) {
+      setActiveViewId('');
+      setPinMetaView(false);
+      return;
+    }
+
+    if (pinMetaView && (activeViewId === 'messages' || activeViewId === 'summary')) {
+      return;
+    }
+
+    if (activeTabId && resultViews.some((tab) => tab.id === activeTabId)) {
+      setActiveViewId(activeTabId);
+      return;
+    }
+
+    if (!activeViewId || !resultViews.some((tab) => tab.id === activeViewId)) {
+      if (hasQueryResults) {
+        setActiveViewId(resultViews[0].id);
+      } else {
+        setActiveViewId('summary');
+      }
+    }
+  }, [tabs, activeTabId, resultViews, activeViewId, pinMetaView, hasQueryResults]);
 
   const activeTab = React.useMemo(
-    () => tabs.find((tab) => tab.id === activeTabId) ?? null,
-    [tabs, activeTabId],
+    () => resultViews.find((tab) => tab.id === activeViewId) ?? null,
+    [resultViews, activeViewId],
   );
 
   const canExportCsv =
@@ -532,23 +711,20 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
     }
   }, [activeTab, t]);
 
-  // Render result content based on tab type
-  const renderResultContent = (tab: ResultTab) => {
-    switch (tab.type) {
-      case 'query':
-        return <QueryResultTable data={tab.data as QueryResultData} />;
-      case 'update':
-        return <UpdateResult data={tab.data as ExecResultData} />;
-      case 'error':
-        return <ErrorResult message={tab.data as string} />;
-      default:
-        return null;
+  const handleSwitchView = (nextViewId: string) => {
+    setActiveViewId(nextViewId);
+    setPinMetaView(nextViewId === 'messages' || nextViewId === 'summary');
+    if (nextViewId !== 'messages' && nextViewId !== 'summary') {
+      onTabChange(nextViewId);
     }
+  };
+
+  const renderResultContent = (tab: ResultTab) => {
+    return <QueryResultTable data={tab.data as QueryResultData} />;
   };
 
   return (
     <div className="result-panel">
-      {/* Result Toolbar */}
       <div className="result-panel-toolbar">
         <div className="result-panel-title">
           <span>{t('resultPanel.title')}</span>
@@ -582,30 +758,51 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
         </div>
       </div>
 
-      {/* Result Tabs */}
       {tabs.length === 0 ? (
         <div className="result-panel-empty">
           <p>{t('resultPanel.emptyHint')}</p>
         </div>
       ) : (
-        <Tabs
-          selectedTabId={activeTabId || undefined}
-          onChange={onTabChange}
-          className="result-tabs"
-        >
-          {tabs.map((tab) => (
-            <Tab
-              key={tab.id}
-              id={tab.id}
-              title={<ResultTabTitle tab={tab} onClose={() => onTabClose(tab.id)} />}
-              panel={
-                <div className="result-tab-content">
-                  {renderResultContent(tab)}
-                </div>
-              }
-            />
-          ))}
-        </Tabs>
+        <>
+          <div className="result-navicat-tabs">
+            <button
+              className={`result-navicat-tab ${activeViewId === 'messages' ? 'active' : ''}`}
+              onClick={() => handleSwitchView('messages')}
+            >
+              {t('resultPanel.messages')}
+            </button>
+            <button
+              className={`result-navicat-tab ${activeViewId === 'summary' ? 'active' : ''}`}
+              onClick={() => handleSwitchView('summary')}
+            >
+              {t('resultPanel.summary')}
+            </button>
+            {resultViews.map((tab, index) => (
+              <button
+                key={`view_${tab.id}`}
+                className={`result-navicat-tab ${activeViewId === tab.id ? 'active' : ''}`}
+                onClick={() => handleSwitchView(tab.id)}
+              >
+                {t('resultPanel.resultSetSimple', { index: index + 1 })}
+              </button>
+            ))}
+          </div>
+
+          <div className="result-navicat-content">
+            {activeViewId === 'messages' && <MessageView tabs={sortedTabs} />}
+            {activeViewId === 'summary' && (
+              <SummaryView
+                tabs={sortedTabs}
+                onlyErrors={summaryOnlyErrors}
+                onToggleOnlyErrors={setSummaryOnlyErrors}
+                onOpenQueryResult={handleSwitchView}
+              />
+            )}
+            {activeTab && activeViewId !== 'messages' && activeViewId !== 'summary' && (
+              <div className="result-tab-content">{renderResultContent(activeTab)}</div>
+            )}
+          </div>
+        </>
       )}
     </div>
   );
