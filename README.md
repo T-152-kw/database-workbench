@@ -67,6 +67,59 @@ npm run tauri dev
 npm run tauri build
 ```
 
+#### 主要依赖说明
+
+**一键安装所有依赖：**
+
+```bash
+npm install
+```
+
+**手动安装生产依赖：**
+
+```bash
+npm install @blueprintjs/core@^6.8.0 @blueprintjs/icons@^6.5.2 @blueprintjs/select@^6.1.0 @monaco-editor/react@^4.7.0 @tanstack/react-table@^8.21.3 @tauri-apps/api@^2 @tauri-apps/plugin-dialog@^2 @tauri-apps/plugin-fs@^2 @tauri-apps/plugin-opener@^2 @tauri-apps/plugin-process@^2 @tauri-apps/plugin-shell@^2 @tauri-apps/plugin-updater@^2.10.0 @types/dagre@^0.7.53 clsx@^2.1.1 dagre@^0.8.5 date-fns@^4.1.0 docx@^9.6.0 html-to-image@^1.11.13 i18next@^25.8.13 i18next-browser-languagedetector@^8.2.1 jspdf@^4.2.0 jspdf-autotable@^5.0.7 jspdf-font@^1.0.7 lucide-react@^0.564.0 monaco-editor@^0.52.2 react@^18.3.1 react-dom@^18.3.1 react-i18next@^16.5.4 reactflow@^11.11.4 zustand@^5.0.11
+```
+
+**手动安装开发依赖：**
+
+```bash
+npm install -D @tauri-apps/cli@^2 @types/i18next@^12.1.0 @types/react@^18.3.28 @types/react-dom@^18.3.7 @vitejs/plugin-react@^4.6.0 typescript@~5.8.3 vite@^7.0.4
+```
+
+本项目使用以下核心依赖：
+
+**UI 组件库**
+- `@blueprintjs/core` / `@blueprintjs/icons` / `@blueprintjs/select` - Blueprint.js UI 组件库
+
+**编辑器**
+- `@monaco-editor/react` / `monaco-editor` - Monaco 代码编辑器
+
+**Tauri 相关**
+- `@tauri-apps/api` - Tauri 前端 API
+- `@tauri-apps/plugin-dialog` / `plugin-fs` / `plugin-shell` / `plugin-updater` 等 - Tauri 官方插件
+
+**状态管理**
+- `zustand` - 轻量级状态管理
+
+**国际化**
+- `i18next` / `react-i18next` / `i18next-browser-languagedetector` - 国际化支持
+
+**图表与可视化**
+- `reactflow` - 流程图/ER 图绘制
+- `dagre` - 自动布局算法
+
+**PDF/文档导出**
+- `jspdf` / `jspdf-autotable` - PDF 生成
+- `docx` - Word 文档生成
+- `html-to-image` - HTML 转图片
+
+**其他工具**
+- `@tanstack/react-table` - 表格组件
+- `date-fns` - 日期处理
+- `lucide-react` - 图标库
+- `clsx` - CSS 类名处理
+
 ## 项目结构
 
 ```
@@ -147,6 +200,20 @@ npx tsc --noEmit
 - 界面设置（侧边栏、状态栏）
 
 ## 更新日志
+
+### v0.1.2
+
+- 重写执行结果框，采用类 Navicat 的执行结果布局方式，可更直观地展示当前语句执行情况
+- 为左侧元数据树标签新增丰富的右键事件处理逻辑
+- 为左侧元数据树标签新增双击事件处理逻辑
+- 修复新建/编辑函数的模板异常问题
+- 修复注释填写无响应的交互问题
+- 修复名称填写无响应的交互问题
+
+### v0.1.1
+
+- 修复表格日期类型字段默认显示毫秒（后缀6个0）的问题，优化为仅在毫秒值非0时展示毫秒部分
+- 新增数据字典功能，目前文案为英文版
 
 ### v0.1.0
 
