@@ -48,13 +48,13 @@
 
 ### 从 Release 下载
 
-前往 [Releases](https://github.com/T-152-kw/database-workbench/releases) 页面下载最新版本的安装包。
+前往 [Releases](https://gitee.com/nick4487617348/database-workbench/releases) 页面下载最新版本的安装包。
 
 ### 从源码构建
 
 ```bash
 # 克隆仓库
-git clone https://github.com/T-152-kw/database-workbench.git
+git clone https://gitee.com/nick4487617348/database-workbench.git
 cd database-workbench
 
 # 安装依赖
