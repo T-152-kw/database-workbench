@@ -1,0 +1,11 @@
+{
+  "version": "0.1.2",
+  "notes": "修复多项问题，完善右键管理",
+  "pub_date": "2026-03-06T10:00:00Z",
+  "platforms": {
+    "windows-x86_64": {
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdHRVRkExTUNVdHJKeXRrMVhUV1JNSnZ4aHhwK0pza1hGMEF0NDV1ZFBSUDhJRTB6c2VJb05DUVJTNk1CZE1WTUNrT1hJdTVjaVp5bWxMSyt0S0FiY0pOMzFEQWNhVUFrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzcyNzk4OTMyCWZpbGU6RGF0YWJhc2UgV29ya2JlbmNoXzAuMS4yX3g2NC1zZXR1cC5leGUKa1lUQ0g1UDNFNm9WaFB0N3dmSzVmZmhNZENTSHc2ZkpvUy9MVHlzRXV3S0U3M2cvRG5QNVBZRDJRM2xEVkt2WHl4Y1QxeTkzRDh5cXQ4M24wRGZTQWc9PQo=",
+      "url": "https://github.com/T-152-kw/database-workbench/releases/download/v0.1.2/Database.Workbench_0.1.2_x64-setup.exe"
+    }
+  }
+}
