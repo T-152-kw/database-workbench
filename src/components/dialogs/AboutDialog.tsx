@@ -24,7 +24,7 @@ export const AboutDialog: React.FC<AboutDialogProps> = ({
       <div className={Classes.DIALOG_BODY}>
         <div className="about-content">
           <h2 className="about-title">Database Workbench</h2>
-          <p className="about-version">{t('dialog.about.version', { version: '0.1.2' })}</p>
+          <p className="about-version">{t('dialog.about.version', { version: '0.1.5' })}</p>
           <p className="about-description">
             {t('dialog.about.description')}
           </p>

@@ -1,0 +1,123 @@
+.backup-restore-dialog .bp5-dialog-body,
+.backup-restore-dialog .bp6-dialog-body {
+  max-height: 70vh;
+  overflow: auto;
+}
+
+.brd-subtitle {
+  margin-bottom: 10px;
+  color: #5f6b7c;
+  font-size: 12px;
+}
+
+.brd-section {
+  margin-bottom: 14px;
+  border: 1px solid #d8e1eb;
+  border-radius: 8px;
+  padding: 12px;
+  background: #f8fbff;
+}
+
+.brd-section h3 {
+  margin: 0 0 10px;
+  font-size: 14px;
+  color: #1f2d3d;
+}
+
+.brd-section-title-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.brd-input-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.brd-options-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(240px, 1fr));
+  gap: 6px 12px;
+}
+
+.brd-object-toolbar {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.brd-object-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.brd-object-panel {
+  border: 1px solid #d8e1eb;
+  border-radius: 6px;
+  background: #ffffff;
+  min-height: 220px;
+  display: flex;
+  flex-direction: column;
+}
+
+.brd-object-title {
+  padding: 8px 10px;
+  border-bottom: 1px solid #eef3f8;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.brd-object-list {
+  padding: 8px 10px;
+  overflow: auto;
+}
+
+.brd-advanced-row {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.brd-log-box {
+  min-height: 180px;
+  max-height: 320px;
+  border: 1px solid #d8e1eb;
+  border-radius: 6px;
+  background: #ffffff;
+  padding: 8px;
+  white-space: pre-wrap;
+  overflow: auto;
+  font-family: Consolas, 'Courier New', monospace;
+  font-size: 12px;
+}
+
+.brd-refresh-btn {
+  min-width: 72px;
+  white-space: nowrap;
+  flex: 0 0 auto;
+}
+
+.brd-status {
+  margin-right: auto;
+  color: #5f6b7c;
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .brd-options-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .brd-object-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .brd-input-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

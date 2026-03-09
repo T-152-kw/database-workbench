@@ -1,6 +1,6 @@
 [package]
 name = "database-workbench"
-version = "0.1.2"
+version = "0.1.5"
 description = "A Tauri App"
 authors = ["you"]
 edition = "2021"
@@ -40,6 +40,7 @@ once_cell = "1"
 rust_xlsxwriter = "0.73"
 sqlparser = "0.44"
 tokio = { version = "1", features = ["rt-multi-thread", "time"] }
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }
 
 [target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
 tauri-plugin-updater = "2"

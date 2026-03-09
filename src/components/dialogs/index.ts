@@ -10,3 +10,5 @@ export { ShortcutsDialog } from './ShortcutsDialog';
 export { OptionsDialog } from './OptionsDialog';
 export { PropertiesDialog } from './PropertiesDialog';
 export { UpdateDialog } from './UpdateDialog';
+export { BackupDialog } from './BackupDialog';
+export { RestoreDialog } from './RestoreDialog';

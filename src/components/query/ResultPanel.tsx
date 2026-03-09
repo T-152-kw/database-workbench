@@ -23,6 +23,7 @@ interface ResultPanelProps {
   onTabChange: (tabId: string) => void;
   onTabClose: (tabId: string) => void;
   onClearAll: () => void;
+  onRequestQueryPage?: (tabId: string, page: number, pageSize: number) => void | Promise<void>;
 }
 
 interface SummaryDetailState {
@@ -148,12 +149,20 @@ const ColumnResizeHandle: React.FC<{
 };
 
 // Query Result Table Component
-const QueryResultTable: React.FC<{ data: QueryResultData }> = ({ data }) => {
+const QueryResultTable: React.FC<{
+  data: QueryResultData;
+  onRequestPage?: (page: number, pageSize: number) => void | Promise<void>;
+}> = ({ data, onRequestPage }) => {
   const { t } = useTranslation();
   const [sorting, setSorting] = React.useState<SortingState>([]);
   const [selectedRowIndex, setSelectedRowIndex] = React.useState<number | null>(null);
   const [contextMenu, setContextMenu] = React.useState<ResultContextMenuState | null>(null);
   const [columnWidths, setColumnWidths] = React.useState<Record<string, number>>({});
+  const serverPaginationData = data.pagination;
+  const serverPagination = Boolean(serverPaginationData);
+  const serverOffset = serverPaginationData
+    ? (serverPaginationData.page - 1) * serverPaginationData.page_size
+    : 0;
 
   const columns: ColumnDef<unknown[], string>[] = React.useMemo(() => {
     const sourceColumns = data.columns.length > 0
@@ -163,9 +172,9 @@ const QueryResultTable: React.FC<{ data: QueryResultData }> = ({ data }) => {
     const rowNumberColumn: ColumnDef<unknown[], string> = {
       id: '__rownum',
       header: '#',
-      accessorFn: (_row, index) => String(index + 1),
+      accessorFn: (_row, index) => String(index + 1 + serverOffset),
       enableSorting: false,
-      cell: (info) => String(info.row.index + 1),
+      cell: (info) => String(info.row.index + 1 + serverOffset),
     };
 
     const dataColumns = sourceColumns.map((col, index) => ({
@@ -180,7 +189,7 @@ const QueryResultTable: React.FC<{ data: QueryResultData }> = ({ data }) => {
     }));
 
     return [rowNumberColumn, ...dataColumns];
-  }, [data.columns, t]);
+  }, [data.columns, t, serverOffset]);
 
   const table = useReactTable({
     data: data.rows,
@@ -190,7 +199,7 @@ const QueryResultTable: React.FC<{ data: QueryResultData }> = ({ data }) => {
     },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: getPaginationRowModel(),
+    getPaginationRowModel: serverPagination ? undefined : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
     initialState: {
       pagination: {
@@ -198,6 +207,16 @@ const QueryResultTable: React.FC<{ data: QueryResultData }> = ({ data }) => {
       },
     },
   });
+
+  const handleServerPageChange = React.useCallback((page: number, pageSize?: number) => {
+    if (!serverPaginationData || !onRequestPage) return;
+    void onRequestPage(page, pageSize ?? serverPaginationData.page_size);
+  }, [serverPaginationData, onRequestPage]);
+
+  const handleServerPageSizeChange = React.useCallback((newSize: number) => {
+    if (!serverPaginationData || !onRequestPage) return;
+    void onRequestPage(1, newSize);
+  }, [serverPaginationData, onRequestPage]);
 
   React.useEffect(() => {
     if (!contextMenu) return;
@@ -369,44 +388,108 @@ const QueryResultTable: React.FC<{ data: QueryResultData }> = ({ data }) => {
       {/* Pagination */}
       <div className="result-table-pagination">
         <div className="pagination-info">
-          {t('resultPanel.showingRows', { shown: table.getRowModel().rows.length, total: data.rows.length })}
+          {!serverPagination && t('resultPanel.showingRows', { shown: table.getRowModel().rows.length, total: data.rows.length })}
+          {serverPagination && t('resultPanel.showingRows', {
+            shown: data.rows.length,
+            total: data.pagination?.total_rows ?? (data.pagination?.has_more ? `${data.rows.length}+` : `${data.rows.length}`),
+          })}
         </div>
         <div className="pagination-controls">
-          <Button
-            small
-            minimal
-            disabled={!table.getCanPreviousPage()}
-            onClick={() => table.setPageIndex(0)}
-          >
-            {'<<'}
-          </Button>
-          <Button
-            small
-            minimal
-            disabled={!table.getCanPreviousPage()}
-            onClick={() => table.previousPage()}
-          >
-            {'<'}
-          </Button>
-          <span className="pagination-page">
-            {t('resultPanel.page', { current: table.getState().pagination.pageIndex + 1, total: table.getPageCount() })}
-          </span>
-          <Button
-            small
-            minimal
-            disabled={!table.getCanNextPage()}
-            onClick={() => table.nextPage()}
-          >
-            {'>'}
-          </Button>
-          <Button
-            small
-            minimal
-            disabled={!table.getCanNextPage()}
-            onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-          >
-            {'>>'}
-          </Button>
+          {!serverPagination && (
+            <>
+              <Button
+                small
+                minimal
+                disabled={!table.getCanPreviousPage()}
+                onClick={() => table.setPageIndex(0)}
+              >
+                {'<<'}
+              </Button>
+              <Button
+                small
+                minimal
+                disabled={!table.getCanPreviousPage()}
+                onClick={() => table.previousPage()}
+              >
+                {'<'}
+              </Button>
+              <span className="pagination-page">
+                {t('resultPanel.page', { current: table.getState().pagination.pageIndex + 1, total: table.getPageCount() })}
+              </span>
+              <Button
+                small
+                minimal
+                disabled={!table.getCanNextPage()}
+                onClick={() => table.nextPage()}
+              >
+                {'>'}
+              </Button>
+              <Button
+                small
+                minimal
+                disabled={!table.getCanNextPage()}
+                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
+              >
+                {'>>'}
+              </Button>
+            </>
+          )}
+          {serverPagination && serverPaginationData && (
+            <>
+              <span className="pagination-page-size-label">{t('resultPanel.pageSize')}</span>
+              <select
+                className="pagination-page-size-select"
+                value={serverPaginationData.page_size}
+                onChange={(event) => handleServerPageSizeChange(Number(event.target.value))}
+              >
+                {[100, 200, 500, 1000].map((size) => (
+                  <option key={size} value={size}>{size}</option>
+                ))}
+              </select>
+              <Button
+                small
+                minimal
+                disabled={serverPaginationData.page <= 1}
+                onClick={() => handleServerPageChange(1)}
+              >
+                {'<<'}
+              </Button>
+              <Button
+                small
+                minimal
+                disabled={serverPaginationData.page <= 1}
+                onClick={() => handleServerPageChange(serverPaginationData.page - 1)}
+              >
+                {'<'}
+              </Button>
+              <span className="pagination-page">
+                {t('resultPanel.page', {
+                  current: serverPaginationData.page,
+                  total: serverPaginationData.total_pages ?? '?',
+                })}
+              </span>
+              <Button
+                small
+                minimal
+                disabled={!serverPaginationData.has_more}
+                onClick={() => handleServerPageChange(serverPaginationData.page + 1)}
+              >
+                {'>'}
+              </Button>
+              <Button
+                small
+                minimal
+                disabled={!serverPaginationData.total_pages || serverPaginationData.page >= serverPaginationData.total_pages}
+                onClick={() => {
+                  if (serverPaginationData.total_pages) {
+                    handleServerPageChange(serverPaginationData.total_pages);
+                  }
+                }}
+              >
+                {'>>'}
+              </Button>
+            </>
+          )}
         </div>
       </div>
     </div>
@@ -616,6 +699,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
   onTabChange,
   onTabClose,
   onClearAll,
+  onRequestQueryPage,
 }) => {
   const { t } = useTranslation();
   const [exportNotice, setExportNotice] = React.useState<string | null>(null);
@@ -720,7 +804,12 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
   };
 
   const renderResultContent = (tab: ResultTab) => {
-    return <QueryResultTable data={tab.data as QueryResultData} />;
+    return (
+      <QueryResultTable
+        data={tab.data as QueryResultData}
+        onRequestPage={(page, pageSize) => onRequestQueryPage?.(tab.id, page, pageSize)}
+      />
+    );
   };
 
   return (

@@ -185,7 +185,7 @@ export const ToolBar: React.FC = () => {
   const { t } = useTranslation();
   const { theme, setStatusMessage } = useAppStore();
   const { addTab } = useTabStore();
-  const { connections, activeConnectionId, activeDatabase, getLastUsedDatabaseForConnection } = useConnectionStore();
+  const { connections, activeConnectionId, activeDatabase } = useConnectionStore();
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
   const activeConnection = connections.find((c) => c.profile.name === activeConnectionId);
 
@@ -224,13 +224,12 @@ export const ToolBar: React.FC = () => {
       iconType: 'query',
       shortcut: 'Ctrl+Q',
       onClick: () => {
-        const inheritedDatabase = activeDatabase || getLastUsedDatabaseForConnection(activeConnection?.profile.name);
         addTab({
           type: 'query',
           title: t('query.new'),
           connectionId: activeConnection?.profile.name,
           connectionProfile: activeConnection?.profile,
-          database: inheritedDatabase,
+          database: activeDatabase || undefined,
         });
       },
     },
@@ -300,13 +299,7 @@ export const ToolBar: React.FC = () => {
           void showToolbarRequirementNotice(t('database.backup'), 'database');
           return;
         }
-        addTab({
-          type: 'backup',
-          title: `${t('database.backup')} - ${activeDatabase}`,
-          connectionId: activeConnection.profile.name,
-          connectionProfile: activeConnection.profile,
-          database: activeDatabase,
-        });
+        window.dispatchEvent(new CustomEvent('dbw:open-backup-dialog'));
       },
     },
     {
@@ -318,13 +311,7 @@ export const ToolBar: React.FC = () => {
           void showToolbarRequirementNotice(t('database.restore'), 'connection');
           return;
         }
-        addTab({
-          type: 'restore',
-          title: `${t('database.restore')} - ${activeConnection.profile.name || activeConnection.profile.host}`,
-          connectionId: activeConnection.profile.name,
-          connectionProfile: activeConnection.profile,
-          database: activeDatabase || undefined,
-        });
+        window.dispatchEvent(new CustomEvent('dbw:open-restore-dialog'));
       },
     },
     {

@@ -23,7 +23,9 @@ import {
   ShortcutsDialog,
   ConnectionDialog,
   OptionsDialog,
-  PropertiesDialog
+  PropertiesDialog,
+  BackupDialog,
+  RestoreDialog,
 } from '../dialogs';
 import { useFavorites } from '../../hooks/useFavorites';
 import type { FavoriteItem } from '../../types/api';
@@ -64,6 +66,8 @@ export const MenuBar: React.FC = () => {
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
   const [isOptionsDialogOpen, setIsOptionsDialogOpen] = useState(false);
   const [isPropertiesDialogOpen, setIsPropertiesDialogOpen] = useState(false);
+  const [isBackupDialogOpen, setIsBackupDialogOpen] = useState(false);
+  const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
   const [recentFavorites, setRecentFavorites] = useState<FavoriteItem[]>([]);
 
   // 获取菜单配置
@@ -77,6 +81,32 @@ export const MenuBar: React.FC = () => {
     const sorted = [...favorites].sort((a, b) => b.lastUsedTime - a.lastUsedTime);
     setRecentFavorites(sorted.slice(0, 9));
   }, [favorites]);
+
+  useEffect(() => {
+    const onOpenBackup = () => {
+      if (!activeConnection?.profile || !activeDatabase) {
+        void showToolbarRequirementNotice(t('database.backup'), 'database');
+        return;
+      }
+      setIsBackupDialogOpen(true);
+    };
+
+    const onOpenRestore = () => {
+      if (!activeConnection?.profile) {
+        void showToolbarRequirementNotice(t('database.restore'), 'connection');
+        return;
+      }
+      setIsRestoreDialogOpen(true);
+    };
+
+    window.addEventListener('dbw:open-backup-dialog', onOpenBackup as EventListener);
+    window.addEventListener('dbw:open-restore-dialog', onOpenRestore as EventListener);
+
+    return () => {
+      window.removeEventListener('dbw:open-backup-dialog', onOpenBackup as EventListener);
+      window.removeEventListener('dbw:open-restore-dialog', onOpenRestore as EventListener);
+    };
+  }, [activeConnection, activeDatabase, t]);
 
   // 点击外部关闭菜单
   useEffect(() => {
@@ -147,6 +177,19 @@ export const MenuBar: React.FC = () => {
           sqlFilePath: selected,
           isModified: false,
         });
+        // 添加到最近文件
+        const newFile = {
+          path: selected,
+          name: fileName,
+          lastOpened: Date.now(),
+        };
+        const saved = localStorage.getItem('dbw-recent-files');
+        const prevFiles = saved ? JSON.parse(saved) : [];
+        const filtered = prevFiles.filter((f: { path: string }) => f.path !== selected);
+        const updated = [newFile, ...filtered].slice(0, 8);
+        localStorage.setItem('dbw-recent-files', JSON.stringify(updated));
+        // 通知 WelcomeTab 更新最近文件列表
+        window.dispatchEvent(new CustomEvent('dbw:recent-files-updated'));
         setStatusMessage(`${t('common.open')}: ${selected}`);
       }
     } catch (error) {
@@ -299,13 +342,7 @@ export const MenuBar: React.FC = () => {
       setActiveMenu(null);
       return;
     }
-    addTab({
-      type: 'backup',
-      title: `${t('database.backup')} - ${activeDatabase}`,
-      connectionId: activeConnection.profile.name,
-      connectionProfile: activeConnection.profile,
-      database: activeDatabase,
-    });
+    setIsBackupDialogOpen(true);
     setActiveMenu(null);
   }, [activeConnection, activeDatabase, addTab, t]);
 
@@ -315,15 +352,9 @@ export const MenuBar: React.FC = () => {
       setActiveMenu(null);
       return;
     }
-    addTab({
-      type: 'restore',
-      title: `${t('database.restore')} - ${activeConnection.profile.name || activeConnection.profile.host}`,
-      connectionId: activeConnection.profile.name,
-      connectionProfile: activeConnection.profile,
-      database: activeDatabase || undefined,
-    });
+    setIsRestoreDialogOpen(true);
     setActiveMenu(null);
-  }, [activeConnection, activeDatabase, addTab, t]);
+  }, [activeConnection, t]);
 
   const handleDataDictionary = useCallback(() => {
     if (!activeConnection?.profile || !activeDatabase) {
@@ -849,6 +880,20 @@ export const MenuBar: React.FC = () => {
       <PropertiesDialog
         isOpen={isPropertiesDialogOpen}
         onClose={() => setIsPropertiesDialogOpen(false)}
+      />
+
+      <BackupDialog
+        isOpen={isBackupDialogOpen}
+        onClose={() => setIsBackupDialogOpen(false)}
+        connectionProfile={activeConnection?.profile}
+        database={activeDatabase || undefined}
+      />
+
+      <RestoreDialog
+        isOpen={isRestoreDialogOpen}
+        onClose={() => setIsRestoreDialogOpen(false)}
+        connectionProfile={activeConnection?.profile}
+        initialDatabase={activeDatabase || undefined}
       />
     </>
   );

@@ -12,14 +12,213 @@ use backend::metadata;
 use backend::models::{ConnectionProfile, DbType, FavoriteItem, FavoriteType, SqlParam, UserModel};
 use backend::pool;
 use backend::sqlutils;
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::atomic::{AtomicU64, Ordering};
+use std::sync::{Arc, Mutex, OnceLock};
+use std::time::Duration;
 use std::io::Write;
+use tauri::Emitter;
+use tauri_plugin_updater::UpdaterExt;
 
 #[derive(Serialize)]
 struct CsvExportInfo {
     file_path: String,
     exported_at: String,
     row_count: usize,
+}
+
+const GITHUB_LATEST_ENDPOINT: &str =
+    "https://raw.githubusercontent.com/T-152-kw/database-workbench/main/latest.json";
+const GITEE_LATEST_ENDPOINT: &str =
+    "https://gitee.com/nick4487617348/database-workbench/raw/master/latest.json";
+
+#[derive(Deserialize)]
+struct IpApiCoResponse {
+    country_code: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct IpWhoIsResponse {
+    success: Option<bool>,
+    country_code: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct IpInfoResponse {
+    country: Option<String>,
+}
+
+#[derive(Serialize)]
+struct RegionUpdateInfo {
+    available: bool,
+    version: Option<String>,
+    date: Option<String>,
+    body: Option<String>,
+    preferred_source: String,
+    country_code: Option<String>,
+}
+
+#[derive(Serialize, Clone)]
+struct UpdaterDownloadProgressEvent {
+    event: String,
+    content_length: Option<u64>,
+    chunk_length: Option<u64>,
+    downloaded: u64,
+    total: Option<u64>,
+    percentage: Option<u8>,
+}
+
+struct UpdaterDownloadProgressState {
+    started: bool,
+    downloaded: u64,
+    total: Option<u64>,
+}
+
+static COUNTRY_CODE_CACHE: OnceLock<Mutex<Option<String>>> = OnceLock::new();
+static SQL_SPLIT_SESSIONS: OnceLock<Mutex<HashMap<u64, Vec<String>>>> = OnceLock::new();
+static SQL_SPLIT_SESSION_COUNTER: AtomicU64 = AtomicU64::new(1);
+const SQL_SPLIT_PAGE_SIZE_DEFAULT: u64 = 120;
+const SQL_SPLIT_PAGE_SIZE_MAX: u64 = 1000;
+
+#[derive(Serialize)]
+struct SqlSplitSessionInfo {
+    session_id: u64,
+    total: u64,
+}
+
+#[derive(Serialize)]
+struct SqlSplitStatementsPage {
+    statements: Vec<String>,
+    page: u64,
+    page_size: u64,
+    total: u64,
+    total_pages: u64,
+    has_more: bool,
+}
+
+fn sql_split_sessions() -> &'static Mutex<HashMap<u64, Vec<String>>> {
+    SQL_SPLIT_SESSIONS.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn updater_endpoints_for_country(country_code: Option<&str>) -> (String, Vec<&'static str>) {
+    if country_code == Some("CN") {
+        (
+            "gitee".to_string(),
+            vec![GITEE_LATEST_ENDPOINT, GITHUB_LATEST_ENDPOINT],
+        )
+    } else {
+        (
+            "github".to_string(),
+            vec![GITHUB_LATEST_ENDPOINT, GITEE_LATEST_ENDPOINT],
+        )
+    }
+}
+
+fn parse_update_endpoints(endpoints: &[&'static str]) -> Result<Vec<reqwest::Url>, String> {
+    endpoints
+        .iter()
+        .map(|endpoint| {
+            endpoint
+                .parse::<reqwest::Url>()
+                .map_err(|e| format!("Invalid updater endpoint {endpoint}: {e}"))
+        })
+        .collect()
+}
+
+fn country_cache() -> &'static Mutex<Option<String>> {
+    COUNTRY_CODE_CACHE.get_or_init(|| Mutex::new(None))
+}
+
+fn get_cached_country_code() -> Option<String> {
+    country_cache().lock().ok().and_then(|g| g.clone())
+}
+
+fn set_cached_country_code(country_code: Option<String>) {
+    if let Ok(mut g) = country_cache().lock() {
+        *g = country_code;
+    }
+}
+
+async fn detect_country_code_from_ipapi(client: reqwest::Client) -> Option<String> {
+    let resp = client
+        .get("https://ipapi.co/json/")
+        .send()
+        .await
+        .and_then(|res| res.error_for_status())
+        .ok()?;
+
+    resp.json::<IpApiCoResponse>().await.ok()?.country_code
+}
+
+async fn detect_country_code_from_ipwhois(client: reqwest::Client) -> Option<String> {
+    let resp = client
+        .get("https://ipwho.is/")
+        .send()
+        .await
+        .and_then(|res| res.error_for_status())
+        .ok()?;
+
+    let payload = resp.json::<IpWhoIsResponse>().await.ok()?;
+    if payload.success.unwrap_or(true) {
+        payload.country_code
+    } else {
+        None
+    }
+}
+
+async fn detect_country_code_from_ipinfo(client: reqwest::Client) -> Option<String> {
+    let resp = client
+        .get("https://ipinfo.io/json")
+        .send()
+        .await
+        .and_then(|res| res.error_for_status())
+        .ok()?;
+
+    resp.json::<IpInfoResponse>().await.ok()?.country
+}
+
+async fn detect_country_code() -> Option<String> {
+    let client = reqwest::Client::builder()
+        .timeout(Duration::from_millis(1200))
+        .build()
+        .ok()?;
+
+    let mut tasks = tokio::task::JoinSet::new();
+    tasks.spawn(detect_country_code_from_ipapi(client.clone()));
+    tasks.spawn(detect_country_code_from_ipwhois(client.clone()));
+    tasks.spawn(detect_country_code_from_ipinfo(client));
+
+    while let Some(result) = tasks.join_next().await {
+        if let Ok(Some(code)) = result {
+            tasks.abort_all();
+            return Some(code.to_uppercase());
+        }
+    }
+
+    None
+}
+
+async fn get_or_detect_country_code() -> Option<String> {
+    if let Some(code) = get_cached_country_code() {
+        return Some(code);
+    }
+
+    // Keep country lookup bounded to avoid long spinning on slow networks.
+    let detected = tokio::time::timeout(Duration::from_millis(1600), detect_country_code())
+        .await
+        .ok()
+        .flatten();
+
+    if let Some(code) = detected.clone() {
+        set_cached_country_code(Some(code));
+    }
+
+    detected
+}
+
+async fn warmup_country_detection_cache() {
+    let _ = get_or_detect_country_code().await;
 }
 
 #[tauri::command]
@@ -102,6 +301,18 @@ fn pool_get_connection_properties(
 #[tauri::command]
 fn pool_query(pool_id: u64, conn_id: u64, sql: String) -> Result<pool::QueryResult, String> {
     pool::query(pool_id, conn_id, &sql)
+}
+
+#[tauri::command]
+fn pool_query_page(
+    pool_id: u64,
+    conn_id: u64,
+    sql: String,
+    page: Option<u64>,
+    page_size: Option<u64>,
+    include_total: Option<bool>,
+) -> Result<pool::QueryPageResult, String> {
+    pool::query_page(pool_id, conn_id, &sql, page, page_size, include_total)
 }
 
 #[tauri::command]
@@ -470,6 +681,78 @@ fn sql_split_statements(sql: String, db_type: DbType) -> Vec<String> {
 }
 
 #[tauri::command]
+fn sql_split_statements_create(sql: String, db_type: DbType) -> Result<SqlSplitSessionInfo, String> {
+    let statements: Vec<String> = sqlutils::split_sql_statements(&sql, db_type)
+        .into_iter()
+        .map(|s| s.trim().to_string())
+        .filter(|s| !s.is_empty())
+        .collect();
+
+    let session_id = SQL_SPLIT_SESSION_COUNTER.fetch_add(1, Ordering::SeqCst);
+    let total = statements.len() as u64;
+
+    let mut sessions = sql_split_sessions()
+        .lock()
+        .map_err(|_| "SQL split session lock failed".to_string())?;
+    sessions.insert(session_id, statements);
+
+    Ok(SqlSplitSessionInfo { session_id, total })
+}
+
+#[tauri::command]
+fn sql_split_statements_page(
+    session_id: u64,
+    page: Option<u64>,
+    page_size: Option<u64>,
+) -> Result<SqlSplitStatementsPage, String> {
+    let safe_page = page.unwrap_or(1).max(1);
+    let safe_page_size = page_size
+        .unwrap_or(SQL_SPLIT_PAGE_SIZE_DEFAULT)
+        .clamp(1, SQL_SPLIT_PAGE_SIZE_MAX);
+
+    let sessions = sql_split_sessions()
+        .lock()
+        .map_err(|_| "SQL split session lock failed".to_string())?;
+    let statements = sessions
+        .get(&session_id)
+        .ok_or_else(|| "SQL split session not found".to_string())?;
+
+    let total = statements.len() as u64;
+    let total_pages = if total == 0 {
+        0
+    } else {
+        total.div_ceil(safe_page_size)
+    };
+
+    let start = ((safe_page - 1) * safe_page_size) as usize;
+    let end = (start + safe_page_size as usize).min(statements.len());
+
+    let page_statements = if start >= statements.len() {
+        Vec::new()
+    } else {
+        statements[start..end].to_vec()
+    };
+
+    Ok(SqlSplitStatementsPage {
+        statements: page_statements,
+        page: safe_page,
+        page_size: safe_page_size,
+        total,
+        total_pages,
+        has_more: end < statements.len(),
+    })
+}
+
+#[tauri::command]
+fn sql_split_statements_release(session_id: u64) -> bool {
+    if let Ok(mut sessions) = sql_split_sessions().lock() {
+        sessions.remove(&session_id).is_some()
+    } else {
+        false
+    }
+}
+
+#[tauri::command]
 fn json_parse_canonical(json: String) -> Result<String, String> {
     json_mod::parse_to_canonical_json(&json)
 }
@@ -710,9 +993,151 @@ fn executor_shutdown() -> Result<bool, String> {
     executor::shutdown()
 }
 
+#[tauri::command]
+async fn updater_check_by_region(app_handle: tauri::AppHandle) -> Result<RegionUpdateInfo, String> {
+    let country_code = get_or_detect_country_code().await;
+    let (preferred_source, endpoint_strings) = updater_endpoints_for_country(country_code.as_deref());
+    let endpoints = parse_update_endpoints(&endpoint_strings)?;
+
+    let updater = app_handle
+        .updater_builder()
+        .timeout(Duration::from_secs(3))
+        .endpoints(endpoints)
+        .map_err(|e| format!("Configure updater endpoints failed: {e}"))?
+        .build()
+        .map_err(|e| format!("Build updater failed: {e}"))?;
+
+    match updater.check().await {
+        Ok(Some(update)) => Ok(RegionUpdateInfo {
+            available: true,
+            version: Some(update.version),
+            date: update.date.map(|d| d.to_string()),
+            body: update.body,
+            preferred_source,
+            country_code,
+        }),
+        Ok(None) => Ok(RegionUpdateInfo {
+            available: false,
+            version: None,
+            date: None,
+            body: None,
+            preferred_source,
+            country_code,
+        }),
+        Err(e) => Err(format!("Check update failed: {e}")),
+    }
+}
+
+#[tauri::command]
+async fn updater_download_and_install_by_region(
+    app_handle: tauri::AppHandle,
+    window: tauri::Window,
+) -> Result<(), String> {
+    let country_code = get_or_detect_country_code().await;
+    let (_, endpoint_strings) = updater_endpoints_for_country(country_code.as_deref());
+    let endpoints = parse_update_endpoints(&endpoint_strings)?;
+
+    let updater = app_handle
+        .updater_builder()
+        .timeout(Duration::from_secs(3))
+        .endpoints(endpoints)
+        .map_err(|e| format!("Configure updater endpoints failed: {e}"))?
+        .build()
+        .map_err(|e| format!("Build updater failed: {e}"))?;
+
+    let update = updater
+        .check()
+        .await
+        .map_err(|e| format!("Check update failed: {e}"))?
+        .ok_or_else(|| "No update available".to_string())?;
+
+    let progress_state = Arc::new(Mutex::new(UpdaterDownloadProgressState {
+        started: false,
+        downloaded: 0,
+        total: None,
+    }));
+
+    let window_for_progress = window.clone();
+    let window_for_finish = window.clone();
+    let progress_state_for_progress = Arc::clone(&progress_state);
+    let progress_state_for_finish = Arc::clone(&progress_state);
+
+    update
+        .download_and_install(
+            move |chunk_len, content_len| {
+                let mut state = match progress_state_for_progress.lock() {
+                    Ok(guard) => guard,
+                    Err(_) => return,
+                };
+
+                if !state.started {
+                    state.started = true;
+                    state.total = content_len;
+                    let _ = window_for_progress.emit(
+                        "updater-download-progress",
+                        UpdaterDownloadProgressEvent {
+                            event: "Started".to_string(),
+                            content_length: content_len,
+                            chunk_length: None,
+                            downloaded: state.downloaded,
+                            total: content_len,
+                            percentage: Some(0),
+                        },
+                    );
+                }
+
+                state.downloaded = state.downloaded.saturating_add(chunk_len as u64);
+                let percentage = state
+                    .total
+                    .filter(|t| *t > 0)
+                    .map(|t| ((state.downloaded.saturating_mul(100)) / t).min(100) as u8);
+
+                let _ = window_for_progress.emit(
+                    "updater-download-progress",
+                    UpdaterDownloadProgressEvent {
+                        event: "Progress".to_string(),
+                        content_length: state.total,
+                        chunk_length: Some(chunk_len as u64),
+                        downloaded: state.downloaded,
+                        total: state.total,
+                        percentage,
+                    },
+                );
+            },
+            move || {
+                let (downloaded, total) = match progress_state_for_finish.lock() {
+                    Ok(state) => (state.downloaded, state.total),
+                    Err(_) => (0, None),
+                };
+
+                let _ = window_for_finish.emit(
+                    "updater-download-progress",
+                    UpdaterDownloadProgressEvent {
+                        event: "Finished".to_string(),
+                        content_length: total,
+                        chunk_length: None,
+                        downloaded,
+                        total,
+                        percentage: Some(100),
+                    },
+                );
+            },
+        )
+        .await
+        .map_err(|e| format!("Download and install failed: {e}"))?;
+
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .setup(|_app| {
+            tauri::async_runtime::spawn(async move {
+                warmup_country_detection_cache().await;
+            });
+            Ok(())
+        })
         .plugin(tauri_plugin_updater::Builder::new().build())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_fs::init())
@@ -731,6 +1156,7 @@ pub fn run() {
             pool_get_all_active_connections,
             pool_get_connection_properties,
             pool_query,
+            pool_query_page,
             pool_query_multi,
             pool_execute,
             pool_query_prepared,
@@ -784,6 +1210,9 @@ pub fn run() {
             sql_format,
             sql_extract_view_select,
             sql_split_statements,
+            sql_split_statements_create,
+            sql_split_statements_page,
+            sql_split_statements_release,
             json_parse_canonical,
             import_from_csv,
             import_from_json,
@@ -802,7 +1231,9 @@ pub fn run() {
             schedule_list,
             executor_init,
             executor_submit,
-            executor_shutdown
+            executor_shutdown,
+            updater_check_by_region,
+            updater_download_and_install_by_region
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

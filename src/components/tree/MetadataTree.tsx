@@ -19,7 +19,7 @@ import {
 } from '../icons';
 import { useConnectionStore, useAppStore, useTabStore } from '../../stores';
 import { tauriApi } from '../../hooks';
-import type { ConnectionProfile } from '../../types';
+import type { ConnectionProfile, DesignerActionRequest } from '../../types';
 import { ConfirmDialog, CreateDatabaseDialog, ConnectionDialog } from '../dialogs';
 import { ViewDefinitionDialog } from '../dialogs/ViewDefinitionDialog';
 import { showEditConnectionNotice } from '../../utils';
@@ -125,9 +125,11 @@ const applySelectionToNodes = (treeNodes: TreeNode[], selectedId: string | null)
 export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery }) => {
   const { t } = useTranslation();
   const { theme, setStatusMessage } = useAppStore();
-  const { addTab } = useTabStore();
+  const { addTab, setActiveTab, updateTab } = useTabStore();
   const {
     connections,
+    activeConnectionId,
+    activeDatabase,
     setActiveConnection,
     setActiveDatabase,
     setLastUsedDatabaseForConnection,
@@ -711,6 +713,7 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
                 connection: node.nodeData?.connection,
                 database: node.nodeData?.database,
                 table: node.nodeData?.table,
+                objectName: name,
                 itemType: 'column',
               },
             };
@@ -734,6 +737,7 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
                 connection: node.nodeData?.connection,
                 database: node.nodeData?.database,
                 table: node.nodeData?.table,
+                objectName: name,
                 itemType: 'index',
               },
             };
@@ -754,6 +758,7 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
                 connection: node.nodeData?.connection,
                 database: node.nodeData?.database,
                 table: node.nodeData?.table,
+                objectName: record.CONSTRAINT_NAME || '',
                 itemType: 'foreignKey',
               },
             };
@@ -772,6 +777,7 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
               connection: node.nodeData?.connection,
               database: node.nodeData?.database,
               table: node.nodeData?.table,
+              objectName: record.CONSTRAINT_NAME || '',
               itemType: 'check',
             },
           }));
@@ -789,6 +795,7 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
               connection: node.nodeData?.connection,
               database: node.nodeData?.database,
               table: node.nodeData?.table,
+              objectName: record.TRIGGER_NAME || '',
               itemType: 'trigger',
             },
           }));
@@ -871,6 +878,62 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
       table: tableName,
     });
   }, [addTab, t]);
+
+  const openDesignerWithAction = useCallback((
+    profile: ConnectionProfile,
+    targetDatabase: string,
+    targetTable: string,
+    action: Omit<DesignerActionRequest, 'nonce'>,
+  ) => {
+    const payload: DesignerActionRequest = {
+      ...action,
+      nonce: Date.now(),
+    };
+
+    const findMatchingDesignerTab = () => useTabStore.getState().tabs.find((tab) => (
+      tab.type === 'designer' &&
+      tab.connectionId === profile.name &&
+      tab.database === targetDatabase &&
+      tab.table === targetTable
+    ));
+
+    const existingTab = findMatchingDesignerTab();
+
+    if (existingTab) {
+      updateTab(existingTab.id, {
+        data: {
+          ...(existingTab.data as Record<string, unknown> | undefined),
+          designerAction: payload,
+        },
+      });
+      setActiveTab(existingTab.id);
+      return;
+    }
+
+    addTab({
+      type: 'designer',
+      title: t('tabTitles.designer.edit', { tableName: targetTable }),
+      connectionId: profile.name,
+      connectionProfile: profile,
+      database: targetDatabase,
+      table: targetTable,
+      data: {
+        designerAction: payload,
+      },
+    });
+
+    // addTab may activate an existing tab under race conditions; enforce action payload after insert/activation.
+    const latestMatch = findMatchingDesignerTab();
+    if (latestMatch) {
+      updateTab(latestMatch.id, {
+        data: {
+          ...(latestMatch.data as Record<string, unknown> | undefined),
+          designerAction: payload,
+        },
+      });
+      setActiveTab(latestMatch.id);
+    }
+  }, [addTab, setActiveTab, t, updateTab]);
 
   const openViewDesignerTab = useCallback((profile: ConnectionProfile, database: string, viewName: string) => {
     addTab({
@@ -983,6 +1046,59 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
       },
     });
   }, [getParentFolderId, refreshFolderById, setStatusMessage, t]);
+
+  const handleDeleteDesignerObject = useCallback((
+    profile: ConnectionProfile,
+    database: string,
+    tableName: string,
+    itemType: 'column' | 'index' | 'foreignKey' | 'check' | 'trigger',
+    objectName: string,
+    objectTypeLabel: string,
+    refreshParentFolder: () => void,
+  ) => {
+    const escapedTable = tableName.replace(/`/g, '``');
+    const escapedObject = objectName.replace(/`/g, '``');
+
+    let sql = '';
+    if (itemType === 'column') {
+      sql = `ALTER TABLE \`${escapedTable}\` DROP COLUMN \`${escapedObject}\``;
+    } else if (itemType === 'index') {
+      sql = `ALTER TABLE \`${escapedTable}\` DROP INDEX \`${escapedObject}\``;
+    } else if (itemType === 'foreignKey') {
+      sql = `ALTER TABLE \`${escapedTable}\` DROP FOREIGN KEY \`${escapedObject}\``;
+    } else if (itemType === 'check') {
+      sql = `ALTER TABLE \`${escapedTable}\` DROP CHECK \`${escapedObject}\``;
+    } else if (itemType === 'trigger') {
+      sql = `DROP TRIGGER \`${escapedObject}\``;
+    }
+
+    if (!sql) return;
+
+    setConfirmDialog({
+      isOpen: true,
+      title: t('metadataTree.confirmDeleteObjectTitle'),
+      message: t('metadataTree.confirmDeleteObjectMessage', {
+        objectType: objectTypeLabel,
+        name: objectName,
+      }),
+      intent: 'danger',
+      onConfirm: async () => {
+        try {
+          await tauriApi.metadata.executeSql(profile, sql, database);
+          setStatusMessage(t('metadataTree.objectDeleted', {
+            objectType: objectTypeLabel,
+            name: objectName,
+          }));
+          refreshParentFolder();
+        } catch (error) {
+          console.error(t('metadataTree.objectDeleteFailed'), error);
+          setStatusMessage(t('metadataTree.objectDeleteFailedWithError', {
+            error: String(error),
+          }));
+        }
+      },
+    });
+  }, [setStatusMessage, t]);
 
   const handleNodeDoubleClick = useCallback((node: TreeNode) => {
     if (!node.nodeData) return;
@@ -1117,17 +1233,51 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
       setStatusMessage(t('metadataTree.databaseCreated', { name }));
 
       if (createDbDialog.nodeId) {
-        const connNode = nodes.find(n => n.id === createDbDialog.nodeId);
-        if (connNode) {
-          await closeConnection(connNode);
-          await connectConnection(connNode);
-        }
+        setNodes(prev => prev.map((node) => {
+          if (String(node.id) !== createDbDialog.nodeId) {
+            return node;
+          }
+
+          const existingChildren = (node.childNodes as TreeNode[] | undefined) || [];
+          const exists = existingChildren.some((child) => child.nodeData?.database === name);
+          if (exists) {
+            return node;
+          }
+
+          const createdNode: TreeNode = {
+            id: `${createDbDialog.nodeId}-${name}`,
+            label: name,
+            icon: <DatabaseIcon opened={false} isSystemDb={false} size={16} />,
+            isExpanded: false,
+            hasCaret: false,
+            nodeData: {
+              connection: createDbDialog.connection,
+              database: name,
+              isSystemDb: false,
+              isDbOpened: false,
+            },
+          };
+
+          const systemChildren = existingChildren.filter((child) => child.nodeData?.isSystemDb);
+          const userChildren = existingChildren.filter((child) => !child.nodeData?.isSystemDb);
+          const nextUserChildren = [...userChildren, createdNode].sort((a, b) => {
+            const aLabel = String(a.label || '').toLowerCase();
+            const bLabel = String(b.label || '').toLowerCase();
+            return aLabel.localeCompare(bLabel);
+          });
+
+          return {
+            ...node,
+            hasCaret: true,
+            childNodes: [...systemChildren, ...nextUserChildren],
+          };
+        }));
       }
     } catch (error) {
       console.error(t('metadataTree.createDatabaseFailed'), error);
       setStatusMessage(t('metadataTree.createFailed', { error: String(error) }));
     }
-  }, [createDbDialog, nodes, closeConnection, connectConnection, setStatusMessage, t]);
+  }, [createDbDialog, setStatusMessage, t]);
 
   const handleDeleteDatabase = useCallback(async (node: TreeNode) => {
     if (!node.nodeData?.connection || !node.nodeData?.database) return;
@@ -1152,16 +1302,37 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
           setStatusMessage(t('metadataTree.databaseDeleted', { name: dbName }));
 
           const nodeId = node.id as string;
+          const connectionName = node.nodeData?.connection?.name;
+          const connectionNodeId = (nodeId.split('-').slice(0, -1).join('-')) || undefined;
+
+          if (connectionName && activeConnectionId === connectionName && activeDatabase === dbName) {
+            setActiveConnection(connectionName);
+            setActiveDatabase(null);
+            clearLastUsedDatabaseForConnection(connectionName);
+            if (connectionNodeId) {
+              setSelectedNodeId(connectionNodeId);
+            }
+          }
+
           setNodes(prev => {
             const removeDbNode = (nodes: TreeNode[]): TreeNode[] => {
               return nodes.map(n => {
+                if (String(n.id) === connectionNodeId) {
+                  return {
+                    ...n,
+                    isSelected: connectionNodeId ? true : n.isSelected,
+                    childNodes: n.childNodes
+                      ? (n.childNodes as TreeNode[]).filter(child => child.id !== nodeId)
+                      : n.childNodes,
+                  };
+                }
                 if (n.childNodes) {
                   return { ...n, childNodes: (n.childNodes as TreeNode[]).filter(child => child.id !== nodeId) };
                 }
                 return n;
               });
             };
-            return removeDbNode(prev);
+            return applySelectionToNodes(removeDbNode(prev), connectionNodeId || null);
           });
         } catch (error) {
           console.error(t('metadataTree.deleteDatabaseFailed'), error);
@@ -1169,7 +1340,15 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
         }
       },
     });
-  }, [setStatusMessage, t]);
+  }, [
+    activeConnectionId,
+    activeDatabase,
+    clearLastUsedDatabaseForConnection,
+    setActiveConnection,
+    setActiveDatabase,
+    setStatusMessage,
+    t,
+  ]);
 
   const handleDeleteConnection = useCallback((node: TreeNode) => {
     const connName = node.nodeData?.connection?.name;
@@ -1392,6 +1571,7 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
   const showFolderMenu = useCallback((node: TreeNode, e: React.MouseEvent<HTMLElement>) => {
     const profile = node.nodeData?.connection;
     const database = node.nodeData?.database;
+    const table = node.nodeData?.table;
     const folderType = node.nodeData?.folderType;
     if (!profile || !database || !folderType) return;
 
@@ -1402,6 +1582,16 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
         openViewDesignerTab(profile, database, 'new_view');
       } else if (folderType === 'functions') {
         openFunctionDesignerTab(profile, database, undefined, 'FUNCTION');
+      } else if (folderType === 'columns' && table) {
+        openDesignerWithAction(profile, database, table, { target: 'field', action: 'new' });
+      } else if (folderType === 'indexes' && table) {
+        openDesignerWithAction(profile, database, table, { target: 'index', action: 'new' });
+      } else if (folderType === 'foreignKeys' && table) {
+        openDesignerWithAction(profile, database, table, { target: 'foreignKey', action: 'new' });
+      } else if (folderType === 'checks' && table) {
+        openDesignerWithAction(profile, database, table, { target: 'check', action: 'new' });
+      } else if (folderType === 'triggers' && table) {
+        openDesignerWithAction(profile, database, table, { target: 'trigger', action: 'new' });
       }
     };
 
@@ -1416,7 +1606,7 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
       content: menu,
       targetOffset: { left: e.clientX, top: e.clientY },
     });
-  }, [loadFolder, openFunctionDesignerTab, openTableDesignerTab, openViewDesignerTab, t]);
+  }, [loadFolder, openDesignerWithAction, openFunctionDesignerTab, openTableDesignerTab, openViewDesignerTab, t]);
 
   const showMetadataItemMenu = useCallback((node: TreeNode, e: React.MouseEvent<HTMLElement>) => {
     const profile = node.nodeData?.connection;
@@ -1425,6 +1615,7 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
     if (!profile || !database || !itemType) return;
 
     const objectName = node.nodeData?.objectName || node.nodeData?.table;
+    const tableName = node.nodeData?.table;
     const routineType = node.nodeData?.routineType === 'PROCEDURE' ? 'PROCEDURE' : 'FUNCTION';
 
     const parentFolderId = getParentFolderId(String(node.id));
@@ -1489,6 +1680,80 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
           <MenuItem text={t('common.refresh')} onClick={refreshParentFolder} />
         </Menu>
       );
+    } else if (
+      ['column', 'index', 'foreignKey', 'check', 'trigger'].includes(itemType) &&
+      objectName &&
+      tableName
+    ) {
+      const objectTypeMap: Record<string, string> = {
+        column: t('metadataTree.objectTypeColumn'),
+        index: t('metadataTree.objectTypeIndex'),
+        foreignKey: t('metadataTree.objectTypeForeignKey'),
+        check: t('metadataTree.objectTypeCheck'),
+        trigger: t('metadataTree.objectTypeTrigger'),
+      };
+
+      const targetMap: Record<string, DesignerActionRequest['target']> = {
+        column: 'field',
+        index: 'index',
+        foreignKey: 'foreignKey',
+        check: 'check',
+        trigger: 'trigger',
+      };
+
+      const target = targetMap[itemType];
+      const objectTypeLabel = objectTypeMap[itemType];
+
+      menu = (
+        <Menu className="tree-context-menu">
+          <MenuItem
+            text={t('metadataTree.editObject', { objectType: objectTypeLabel })}
+            onClick={() => openDesignerWithAction(profile, database, tableName, {
+              target,
+              action: 'edit',
+              name: objectName,
+            })}
+          />
+          <MenuItem
+            text={t('metadataTree.newObjectWithType', { objectType: objectTypeLabel })}
+            onClick={() => openDesignerWithAction(profile, database, tableName, {
+              target,
+              action: 'new',
+            })}
+          />
+          <MenuItem
+            text={t('metadataTree.deleteObjectWithType', { objectType: objectTypeLabel })}
+            onClick={() => handleDeleteDesignerObject(
+              profile,
+              database,
+              tableName,
+              itemType as 'column' | 'index' | 'foreignKey' | 'check' | 'trigger',
+              objectName,
+              objectTypeLabel,
+              refreshParentFolder,
+            )}
+          />
+          <MenuItem
+            text={t('metadataTree.renameObject')}
+            onClick={() => {
+              const input = window.prompt(
+                t('metadataTree.renamePrompt', { objectType: objectTypeLabel, name: objectName }),
+                objectName,
+              );
+              const newName = input?.trim();
+              if (!newName || newName === objectName) return;
+              openDesignerWithAction(profile, database, tableName, {
+                target,
+                action: 'rename',
+                name: objectName,
+                newName,
+              });
+            }}
+          />
+          <Divider />
+          <MenuItem text={t('common.refresh')} onClick={refreshParentFolder} />
+        </Menu>
+      );
     }
 
     if (!menu) return;
@@ -1500,7 +1765,9 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
   }, [
     getParentFolderId,
     handleDeleteMetadataObject,
+    handleDeleteDesignerObject,
     openFunctionDesignerTab,
+    openDesignerWithAction,
     openTableDataTab,
     openTableDesignerTab,
     openViewDataTab,
@@ -1520,9 +1787,9 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
       showConnectionMenu(node, e);
     } else if (node.nodeData?.database && !node.nodeData?.folderType && !node.nodeData?.itemType) {
       showDatabaseMenu(node, e);
-    } else if (node.nodeData?.folderType && ['tables', 'views', 'functions'].includes(node.nodeData.folderType)) {
+    } else if (node.nodeData?.folderType && ['tables', 'views', 'functions', 'columns', 'indexes', 'foreignKeys', 'checks', 'triggers'].includes(node.nodeData.folderType)) {
       showFolderMenu(node, e);
-    } else if (node.nodeData?.itemType && ['table', 'view', 'function'].includes(node.nodeData.itemType)) {
+    } else if (node.nodeData?.itemType && ['table', 'view', 'function', 'column', 'index', 'foreignKey', 'check', 'trigger'].includes(node.nodeData.itemType)) {
       showMetadataItemMenu(node, e);
     }
   }, [showConnectionMenu, showDatabaseMenu, showFolderMenu, showMetadataItemMenu]);

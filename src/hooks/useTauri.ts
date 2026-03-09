@@ -380,22 +380,31 @@ export const exportApi = {
 const toRustBackupRequest = (req: BackupRequest) => ({
   conn: req.conn,
   schema: req.schema,
-  mysqldump_path: req.mysqldumpPath,
   output_path: req.outputPath,
+  selected_tables: req.selectedTables ?? [],
+  selected_views: req.selectedViews ?? [],
+  selected_routines: req.selectedRoutines ?? [],
   options: {
+    include_structure: req.options.includeStructure ?? true,
     include_data: req.options.includeData,
     include_views: req.options.includeViews,
     include_routines: req.options.includeRoutines,
+    include_triggers: req.options.includeTriggers ?? true,
     add_drop_table: req.options.addDropTable,
+    use_transaction: req.options.useTransaction ?? true,
+    compress_output: req.options.compressOutput ?? false,
+    compression_level: req.options.compressionLevel,
+    insert_batch_size: req.options.insertBatchSize,
   },
 });
 
 const toRustRestoreRequest = (req: RestoreRequest) => ({
   conn: req.conn,
   target_schema: req.targetSchema,
-  mysql_path: req.mysqlPath,
   input_path: req.inputPath,
   create_schema: req.createSchema,
+  continue_on_error: req.continueOnError ?? false,
+  use_transaction: req.useTransaction ?? true,
 });
 
 const toRustIncrementalRequest = (req: IncrementalRequest) => ({

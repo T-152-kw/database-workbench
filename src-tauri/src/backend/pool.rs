@@ -35,6 +35,10 @@ static KEEPALIVE_MANAGER: Lazy<KeepaliveManager> = Lazy::new(|| KeepaliveManager
 
 static CONN_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
 static POOL_ID_COUNTER: AtomicU64 = AtomicU64::new(1);
+const DEFAULT_QUERY_PAGE_SIZE: u64 = 200;
+const MAX_QUERY_PAGE_SIZE: u64 = 2000;
+// Avoid probing connection health for every statement; probe only after idle window.
+const HEALTH_CHECK_IDLE_THRESHOLD_SECS: u64 = 3;
 
 #[derive(Debug, Clone, Deserialize)]
 pub struct PoolConfig {
@@ -153,6 +157,7 @@ struct ConnectionState {
     created_at: u64,         // NEW: 连接创建时间戳
     use_count: AtomicU64,    // NEW: 连接使用次数
     last_used_at: AtomicU64, // NEW: 最后使用时间戳
+    last_health_check_at: AtomicU64,
     // NEW: 安全检测状态跟踪
     in_transaction: AtomicU64,       // 事务嵌套计数（0表示不在事务中）
     has_temporary_tables: AtomicU64, // 临时表计数
@@ -171,6 +176,7 @@ impl ConnectionState {
             created_at: now,
             use_count: AtomicU64::new(0),
             last_used_at: AtomicU64::new(now),
+            last_health_check_at: AtomicU64::new(0),
             in_transaction: AtomicU64::new(0),
             has_temporary_tables: AtomicU64::new(0),
             auto_reconnect,
@@ -180,11 +186,26 @@ impl ConnectionState {
     // NEW: 记录连接使用
     fn record_use(&self) {
         self.use_count.fetch_add(1, Ordering::SeqCst);
-        let now = std::time::SystemTime::now()
+        let now = Self::now_unix_secs();
+        self.last_used_at.store(now, Ordering::SeqCst);
+    }
+
+    fn now_unix_secs() -> u64 {
+        std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap_or_default()
-            .as_secs();
-        self.last_used_at.store(now, Ordering::SeqCst);
+            .as_secs()
+    }
+
+    fn should_probe_health(&self) -> bool {
+        let now = Self::now_unix_secs();
+        let last_check = self.last_health_check_at.load(Ordering::SeqCst);
+        now.saturating_sub(last_check) >= HEALTH_CHECK_IDLE_THRESHOLD_SECS
+    }
+
+    fn mark_health_checked(&self) {
+        let now = Self::now_unix_secs();
+        self.last_health_check_at.store(now, Ordering::SeqCst);
     }
 
     // NEW: 检查是否可以安全重连
@@ -591,14 +612,21 @@ impl ConnectionPool {
                 .get_mut(&conn_id)
                 .ok_or_else(|| "Connection not found".to_string())?;
 
-            match entry.conn.query_drop("SELECT 1") {
-                Ok(_) => false,
-                Err(err) => {
-                    let probe_error = err.to_string();
-                    if !is_connection_lost_error(&probe_error) {
-                        return Err(format!("Connection health check failed: {probe_error}"));
+            if !entry.should_probe_health() {
+                false
+            } else {
+                let probe_result = entry.conn.query_drop("SELECT 1");
+                entry.mark_health_checked();
+
+                match probe_result {
+                    Ok(_) => false,
+                    Err(err) => {
+                        let probe_error = err.to_string();
+                        if !is_connection_lost_error(&probe_error) {
+                            return Err(format!("Connection health check failed: {probe_error}"));
+                        }
+                        true
                     }
-                    true
                 }
             }
         };
@@ -648,7 +676,10 @@ impl ConnectionPool {
                 .ok_or_else(|| "Connection not found".to_string())?;
 
             match action(&mut entry.conn) {
-                Ok(result) => return Ok(result),
+                Ok(result) => {
+                    entry.record_use();
+                    return Ok(result);
+                }
                 Err(err) => {
                     if !is_connection_lost_error(&err) {
                         return Err(err);
@@ -714,9 +745,15 @@ impl ConnectionPool {
         // NEW: 记录连接使用
         entry.record_use();
 
-        action(&mut entry.conn).map_err(|retry_err| {
-            format!("Connection was reset after error: {first_error}; retry failed: {retry_err}")
-        })
+        match action(&mut entry.conn) {
+            Ok(result) => {
+                entry.record_use();
+                Ok(result)
+            }
+            Err(retry_err) => Err(format!(
+                "Connection was reset after error: {first_error}; retry failed: {retry_err}"
+            )),
+        }
     }
 
     fn with_pooled_connection<T, F>(&self, action: F) -> Result<T, String>
@@ -870,6 +907,19 @@ pub struct ColumnMeta {
 pub struct QueryResult {
     pub columns: Vec<ColumnMeta>,
     pub rows: Vec<Vec<JsonValue>>,
+    pub query_time_secs: f64,
+    pub fetch_time_secs: f64,
+}
+
+#[derive(Debug, Serialize)]
+pub struct QueryPageResult {
+    pub columns: Vec<ColumnMeta>,
+    pub rows: Vec<Vec<JsonValue>>,
+    pub page: u64,
+    pub page_size: u64,
+    pub has_more: bool,
+    pub total_rows: Option<u64>,
+    pub total_pages: Option<u64>,
     pub query_time_secs: f64,
     pub fetch_time_secs: f64,
 }
@@ -1199,6 +1249,25 @@ pub fn query(pool_id: u64, conn_id: u64, sql: &str) -> Result<QueryResult, Strin
     }
 }
 
+pub fn query_page(
+    pool_id: u64,
+    conn_id: u64,
+    sql: &str,
+    page: Option<u64>,
+    page_size: Option<u64>,
+    include_total: Option<bool>,
+) -> Result<QueryPageResult, String> {
+    let manager = POOL_MANAGER
+        .read()
+        .map_err(|_| "Pool manager lock failed".to_string())?;
+    match manager.get_pool(pool_id) {
+        Some(pool) => pool.with_connection(conn_id, |conn| {
+            execute_query_page(conn, sql, page, page_size, include_total)
+        }),
+        None => Err("Pool not found".to_string()),
+    }
+}
+
 pub fn query_multi(pool_id: u64, conn_id: u64, sql: &str) -> Result<MultiQueryResult, String> {
     let manager = POOL_MANAGER
         .read()
@@ -1502,6 +1571,117 @@ fn execute_query(
     result.fetch_time_secs = fetch_start.elapsed().as_secs_f64();
 
     Ok(result)
+}
+
+fn execute_query_page(
+    conn: &mut Conn,
+    sql: &str,
+    page: Option<u64>,
+    page_size: Option<u64>,
+    include_total: Option<bool>,
+) -> Result<QueryPageResult, String> {
+    let normalized_sql = normalize_query_sql(sql)?;
+    let safe_page = page.unwrap_or(1).max(1);
+    let safe_page_size = page_size
+        .unwrap_or(DEFAULT_QUERY_PAGE_SIZE)
+        .clamp(1, MAX_QUERY_PAGE_SIZE);
+    let offset = (safe_page - 1).saturating_mul(safe_page_size);
+
+    let started_at = Instant::now();
+    let (total_rows, total_pages) = if include_total.unwrap_or(false) {
+        let count_sql = format!(
+            "SELECT COUNT(*) AS __dwb_total_rows FROM ({}) AS __dwb_count_subquery",
+            normalized_sql
+        );
+
+        let total = conn
+            .query_first::<u64, _>(count_sql)
+            .map_err(|e| format!("Count query failed: {e}"))?
+            .unwrap_or(0);
+
+        let pages = if total == 0 {
+            Some(1)
+        } else {
+            Some(total.div_ceil(safe_page_size))
+        };
+
+        (Some(total), pages)
+    } else {
+        (None, None)
+    };
+
+    let paged_sql = format!(
+        "SELECT * FROM ({}) AS __dwb_page_subquery LIMIT {}, {}",
+        normalized_sql,
+        offset,
+        safe_page_size.saturating_add(1)
+    );
+
+    let mut rows = conn
+        .exec_iter(paged_sql, Params::Empty)
+        .map_err(|e| format!("Query failed: {e}"))?;
+
+    let columns_binding = rows.columns();
+    let columns = columns_binding.as_ref();
+
+    let result_columns: Vec<ColumnMeta> = columns
+        .iter()
+        .map(|c: &mysql::Column| ColumnMeta {
+            name: c.name_str().to_string(),
+            label: c.name_str().to_string(),
+            type_name: format!("{:?}", c.column_type()),
+        })
+        .collect();
+
+    let column_type_hints: Vec<(String, u8)> = columns
+        .iter()
+        .map(|c| (format!("{:?}", c.column_type()), c.decimals()))
+        .collect();
+
+    let fetch_start = Instant::now();
+    let mut result_rows: Vec<Vec<JsonValue>> = Vec::new();
+    let mut has_more = false;
+
+    for row in rows.by_ref() {
+        let row = row.map_err(|e| format!("Row read failed: {e}"))?;
+        if (result_rows.len() as u64) < safe_page_size {
+            result_rows.push(row_to_json(row, &column_type_hints));
+        } else {
+            has_more = true;
+            break;
+        }
+    }
+
+    let fetch_time_secs = fetch_start.elapsed().as_secs_f64();
+    let total_elapsed = started_at.elapsed().as_secs_f64();
+    let query_time_secs = (total_elapsed - fetch_time_secs).max(0.0);
+
+    Ok(QueryPageResult {
+        columns: result_columns,
+        rows: result_rows,
+        page: safe_page,
+        page_size: safe_page_size,
+        has_more,
+        total_rows,
+        total_pages,
+        query_time_secs,
+        fetch_time_secs,
+    })
+}
+
+fn normalize_query_sql(sql: &str) -> Result<String, String> {
+    let mut normalized = sql.trim().trim_end_matches(';').trim().to_string();
+    if normalized.is_empty() {
+        return Err("SQL query cannot be empty".to_string());
+    }
+
+    // Prevent accidental multi-statements from being wrapped into derived tables.
+    if normalized.contains(';') {
+        return Err("Paginated query only supports a single SQL statement".to_string());
+    }
+
+    normalized.shrink_to_fit();
+    Ok(normalized)
 }
 
 fn execute_query_multi(

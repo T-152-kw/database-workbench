@@ -58,8 +58,14 @@ fn split_sql_statements_inner(sql: &str, db_type: &str) -> Vec<String> {
     let mut string_char = '\0';
     let mut in_block_comment = false;
     let mut in_line_comment = false;
-    let mut block_depth: i32 = 0;
     let mut current_word = String::new();
+
+    // MySQL compound statement tracking when delimiter is default ';'.
+    let mut saw_create = false;
+    let mut saw_compound_target = false;
+    let mut in_compound_body = false;
+    let mut compound_depth: i32 = 0;
+    let mut pending_end = false;
 
     let support_go = db_type.eq_ignore_ascii_case("SQL_SERVER");
     let support_slash = db_type.eq_ignore_ascii_case("ORACLE");
@@ -161,26 +167,74 @@ fn split_sql_statements_inner(sql: &str, db_type: &str) -> Vec<String> {
             } else if !current_word.is_empty() {
                 let word = current_word.to_ascii_uppercase();
                 current_word.clear();
-                if word == "BEGIN" || word == "CASE" {
-                    block_depth += 1;
-                } else if word == "END" {
-                    if block_depth > 0 {
-                        block_depth -= 1;
+
+                if support_delimiter_cmd && delimiter == ";" {
+                    if pending_end {
+                        if is_compound_end_suffix(&word) {
+                            if compound_depth > 0 {
+                                compound_depth -= 1;
+                            }
+                            pending_end = false;
+                            continue;
+                        }
+
+                        if compound_depth > 0 {
+                            compound_depth -= 1;
+                        }
+                        pending_end = false;
+                    }
+
+                    if !in_compound_body {
+                        if word == "CREATE" {
+                            saw_create = true;
+                        } else if saw_create && is_compound_target_keyword(&word) {
+                            saw_compound_target = true;
+                        } else if saw_compound_target && word == "BEGIN" {
+                            in_compound_body = true;
+                            compound_depth = 1;
+                        }
+                    } else {
+                        if word == "BEGIN" {
+                            compound_depth += 1;
+                        } else if word == "END" {
+                            pending_end = true;
+                        } else if is_compound_block_opener(&word, &chars, i) {
+                            compound_depth += 1;
+                        }
                     }
                 }
             }
 
             if matches_delimiter(&chars, i, &delimiter) {
-                if block_depth <= 0 {
-                    let stmt = current.trim();
-                    if !stmt.is_empty() {
-                        statements.push(stmt.to_string());
+                if support_delimiter_cmd && delimiter == ";" {
+                    if pending_end {
+                        if compound_depth > 0 {
+                            compound_depth -= 1;
+                        }
+                        pending_end = false;
                     }
-                    current.clear();
-                    block_depth = 0;
-                    i += delimiter.len();
-                    continue;
+
+                    if in_compound_body && compound_depth > 0 {
+                        current.push(ch);
+                        i += 1;
+                        continue;
+                    }
                 }
+
+                let stmt = current.trim();
+                if !stmt.is_empty() {
+                    statements.push(stmt.to_string());
+                }
+                current.clear();
+
+                saw_create = false;
+                saw_compound_target = false;
+                in_compound_body = false;
+                compound_depth = 0;
+                pending_end = false;
+
+                i += delimiter.len();
+                continue;
             }
         }
 
@@ -273,4 +327,32 @@ fn matches_delimiter(chars: &[char], index: usize, delimiter: &str) -> bool {
     }
     let slice = chars[index..index + len].iter().collect::<String>();
     slice == delimiter
+}
+
+fn next_non_whitespace_char(chars: &[char], mut index: usize) -> Option<char> {
+    while index < chars.len() {
+        let ch = chars[index];
+        if !ch.is_whitespace() {
+            return Some(ch);
+        }
+        index += 1;
+    }
+    None
+}
+
+fn is_compound_target_keyword(word: &str) -> bool {
+    word == "TRIGGER" || word == "PROCEDURE" || word == "FUNCTION"
+}
+
+fn is_compound_end_suffix(word: &str) -> bool {
+    word == "IF" || word == "LOOP" || word == "REPEAT" || word == "WHILE" || word == "CASE"
+}
+
+fn is_compound_block_opener(word: &str, chars: &[char], index: usize) -> bool {
+    match word {
+        // Distinguish control-flow IF ... THEN from scalar IF(...).
+        "IF" => next_non_whitespace_char(chars, index).is_none_or(|ch| ch != '('),
+        "LOOP" | "REPEAT" | "WHILE" | "CASE" => true,
+        _ => false,
+    }
 }

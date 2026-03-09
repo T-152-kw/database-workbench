@@ -1,5 +1,7 @@
 import type * as monaco from 'monaco-editor';
 import { getMonacoInstance, getEditorSettings } from './editorSettings';
+import { metadataApi } from '../hooks/useTauri';
+import type { ConnectionProfile, MetadataRecord } from '../types';
 
 // SQL 关键字列表
 const SQL_KEYWORDS = [
@@ -123,6 +125,640 @@ const ROUTINE_KEYWORDS = [
 let completionProviderDisposable: monaco.IDisposable | null = null;
 let enableRoutineKeywordsFlag: boolean = false;
 
+interface CompletionContext {
+  profile: ConnectionProfile;
+  database?: string;
+}
+
+interface CacheEntry<T> {
+  value: T;
+  expiresAt: number;
+}
+
+const TABLE_CACHE_TTL_MS = 20_000;
+const COLUMN_CACHE_TTL_MS = 20_000;
+const DATABASE_CACHE_TTL_MS = 60_000;
+let completionContext: CompletionContext | null = null;
+const databaseListCache = new Map<string, CacheEntry<string[]>>();
+const databaseListInFlight = new Map<string, Promise<string[]>>();
+const tableListCache = new Map<string, CacheEntry<string[]>>();
+const tableListInFlight = new Map<string, Promise<string[]>>();
+const columnCache = new Map<string, CacheEntry<string[]>>();
+const columnInFlight = new Map<string, Promise<string[]>>();
+
+interface TableRef {
+  database?: string;
+  table: string;
+}
+
+interface StatementContext {
+  clause: 'select' | 'from' | 'groupBy' | 'generic';
+  statementSql: string;
+  beforeCursorSql: string;
+  tableRefs: TableRef[];
+  aliasMap: Map<string, TableRef>;
+  selectedFields: string[];
+  hasSelectStar: boolean;
+  cteNames: Set<string>;
+  cteFieldMap: Map<string, string[]>;
+  localRelationNames: Set<string>;
+}
+
+interface DotCompletionContext {
+  qualifierParts: string[];
+}
+
+interface StatementWindow {
+  statementSql: string;
+  beforeCursorSql: string;
+}
+
+function getProfileCacheKey(profile: ConnectionProfile): string {
+  return [
+    profile.host,
+    profile.port,
+    profile.username,
+    profile.database ?? '',
+    profile.sslMode ?? '',
+    profile.sslCaPath ?? '',
+  ].join('|');
+}
+
+function getContextKey(context: CompletionContext): string {
+  return `${getProfileCacheKey(context.profile)}|${context.database ?? ''}`;
+}
+
+function getContextProfileKey(context: CompletionContext): string {
+  return getProfileCacheKey(context.profile);
+}
+
+function parseColumnNames(rows: MetadataRecord[]): string[] {
+  return rows
+    .map((row) => row.COLUMN_NAME)
+    .filter((name): name is string => typeof name === 'string' && name.length > 0);
+}
+
+function readCachedValue<T>(cache: Map<string, CacheEntry<T>>, key: string): T | null {
+  const cached = cache.get(key);
+  if (cached && cached.expiresAt > Date.now()) {
+    return cached.value;
+  }
+  return null;
+}
+
+function normalizePart(part: string): string {
+  const trimmed = part.trim();
+  if (!trimmed) return '';
+
+  if (trimmed.startsWith('`') && trimmed.endsWith('`') && trimmed.length >= 2) {
+    return trimmed.slice(1, -1).replace(/``/g, '`').trim();
+  }
+
+  if (trimmed.startsWith('"') && trimmed.endsWith('"') && trimmed.length >= 2) {
+    return trimmed.slice(1, -1).replace(/""/g, '"').trim();
+  }
+
+  return trimmed;
+}
+
+function splitQualifiedIdentifier(input: string): string[] {
+  const result: string[] = [];
+  let current = '';
+  let inBacktick = false;
+  let inDoubleQuote = false;
+
+  for (let index = 0; index < input.length; index += 1) {
+    const ch = input[index];
+
+    if (ch === '`' && !inDoubleQuote) {
+      inBacktick = !inBacktick;
+      current += ch;
+      continue;
+    }
+
+    if (ch === '"' && !inBacktick) {
+      inDoubleQuote = !inDoubleQuote;
+      current += ch;
+      continue;
+    }
+
+    if (ch === '.' && !inBacktick && !inDoubleQuote) {
+      result.push(normalizePart(current));
+      current = '';
+      continue;
+    }
+
+    current += ch;
+  }
+
+  if (current.length > 0) {
+    result.push(normalizePart(current));
+  }
+
+  return result.filter((part) => part.length > 0);
+}
+
+function parseTableRef(raw: string): TableRef | null {
+  const parts = splitQualifiedIdentifier(raw);
+  if (parts.length === 0) return null;
+
+  if (parts.length === 1) {
+    return { table: parts[0] };
+  }
+
+  return {
+    database: parts[parts.length - 2],
+    table: parts[parts.length - 1],
+  };
+}
+
+function tableRefKey(tableRef: TableRef): string {
+  return `${(tableRef.database || '').toLowerCase()}|${tableRef.table.toLowerCase()}`;
+}
+
+function quoteIdentifier(name: string): string {
+  return `\`${name.replace(/`/g, '``')}\``;
+}
+
+function buildQualifiedTableName(tableRef: TableRef): string {
+  if (tableRef.database) {
+    return `${quoteIdentifier(tableRef.database)}.${quoteIdentifier(tableRef.table)}`;
+  }
+  return quoteIdentifier(tableRef.table);
+}
+
+async function loadDatabasesForContext(context: CompletionContext): Promise<string[]> {
+  const cacheKey = `databases:${getContextProfileKey(context)}`;
+  const cached = readCachedValue(databaseListCache, cacheKey);
+  if (cached) return cached;
+
+  const pending = databaseListInFlight.get(cacheKey);
+  if (pending) return pending;
+
+  const request = metadataApi
+    .listDatabases(context.profile)
+    .then((databases) => {
+      databaseListCache.set(cacheKey, {
+        value: databases,
+        expiresAt: Date.now() + DATABASE_CACHE_TTL_MS,
+      });
+      return databases;
+    })
+    .finally(() => {
+      databaseListInFlight.delete(cacheKey);
+    });
+
+  databaseListInFlight.set(cacheKey, request);
+  return request;
+}
+
+async function loadTablesForContext(context: CompletionContext): Promise<string[]> {
+  if (!context.database) return [];
+
+  const contextKey = getContextKey(context);
+  const cacheKey = `tables:${contextKey}`;
+  const cached = readCachedValue(tableListCache, cacheKey);
+  if (cached) return cached;
+
+  const pending = tableListInFlight.get(cacheKey);
+  if (pending) return pending;
+
+  const request = metadataApi
+    .listTables(context.profile, context.database)
+    .then((tables) => {
+      tableListCache.set(cacheKey, {
+        value: tables,
+        expiresAt: Date.now() + TABLE_CACHE_TTL_MS,
+      });
+      return tables;
+    })
+    .finally(() => {
+      tableListInFlight.delete(cacheKey);
+    });
+
+  tableListInFlight.set(cacheKey, request);
+  return request;
+}
+
+async function loadTablesForDatabase(context: CompletionContext, database: string): Promise<string[]> {
+  if (!database) return [];
+
+  const contextKey = getContextProfileKey(context);
+  const cacheKey = `tables:${contextKey}:${database.toLowerCase()}`;
+  const cached = readCachedValue(tableListCache, cacheKey);
+  if (cached) return cached;
+
+  const pending = tableListInFlight.get(cacheKey);
+  if (pending) return pending;
+
+  const request = metadataApi
+    .listTables(context.profile, database)
+    .then((tables) => {
+      tableListCache.set(cacheKey, {
+        value: tables,
+        expiresAt: Date.now() + TABLE_CACHE_TTL_MS,
+      });
+      return tables;
+    })
+    .finally(() => {
+      tableListInFlight.delete(cacheKey);
+    });
+
+  tableListInFlight.set(cacheKey, request);
+  return request;
+}
+
+async function loadColumnsForTable(
+  context: CompletionContext,
+  tableRef: TableRef
+): Promise<string[]> {
+  const targetDatabase = tableRef.database || context.database;
+  if (!targetDatabase || !tableRef.table) return [];
+
+  const contextKey = getContextProfileKey(context);
+  const cacheKey = `columns:${contextKey}:${targetDatabase.toLowerCase()}:${tableRef.table.toLowerCase()}`;
+  const cached = readCachedValue(columnCache, cacheKey);
+  if (cached) return cached;
+
+  const pending = columnInFlight.get(cacheKey);
+  if (pending) return pending;
+
+  const request = metadataApi
+    .listColumns(context.profile, targetDatabase, tableRef.table)
+    .then((rows) => {
+      const columns = parseColumnNames(rows);
+      columnCache.set(cacheKey, {
+        value: columns,
+        expiresAt: Date.now() + COLUMN_CACHE_TTL_MS,
+      });
+      return columns;
+    })
+    .finally(() => {
+      columnInFlight.delete(cacheKey);
+    });
+
+  columnInFlight.set(cacheKey, request);
+  return request;
+}
+
+function normalizeIdentifier(identifier: string): string {
+  const parts = splitQualifiedIdentifier(identifier);
+  if (parts.length === 0) return '';
+  return parts[parts.length - 1];
+}
+
+function extractStatementWindow(fullSql: string, cursorOffset: number): StatementWindow {
+  let start = 0;
+  for (let index = cursorOffset - 1; index >= 0; index -= 1) {
+    if (fullSql[index] === ';') {
+      start = index + 1;
+      break;
+    }
+  }
+
+  let end = fullSql.length;
+  for (let index = cursorOffset; index < fullSql.length; index += 1) {
+    if (fullSql[index] === ';') {
+      end = index;
+      break;
+    }
+  }
+
+  const statementSql = fullSql.slice(start, end);
+  const statementCursorOffset = Math.max(0, Math.min(statementSql.length, cursorOffset - start));
+  const beforeCursorSql = statementSql.slice(0, statementCursorOffset);
+
+  return {
+    statementSql,
+    beforeCursorSql,
+  };
+}
+
+function splitTopLevelByComma(input: string): string[] {
+  const parts: string[] = [];
+  let current = '';
+  let depth = 0;
+  let inSingleQuote = false;
+  let inDoubleQuote = false;
+  let inBacktick = false;
+
+  for (let index = 0; index < input.length; index += 1) {
+    const ch = input[index];
+
+    if (ch === '\\') {
+      current += ch;
+      if (index + 1 < input.length) {
+        index += 1;
+        current += input[index];
+      }
+      continue;
+    }
+
+    if (!inDoubleQuote && !inBacktick && ch === '\'') {
+      inSingleQuote = !inSingleQuote;
+      current += ch;
+      continue;
+    }
+
+    if (!inSingleQuote && !inBacktick && ch === '"') {
+      inDoubleQuote = !inDoubleQuote;
+      current += ch;
+      continue;
+    }
+
+    if (!inSingleQuote && !inDoubleQuote && ch === '`') {
+      inBacktick = !inBacktick;
+      current += ch;
+      continue;
+    }
+
+    if (!inSingleQuote && !inDoubleQuote && !inBacktick) {
+      if (ch === '(') depth += 1;
+      if (ch === ')' && depth > 0) depth -= 1;
+
+      if (ch === ',' && depth === 0) {
+        parts.push(current.trim());
+        current = '';
+        continue;
+      }
+    }
+
+    current += ch;
+  }
+
+  if (current.trim().length > 0) {
+    parts.push(current.trim());
+  }
+
+  return parts;
+}
+
+function extractSelectedFields(statementSql: string): { fields: string[]; hasStar: boolean } {
+  const match = statementSql.match(/\bselect\b([\s\S]*?)(\bfrom\b|$)/i);
+  if (!match) {
+    return { fields: [], hasStar: false };
+  }
+
+  const selectList = match[1] || '';
+  const hasStar = /(^|\s|,)\*(\s|,|$)/.test(selectList) || /\w+\.\*/.test(selectList);
+  if (hasStar) {
+    return { fields: [], hasStar: true };
+  }
+
+  const fields = splitTopLevelByComma(selectList)
+    .map((segment) => {
+      const asMatch = segment.match(/\bas\s+([`"\w$]+)$/i);
+      if (asMatch) {
+        return normalizeIdentifier(asMatch[1]);
+      }
+
+      const simpleAlias = segment.match(/([`"\w$]+)$/);
+      const core = simpleAlias ? simpleAlias[1] : segment;
+      return normalizeIdentifier(core);
+    })
+    .filter((field) => field.length > 0);
+
+  return { fields, hasStar };
+}
+
+function extractCteNames(statementSql: string): Set<string> {
+  const cteNames = new Set<string>();
+  const withMatch = statementSql.match(/^\s*with\s+([\s\S]+)/i);
+  if (!withMatch) return cteNames;
+
+  const regex = /([`"\w$]+)\s+as\s*\(/gi;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(statementSql)) !== null) {
+    const cteName = normalizeIdentifier(match[1]);
+    if (cteName) {
+      cteNames.add(cteName.toLowerCase());
+    }
+  }
+
+  return cteNames;
+}
+
+function extractCteFieldMap(statementSql: string): Map<string, string[]> {
+  const map = new Map<string, string[]>();
+  const regex = /([`"\w$]+)\s+as\s*\(\s*select\s+([\s\S]*?)\s+from[\s\S]*?\)/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(statementSql)) !== null) {
+    const cteName = normalizeIdentifier(match[1]).toLowerCase();
+    const selectList = match[2] || '';
+    const fields = splitTopLevelByComma(selectList)
+      .map((segment) => {
+        const asMatch = segment.match(/\bas\s+([`"\w$]+)$/i);
+        if (asMatch) return normalizeIdentifier(asMatch[1]);
+        const tail = segment.match(/([`"\w$]+)$/);
+        return normalizeIdentifier(tail ? tail[1] : segment);
+      })
+      .filter((field) => field.length > 0);
+
+    if (cteName && fields.length > 0) {
+      map.set(cteName, fields);
+    }
+  }
+
+  return map;
+}
+
+function extractDerivedTableAliases(statementSql: string): Set<string> {
+  const aliases = new Set<string>();
+  const regex = /\b(?:from|join)\s*\([\s\S]*?\)\s*(?:as\s+)?([`"\w$]+)/gi;
+  let match: RegExpExecArray | null;
+  while ((match = regex.exec(statementSql)) !== null) {
+    const alias = normalizeIdentifier(match[1]);
+    if (alias) aliases.add(alias.toLowerCase());
+  }
+  return aliases;
+}
+
+function extractTableAliasMap(statementSql: string): Map<string, TableRef> {
+  const aliasMap = new Map<string, TableRef>();
+  const regex = /\b(?:from|join|update|into)\s+([^\s,()]+)(?:\s+(?:as\s+)?([`"\w$]+))?/gi;
+  let match: RegExpExecArray | null;
+
+  while ((match = regex.exec(statementSql)) !== null) {
+    const tableRef = parseTableRef(match[1] || '');
+    if (!tableRef) continue;
+    const rawAlias = normalizeIdentifier(match[2] || '');
+
+    aliasMap.set(tableRef.table.toLowerCase(), tableRef);
+    if (rawAlias) {
+      aliasMap.set(rawAlias.toLowerCase(), tableRef);
+    }
+  }
+
+  return aliasMap;
+}
+
+function collectStatementTables(aliasMap: Map<string, TableRef>): TableRef[] {
+  const values = new Map<string, TableRef>();
+  aliasMap.forEach((tableRef) => {
+    values.set(tableRefKey(tableRef), tableRef);
+  });
+  return Array.from(values.values());
+}
+
+function detectClauseContext(beforeCursorSql: string): StatementContext['clause'] {
+  const normalized = beforeCursorSql.toLowerCase();
+  if (/\bgroup\s+by\s+[^;]*$/i.test(normalized)) return 'groupBy';
+  if (/\b(from|join|update|into|table|describe|desc|truncate)\s+[^;]*$/i.test(normalized)) return 'from';
+  if (/\bselect\b[\s\S]*$/i.test(normalized) && !/\bfrom\b/i.test(normalized)) return 'select';
+  return 'generic';
+}
+
+function extractDotCompletionContext(beforeCursorSql: string): DotCompletionContext | null {
+  const trimmedRight = beforeCursorSql.replace(/\s+$/, '');
+  if (!trimmedRight.endsWith('.')) return null;
+
+  const source = trimmedRight.slice(0, -1);
+  let index = source.length - 1;
+  while (index >= 0) {
+    const ch = source[index];
+    const isBreak = /[\s,;()+\-*/=%<>!]/.test(ch);
+    if (isBreak) break;
+    index -= 1;
+  }
+
+  const token = source.slice(index + 1);
+  const parts = splitQualifiedIdentifier(token);
+  if (parts.length === 0) return null;
+
+  return { qualifierParts: parts };
+}
+
+function buildStatementContext(statementSql: string, beforeCursorSql: string): StatementContext {
+  const aliasMap = extractTableAliasMap(statementSql);
+  const tableRefs = collectStatementTables(aliasMap);
+  const selectedFieldInfo = extractSelectedFields(statementSql);
+  const cteNames = extractCteNames(statementSql);
+  const cteFieldMap = extractCteFieldMap(statementSql);
+  const derivedAliases = extractDerivedTableAliases(statementSql);
+  const localRelationNames = new Set<string>([...cteNames, ...derivedAliases]);
+
+  return {
+    clause: detectClauseContext(beforeCursorSql),
+    statementSql,
+    beforeCursorSql,
+    tableRefs,
+    aliasMap,
+    selectedFields: selectedFieldInfo.fields,
+    hasSelectStar: selectedFieldInfo.hasStar,
+    cteNames,
+    cteFieldMap,
+    localRelationNames,
+  };
+}
+
+function createTableSuggestions(
+  monaco: typeof import('monaco-editor'),
+  tables: string[],
+  range: monaco.IRange,
+  priority: number,
+  database?: string,
+  withDatabasePrefix: boolean = false
+): monaco.languages.CompletionItem[] {
+  return tables.map((table) => ({
+    label: withDatabasePrefix && database ? `${database}.${table}` : table,
+    kind: monaco.languages.CompletionItemKind.Class,
+    insertText: withDatabasePrefix && database
+      ? `${quoteIdentifier(database)}.${quoteIdentifier(table)}`
+      : quoteIdentifier(table),
+    detail: database ? `Table (${database})` : 'Table',
+    range,
+    sortText: `${String(priority).padStart(2, '0')}_table_${(database || '').toLowerCase()}_${table.toLowerCase()}`,
+  }));
+}
+
+function createDatabaseSuggestions(
+  monaco: typeof import('monaco-editor'),
+  databases: string[],
+  range: monaco.IRange,
+  priority: number,
+  appendDot: boolean
+): monaco.languages.CompletionItem[] {
+  return databases.map((database) => ({
+    label: database,
+    kind: monaco.languages.CompletionItemKind.Module,
+    insertText: appendDot ? `${quoteIdentifier(database)}.` : quoteIdentifier(database),
+    detail: 'Database',
+    range,
+    sortText: `${String(priority).padStart(2, '0')}_db_${database.toLowerCase()}`,
+  }));
+}
+
+function createColumnSuggestions(
+  monaco: typeof import('monaco-editor'),
+  tableRef: TableRef,
+  columns: string[],
+  range: monaco.IRange,
+  useQualifiedName: boolean,
+  priority: number
+): monaco.languages.CompletionItem[] {
+  const tableDisplay = tableRef.database ? `${tableRef.database}.${tableRef.table}` : tableRef.table;
+  return columns.map((column) => ({
+    label: column,
+    kind: monaco.languages.CompletionItemKind.Field,
+    insertText: useQualifiedName
+      ? `${buildQualifiedTableName(tableRef)}.${quoteIdentifier(column)}`
+      : quoteIdentifier(column),
+    detail: `Column (${tableDisplay})`,
+    range,
+    sortText: `${String(priority).padStart(2, '0')}_col_${tableDisplay.toLowerCase()}_${column.toLowerCase()}`,
+  }));
+}
+
+function createSelectedFieldSuggestions(
+  monaco: typeof import('monaco-editor'),
+  selectedFields: string[],
+  range: monaco.IRange,
+  priority: number
+): monaco.languages.CompletionItem[] {
+  return selectedFields.map((field) => ({
+    label: field,
+    kind: monaco.languages.CompletionItemKind.Field,
+    insertText: field,
+    detail: 'Selected field',
+    range,
+    sortText: `${String(priority).padStart(2, '0')}_selected_${field.toLowerCase()}`,
+  }));
+}
+
+function createLocalRelationSuggestions(
+  monaco: typeof import('monaco-editor'),
+  names: string[],
+  range: monaco.IRange,
+  priority: number
+): monaco.languages.CompletionItem[] {
+  return names.map((name) => ({
+    label: name,
+    kind: monaco.languages.CompletionItemKind.Variable,
+    insertText: quoteIdentifier(name),
+    detail: 'CTE/Derived relation',
+    range,
+    sortText: `${String(priority).padStart(2, '0')}_local_${name.toLowerCase()}`,
+  }));
+}
+
+function dedupeSuggestions(
+  suggestions: monaco.languages.CompletionItem[]
+): monaco.languages.CompletionItem[] {
+  const seen = new Set<string>();
+  const result: monaco.languages.CompletionItem[] = [];
+
+  suggestions.forEach((item) => {
+    const label = typeof item.label === 'string' ? item.label : item.label.label;
+    const key = `${label}:${item.kind ?? ''}:${item.insertText}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    result.push(item);
+  });
+
+  return result;
+}
+
 /**
  * 注册 SQL 自动补全提供程序
  */
@@ -137,8 +773,9 @@ export function registerSQLCompletionProvider(
   unregisterSQLCompletionProvider();
 
   completionProviderDisposable = monaco.languages.registerCompletionItemProvider('sql', {
-    triggerCharacters: ['.', ' ', '\n', '(', ','],
-    provideCompletionItems: (model, position) => {
+    triggerCharacters: ['.', ' ', '(', ','],
+    provideCompletionItems: async (model, position) => {
+      const context = completionContext;
       const word = model.getWordUntilPosition(position);
       const range = {
         startLineNumber: position.lineNumber,
@@ -149,6 +786,19 @@ export function registerSQLCompletionProvider(
 
       const suggestions: monaco.languages.CompletionItem[] = [];
 
+      const fullSql = model.getValue();
+      const cursorOffset = model.getOffsetAt(position);
+      const statementWindow = extractStatementWindow(fullSql, cursorOffset);
+      const statementContext = buildStatementContext(
+        statementWindow.statementSql,
+        statementWindow.beforeCursorSql,
+      );
+      const dotContext = extractDotCompletionContext(statementWindow.beforeCursorSql);
+
+      const keywordPriority = statementContext.clause === 'from' ? 40 : statementContext.clause === 'select' ? 30 : statementContext.clause === 'groupBy' ? 28 : 20;
+      const functionPriority = statementContext.clause === 'select' ? 14 : 24;
+      const dataTypePriority = statementContext.clause === 'from' ? 45 : 26;
+
       // 添加关键字补全
       SQL_KEYWORDS.forEach((keyword) => {
         suggestions.push({
@@ -156,7 +806,7 @@ export function registerSQLCompletionProvider(
           kind: monaco.languages.CompletionItemKind.Keyword,
           insertText: keyword + ' ',
           range,
-          sortText: '1' + keyword,
+          sortText: `${String(keywordPriority).padStart(2, '0')}_keyword_${keyword.toLowerCase()}`,
         });
       });
 
@@ -172,7 +822,7 @@ export function registerSQLCompletionProvider(
           insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet,
           documentation: func.desc,
           range,
-          sortText: '2' + func.name,
+          sortText: `${String(functionPriority).padStart(2, '0')}_func_${func.name.toLowerCase()}`,
         });
       });
 
@@ -183,7 +833,7 @@ export function registerSQLCompletionProvider(
           kind: monaco.languages.CompletionItemKind.TypeParameter,
           insertText: type,
           range,
-          sortText: '3' + type,
+          sortText: `${String(dataTypePriority).padStart(2, '0')}_type_${type.toLowerCase()}`,
         });
       });
 
@@ -195,14 +845,137 @@ export function registerSQLCompletionProvider(
             kind: monaco.languages.CompletionItemKind.Keyword,
             insertText: keyword + ' ',
             range,
-            sortText: '4' + keyword,
+            sortText: `34_routine_${keyword.toLowerCase()}`,
           });
         });
       }
 
-      return { suggestions };
+      if (context?.database) {
+        try {
+          if (dotContext) {
+            const parts = dotContext.qualifierParts;
+
+            if (parts.length >= 2) {
+              const tableRef: TableRef = {
+                database: parts[parts.length - 2],
+                table: parts[parts.length - 1],
+              };
+              const columns = await loadColumnsForTable(context, tableRef);
+              suggestions.push(...createColumnSuggestions(monaco, tableRef, columns, range, false, 2));
+            } else {
+              const qualifier = parts[0];
+              const aliasRef = statementContext.aliasMap.get(qualifier.toLowerCase());
+
+              if (aliasRef) {
+                const qualifierKey = qualifier.toLowerCase();
+                if (statementContext.cteFieldMap.has(qualifierKey)) {
+                  const cteFields = statementContext.cteFieldMap.get(qualifierKey) || [];
+                  const cteTableRef: TableRef = { table: qualifier };
+                  suggestions.push(...createColumnSuggestions(monaco, cteTableRef, cteFields, range, false, 1));
+                } else if (!statementContext.localRelationNames.has(aliasRef.table.toLowerCase())) {
+                  const columns = await loadColumnsForTable(context, aliasRef);
+                  suggestions.push(...createColumnSuggestions(monaco, aliasRef, columns, range, false, 2));
+                }
+              } else {
+                const tablesInQualifierDb = await loadTablesForDatabase(context, qualifier);
+                if (tablesInQualifierDb.length > 0) {
+                  suggestions.push(
+                    ...createTableSuggestions(monaco, tablesInQualifierDb, range, 3, qualifier, false)
+                  );
+                }
+              }
+            }
+          } else {
+            if (statementContext.localRelationNames.size > 0) {
+              const localNames = Array.from(statementContext.localRelationNames);
+              const localPriority = statementContext.clause === 'from' ? 2 : 9;
+              suggestions.push(...createLocalRelationSuggestions(monaco, localNames, range, localPriority));
+            }
+
+            if (statementContext.clause === 'from') {
+              const tables = await loadTablesForContext(context);
+              suggestions.push(...createTableSuggestions(monaco, tables, range, 4));
+
+              const databases = await loadDatabasesForContext(context);
+              suggestions.push(...createDatabaseSuggestions(monaco, databases, range, 6, true));
+            }
+
+            if (statementContext.clause === 'groupBy' && !statementContext.hasSelectStar && statementContext.selectedFields.length > 0) {
+              suggestions.push(
+                ...createSelectedFieldSuggestions(monaco, statementContext.selectedFields, range, 1)
+              );
+            }
+
+            if (statementContext.tableRefs.length > 0) {
+              const columnResults = await Promise.all(statementContext.tableRefs.map(async (tableRef) => {
+                const tableKey = tableRef.table.toLowerCase();
+                if (statementContext.cteFieldMap.has(tableKey)) {
+                  return {
+                    tableRef,
+                    columns: statementContext.cteFieldMap.get(tableKey) || [],
+                  };
+                }
+
+                if (statementContext.localRelationNames.has(tableKey)) {
+                  return {
+                    tableRef,
+                    columns: [] as string[],
+                  };
+                }
+
+                return {
+                  tableRef,
+                  columns: await loadColumnsForTable(context, tableRef),
+                };
+              }));
+
+              const columnPriority = statementContext.clause === 'groupBy'
+                ? 3
+                : statementContext.clause === 'select'
+                  ? 2
+                  : 12;
+
+              columnResults.forEach(({ tableRef, columns }) => {
+                if (columns.length === 0) return;
+                suggestions.push(...createColumnSuggestions(monaco, tableRef, columns, range, false, columnPriority));
+              });
+            }
+          }
+        } catch {
+          // Keep base keyword/function completion available even if metadata lookup fails.
+        }
+      }
+
+      return { suggestions: dedupeSuggestions(suggestions) };
     },
   });
+}
+
+/**
+ * 设置 SQL 自动补全上下文（连接与数据库）
+ */
+export function setSQLCompletionContext(context: CompletionContext | null): void {
+  completionContext = context;
+}
+
+/**
+ * 清理 SQL 自动补全元数据缓存
+ */
+export function clearSQLCompletionMetadataCache(): void {
+  databaseListCache.clear();
+  databaseListInFlight.clear();
+  tableListCache.clear();
+  tableListInFlight.clear();
+  columnCache.clear();
+  columnInFlight.clear();
+}
+
+if (
+  typeof window !== 'undefined' &&
+  !(window as Window & { __dbwSqlCompletionCacheHooked?: boolean }).__dbwSqlCompletionCacheHooked
+) {
+  window.addEventListener('dbw:global-refresh', clearSQLCompletionMetadataCache);
+  (window as Window & { __dbwSqlCompletionCacheHooked?: boolean }).__dbwSqlCompletionCacheHooked = true;
 }
 
 /**

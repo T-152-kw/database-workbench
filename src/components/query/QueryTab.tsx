@@ -9,12 +9,35 @@ import { QueryToolbar } from './QueryToolbar';
 import { QueryEditor, type QueryEditorRef } from './QueryEditor';
 import { ResultPanel } from './ResultPanel';
 import { getEditorSettings } from '../../utils/editorSettings';
+import { setSQLCompletionContext, clearSQLCompletionMetadataCache } from '../../utils/sqlCompletionProvider';
 import '../../styles/query-tab.css';
 
 interface QueryTabProps {
   tabId: string;
   initialConnection?: ConnectionProfile;
   initialDatabase?: string;
+}
+
+interface QueryPageResultData extends QueryResultData {
+  page: number;
+  page_size: number;
+  has_more: boolean;
+  total_rows?: number | null;
+  total_pages?: number | null;
+}
+
+interface StatementSplitSessionData {
+  session_id: number;
+  total: number;
+}
+
+interface StatementSplitPageData {
+  statements: string[];
+  page: number;
+  page_size: number;
+  total: number;
+  total_pages: number;
+  has_more: boolean;
 }
 
 // Chevron icons for collapse/expand
@@ -61,6 +84,9 @@ const SplitPaneResizer: React.FC<{
 const SPLITTER_HEIGHT = 8;
 const MIN_EDITOR_HEIGHT = 160;
 const MIN_RESULT_HEIGHT = 140;
+const DEFAULT_SQL_QUERY_PAGE_SIZE = 200;
+const DEFAULT_SQL_STATEMENT_PAGE_SIZE = 120;
+const RESULT_TAB_FLUSH_BATCH_SIZE = 16;
 
 const clampEditorHeight = (containerHeight: number, targetHeight: number): number => {
   if (containerHeight <= 0) return MIN_EDITOR_HEIGHT;
@@ -94,6 +120,7 @@ export const QueryTab: React.FC<QueryTabProps> = ({
     setActiveDatabase,
     setLastUsedDatabaseForConnection,
     getLastUsedDatabaseForConnection,
+    clearLastUsedDatabaseForConnection,
   } = useConnectionStore();
   const activeConnection = connections.find((c) => c.profile.name === activeConnectionId);
 
@@ -153,7 +180,13 @@ export const QueryTab: React.FC<QueryTabProps> = ({
     return normalized.toLowerCase().endsWith('.sql') ? normalized : `${normalized}.sql`;
   }, [currentTab?.title]);
 
-  const saveSqlFile = useCallback(async (forcedFilePath?: string): Promise<boolean> => {
+  // Ref to track latest content for auto save to avoid stale closure issues
+  const latestSqlContentRef = useRef(sqlContent);
+  useEffect(() => {
+    latestSqlContentRef.current = sqlContent;
+  }, [sqlContent]);
+
+  const saveSqlFile = useCallback(async (forcedFilePath?: string, isAutoSave = false): Promise<boolean> => {
     try {
       let filePath = forcedFilePath || currentTab?.sqlFilePath;
 
@@ -170,18 +203,31 @@ export const QueryTab: React.FC<QueryTabProps> = ({
         filePath = selectedPath;
       }
 
-      await writeTextFile(filePath, sqlContent);
+      // Use latest content from ref for auto save to ensure we save the most recent content
+      const contentToSave = isAutoSave ? latestSqlContentRef.current : sqlContent;
+      await writeTextFile(filePath, contentToSave);
 
       const fileName = filePath.split(/[/\\]/).pop() || 'query.sql';
-      savedSqlContentRef.current = sqlContent;
-      updateTab(tabId, {
-        title: fileName,
-        sqlFilePath: filePath,
-        sqlContent,
-      });
+      savedSqlContentRef.current = contentToSave;
+      
+      // For auto save, don't update sqlContent in tab to avoid editor re-render/flicker
+      // The editor already has the correct content
+      if (isAutoSave) {
+        updateTab(tabId, {
+          title: fileName,
+          sqlFilePath: filePath,
+          // Don't include sqlContent here to prevent re-render
+        });
+      } else {
+        updateTab(tabId, {
+          title: fileName,
+          sqlFilePath: filePath,
+          sqlContent: contentToSave,
+        });
+      }
       setTabModified(tabId, false);
 
-      const message = t('status.saved');
+      const message = isAutoSave ? t('status.autoSaved') : t('status.saved');
       setStatusMessage(message);
       setGlobalStatusMessage(message);
       return true;
@@ -213,10 +259,10 @@ export const QueryTab: React.FC<QueryTabProps> = ({
       if (autoSaveTimerRef.current) {
         clearTimeout(autoSaveTimerRef.current);
       }
-      // Set new timer for auto save (1000ms debounce)
+      // Set new timer for auto save (2000ms debounce - longer delay to reduce flicker and ensure content is stable)
       autoSaveTimerRef.current = setTimeout(() => {
-        void saveSqlFile();
-      }, 1000);
+        void saveSqlFile(undefined, true);
+      }, 2000);
     }
   }, [tabId, updateTab, setTabModified, currentTab?.sqlFilePath, saveSqlFile]);
 
@@ -332,6 +378,34 @@ export const QueryTab: React.FC<QueryTabProps> = ({
 
     const targetDatabase = database || getLastUsedDatabaseForConnection(profile.name);
 
+    const openWithTarget = async (target?: string) => {
+      const newPoolId = await invoke<number>('pool_create', { profile });
+      try {
+        const newConnId = await invoke<number>('pool_get_connection', {
+          poolId: newPoolId,
+          initialDatabase: target,
+        });
+
+        if (target) {
+          await invoke('pool_execute', {
+            poolId: newPoolId,
+            connId: newConnId,
+            sql: `USE \`${target.replace(/`/g, '``')}\``,
+          });
+          await invoke('pool_set_database', {
+            poolId: newPoolId,
+            connId: newConnId,
+            database: target,
+          });
+        }
+
+        return { newPoolId, newConnId };
+      } catch (error) {
+        await invoke('pool_close', { poolId: newPoolId }).catch(() => undefined);
+        throw error;
+      }
+    };
+
     try {
       // Close existing connection
       if (poolIdRef.current && connIdRef.current) {
@@ -341,40 +415,46 @@ export const QueryTab: React.FC<QueryTabProps> = ({
 
       setStatusMessage(t('queryToolbar.connecting'));
 
-      // Create new pool and get connection
-      const newPoolId = await invoke<number>('pool_create', { profile });
-      // MODIFIED: 传递初始数据库到连接池
-      const newConnId = await invoke<number>('pool_get_connection', {
-        poolId: newPoolId,
-        initialDatabase: targetDatabase,
-      });
+      let opened;
+      let resolvedDatabase = targetDatabase;
 
-      // Switch database if specified (执行 USE 语句)
+      // Clear stale remembered database and retry once without database binding.
       if (targetDatabase) {
-        await invoke('pool_execute', {
-          poolId: newPoolId,
-          connId: newConnId,
-          sql: `USE \`${targetDatabase.replace(/`/g, '``')}\``,
-        });
-        // NEW: 通知后端更新数据库状态
-        await invoke('pool_set_database', {
-          poolId: newPoolId,
-          connId: newConnId,
-          database: targetDatabase,
-        });
+        try {
+          opened = await openWithTarget(targetDatabase);
+        } catch (error) {
+          const message = String(error).toLowerCase();
+          const isUnknownDatabase = message.includes('unknown database') || message.includes('error 1049');
+          if (!isUnknownDatabase) {
+            throw error;
+          }
+
+          if (profile.name) {
+            clearLastUsedDatabaseForConnection(profile.name);
+          }
+          resolvedDatabase = undefined;
+          opened = await openWithTarget(undefined);
+        }
+      } else {
+        opened = await openWithTarget(undefined);
       }
+
+      const { newPoolId, newConnId } = opened;
 
       setPoolId(newPoolId);
       setConnId(newConnId);
       poolIdRef.current = newPoolId;
       connIdRef.current = newConnId;
       setActiveConnection(profile.name || null);
-      if (targetDatabase) {
-        setSelectedDatabase(targetDatabase);
-        setActiveDatabase(targetDatabase);
+      if (resolvedDatabase) {
+        setSelectedDatabase(resolvedDatabase);
+        setActiveDatabase(resolvedDatabase);
         if (profile.name) {
-          setLastUsedDatabaseForConnection(profile.name, targetDatabase);
+          setLastUsedDatabaseForConnection(profile.name, resolvedDatabase);
         }
+      } else {
+        setSelectedDatabase(undefined);
+        setActiveDatabase(null);
       }
       setIsConnected(true);
       setConnectionInfo(`${profile.host}:${profile.port}`);
@@ -385,10 +465,12 @@ export const QueryTab: React.FC<QueryTabProps> = ({
       setStatusMessage(t('error.connectionFailed', { message: error }));
     }
   }, [
+    clearLastUsedDatabaseForConnection,
     getLastUsedDatabaseForConnection,
     setActiveConnection,
     setActiveDatabase,
     setLastUsedDatabaseForConnection,
+    t,
   ]);
 
   // Disconnect
@@ -409,6 +491,24 @@ export const QueryTab: React.FC<QueryTabProps> = ({
     setConnectionInfo('');
     setStatusMessage('');
   }, []);
+
+  useEffect(() => {
+    if (!selectedConnection?.name) return;
+    const stillExists = connections.some((conn) => conn.profile.name === selectedConnection.name);
+    if (stillExists) return;
+
+    setSelectedConnection(undefined);
+    setSelectedDatabase(undefined);
+    setActiveConnection(null);
+    setActiveDatabase(null);
+    void disconnect();
+  }, [
+    connections,
+    disconnect,
+    selectedConnection,
+    setActiveConnection,
+    setActiveDatabase,
+  ]);
 
   useEffect(() => {
     poolIdRef.current = poolId;
@@ -469,6 +569,46 @@ export const QueryTab: React.FC<QueryTabProps> = ({
     return trimmed.startsWith('call');
   };
 
+  const isServerPageableSql = useCallback((sql: string): boolean => {
+    const trimmed = stripLeadingSqlComments(sql).trim().toLowerCase();
+    return trimmed.startsWith('select') || trimmed.startsWith('with');
+  }, [stripLeadingSqlComments]);
+
+  const fetchQueryPage = useCallback(async (
+    sql: string,
+    page: number,
+    pageSize: number,
+    includeTotal = true,
+  ): Promise<QueryResultData> => {
+    if (!poolId || !connId) {
+      throw new Error(t('error.noActiveConnection'));
+    }
+
+    const result = await invoke<QueryPageResultData>('pool_query_page', {
+      poolId,
+      connId,
+      sql,
+      page,
+      pageSize,
+      includeTotal,
+    });
+
+    return {
+      columns: result.columns,
+      rows: result.rows,
+      query_time_secs: result.query_time_secs,
+      fetch_time_secs: result.fetch_time_secs,
+      source_sql: sql,
+      pagination: {
+        page: result.page,
+        page_size: result.page_size,
+        has_more: result.has_more,
+        total_rows: result.total_rows,
+        total_pages: result.total_pages,
+      },
+    };
+  }, [poolId, connId, t]);
+
   // Execute SQL
   const executeSql = useCallback(async () => {
     if (!isConnected || !poolId || !connId) {
@@ -505,201 +645,233 @@ export const QueryTab: React.FC<QueryTabProps> = ({
     setIsExecuting(true);
     setStatusMessage(t('status.executing'));
 
+    let splitSessionId: number | null = null;
+
     try {
-      // Split SQL statements
-      const statements = await invoke<string[]>('sql_split_statements', {
+      // Create a backend split session so statements can be consumed page by page.
+      const splitSession = await invoke<StatementSplitSessionData>('sql_split_statements_create', {
         sql,
         dbType: 'MYSQL',
       });
+      splitSessionId = splitSession.session_id;
+
+      if (splitSession.total <= 0) {
+        setStatusMessage(t('query.noQuery'));
+        return;
+      }
 
       // Clear previous results and expand result panel
       setResultTabs([]);
+      setActiveResultTabId(null);
       setIsResultPanelCollapsed(false); // Auto expand when executing SQL
 
       let successCount = 0;
       let errorCount = 0;
       let statementOrder = 0;
       let totalSqlTimeSec = 0;
+      let statementGlobalIndex = 0;
+      const pendingResultTabs: ResultTab[] = [];
       let hasActivatedResultTab = false;
+      let lastDetectedUseDatabase: string | undefined;
 
-      for (let i = 0; i < statements.length; i++) {
-        const statement = statements[i].trim();
-        if (!statement) continue;
+      const flushResultTabs = (force = false) => {
+        if (!force && pendingResultTabs.length < RESULT_TAB_FLUSH_BATCH_SIZE) {
+          return;
+        }
+        if (pendingResultTabs.length === 0) {
+          return;
+        }
 
-        const statementWithoutLeadingComments = stripLeadingSqlComments(statement).trim();
-        if (!statementWithoutLeadingComments) continue;
+        const batch = pendingResultTabs.splice(0, pendingResultTabs.length);
+        if (!hasActivatedResultTab && batch.length > 0) {
+          setActiveResultTabId(batch[0].id);
+          hasActivatedResultTab = true;
+        }
 
-        statementOrder += 1;
-        const startedAtIso = new Date().toISOString();
-        const statementTimerStart = performance.now();
+        setResultTabs((prev) => [...prev, ...batch]);
+      };
 
-        try {
-          if (isStoredProcedureCall(statement)) {
-            // Execute stored procedure with multiple result sets support
-            const result = await invoke<MultiQueryResultData>('pool_query_multi', {
-              poolId,
-              connId,
-              sql: statement,
-            });
+      let statementPage = 1;
+      let hasMoreStatements = true;
 
-            // Create a result tab for each result set
-            if (result.result_sets.length === 0) {
-              // No result sets, show as update result
-              const resultTab: ResultTab = {
-                id: `result_${Date.now()}_${i}`,
-                type: 'update',
-                title: t('resultPanel.updateResult'),
-                data: { affected_rows: result.affected_rows, last_insert_id: result.last_insert_id },
+      while (hasMoreStatements) {
+        const pagedStatements = await invoke<StatementSplitPageData>('sql_split_statements_page', {
+          sessionId: splitSessionId,
+          page: statementPage,
+          pageSize: DEFAULT_SQL_STATEMENT_PAGE_SIZE,
+        });
+
+        hasMoreStatements = pagedStatements.has_more;
+        statementPage += 1;
+
+        for (const statementText of pagedStatements.statements) {
+          const statement = statementText.trim();
+          if (!statement) continue;
+
+          const statementWithoutLeadingComments = stripLeadingSqlComments(statement).trim();
+          if (!statementWithoutLeadingComments) continue;
+
+          const statementIndex = statementGlobalIndex;
+          statementGlobalIndex += 1;
+
+          statementOrder += 1;
+          const startedAtIso = new Date().toISOString();
+          const statementTimerStart = performance.now();
+
+          try {
+            if (isStoredProcedureCall(statement)) {
+              // Execute stored procedure with multiple result sets support
+              const result = await invoke<MultiQueryResultData>('pool_query_multi', {
+                poolId,
+                connId,
                 sql: statement,
-                executionTimeSec: result.query_time_secs,
-                fetchTimeSec: result.fetch_time_secs,
-                statementOrder,
-                startedAt: startedAtIso,
-                finishedAt: new Date().toISOString(),
-                statusText: 'OK',
-              };
-              setResultTabs(prev => [...prev, resultTab]);
-              if (!hasActivatedResultTab) {
-                setActiveResultTabId(resultTab.id);
-                hasActivatedResultTab = true;
-              }
-              totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
-            } else if (result.result_sets.length === 1) {
-              // Single result set
-              const resultTab: ResultTab = {
-                id: `result_${Date.now()}_${i}`,
-                type: 'query',
-                title: t('resultPanel.queryResult', { count: result.result_sets[0].rows.length }),
-                data: result.result_sets[0],
-                sql: statement,
-                executionTimeSec: result.query_time_secs,
-                fetchTimeSec: result.fetch_time_secs,
-                statementOrder,
-                startedAt: startedAtIso,
-                finishedAt: new Date().toISOString(),
-                statusText: 'OK',
-              };
-              setResultTabs(prev => [...prev, resultTab]);
-              if (!hasActivatedResultTab) {
-                setActiveResultTabId(resultTab.id);
-                hasActivatedResultTab = true;
-              }
-              totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
-            } else {
-              // Multiple result sets - create a tab for each
-              result.result_sets.forEach((resultSet, setIndex) => {
+              });
+
+              // Create a result tab for each result set
+              if (result.result_sets.length === 0) {
+                // No result sets, show as update result
                 const resultTab: ResultTab = {
-                  id: `result_${Date.now()}_${i}_${setIndex}`,
-                  type: 'query',
-                  title: t('resultPanel.queryResultSet', { index: setIndex + 1, count: resultSet.rows.length }),
-                  data: resultSet,
+                  id: `result_${Date.now()}_${statementIndex}`,
+                  type: 'update',
+                  title: t('resultPanel.updateResult'),
+                  data: { affected_rows: result.affected_rows, last_insert_id: result.last_insert_id },
                   sql: statement,
-                  executionTimeSec: setIndex === 0 ? result.query_time_secs : 0,
-                  fetchTimeSec: setIndex === 0 ? result.fetch_time_secs : 0,
+                  executionTimeSec: result.query_time_secs,
+                  fetchTimeSec: result.fetch_time_secs,
                   statementOrder,
                   startedAt: startedAtIso,
                   finishedAt: new Date().toISOString(),
                   statusText: 'OK',
                 };
-                setResultTabs(prev => [...prev, resultTab]);
-                if (!hasActivatedResultTab) {
-                  setActiveResultTabId(resultTab.id);
-                  hasActivatedResultTab = true;
-                }
-              });
+                pendingResultTabs.push(resultTab);
+                totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
+              } else if (result.result_sets.length === 1) {
+                // Single result set
+                const resultTab: ResultTab = {
+                  id: `result_${Date.now()}_${statementIndex}`,
+                  type: 'query',
+                  title: t('resultPanel.queryResult', { count: result.result_sets[0].rows.length }),
+                  data: result.result_sets[0],
+                  sql: statement,
+                  executionTimeSec: result.query_time_secs,
+                  fetchTimeSec: result.fetch_time_secs,
+                  statementOrder,
+                  startedAt: startedAtIso,
+                  finishedAt: new Date().toISOString(),
+                  statusText: 'OK',
+                };
+                pendingResultTabs.push(resultTab);
+                totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
+              } else {
+                // Multiple result sets - create a tab for each
+                result.result_sets.forEach((resultSet, setIndex) => {
+                  const resultTab: ResultTab = {
+                    id: `result_${Date.now()}_${statementIndex}_${setIndex}`,
+                    type: 'query',
+                    title: t('resultPanel.queryResultSet', { index: setIndex + 1, count: resultSet.rows.length }),
+                    data: resultSet,
+                    sql: statement,
+                    executionTimeSec: setIndex === 0 ? result.query_time_secs : 0,
+                    fetchTimeSec: setIndex === 0 ? result.fetch_time_secs : 0,
+                    statementOrder,
+                    startedAt: startedAtIso,
+                    finishedAt: new Date().toISOString(),
+                    statusText: 'OK',
+                  };
+                  pendingResultTabs.push(resultTab);
+                });
+                totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
+              }
+              successCount++;
+            } else if (isQuerySql(statement)) {
+              // Execute query
+              const result = isServerPageableSql(statement)
+                ? await fetchQueryPage(statement, 1, DEFAULT_SQL_QUERY_PAGE_SIZE, true)
+                : await invoke<QueryResultData>('pool_query', {
+                  poolId,
+                  connId,
+                  sql: statement,
+                });
+
+              const resultTab: ResultTab = {
+                id: `result_${Date.now()}_${statementIndex}`,
+                type: 'query',
+                title: t('resultPanel.queryResult', { count: result.rows.length }),
+                data: result,
+                sql: statement,
+                executionTimeSec: result.query_time_secs,
+                fetchTimeSec: result.fetch_time_secs,
+                statementOrder,
+                startedAt: startedAtIso,
+                finishedAt: new Date().toISOString(),
+                statusText: 'OK',
+              };
+
+              pendingResultTabs.push(resultTab);
               totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
+              successCount++;
+            } else {
+              // Execute update
+              const result = await invoke<ExecResultData>('pool_execute', {
+                poolId,
+                connId,
+                sql: statement,
+              });
+
+              const resultTab: ResultTab = {
+                id: `result_${Date.now()}_${statementIndex}`,
+                type: 'update',
+                title: t('resultPanel.updateResult'),
+                data: result,
+                sql: statement,
+                executionTimeSec: result.query_time_secs,
+                fetchTimeSec: 0,
+                statementOrder,
+                startedAt: startedAtIso,
+                finishedAt: new Date().toISOString(),
+                statusText: 'OK',
+              };
+
+              pendingResultTabs.push(resultTab);
+              totalSqlTimeSec += result.query_time_secs || 0;
+              successCount++;
             }
-            successCount++;
-          } else if (isQuerySql(statement)) {
-            // Execute query
-            const result = await invoke<QueryResultData>('pool_query', {
-              poolId,
-              connId,
-              sql: statement,
-            });
 
-            const resultTab: ResultTab = {
-              id: `result_${Date.now()}_${i}`,
-              type: 'query',
-              title: t('resultPanel.queryResult', { count: result.rows.length }),
-              data: result,
-              sql: statement,
-              executionTimeSec: result.query_time_secs,
-              fetchTimeSec: result.fetch_time_secs,
-              statementOrder,
-              startedAt: startedAtIso,
-              finishedAt: new Date().toISOString(),
-              statusText: 'OK',
-            };
-
-            setResultTabs(prev => [...prev, resultTab]);
-            if (!hasActivatedResultTab) {
-              setActiveResultTabId(resultTab.id);
-              hasActivatedResultTab = true;
+            const useDatabase = extractUseDatabaseFromStatement(statement);
+            if (useDatabase) {
+              lastDetectedUseDatabase = useDatabase;
             }
-            totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
-            successCount++;
-          } else {
-            // Execute update
-            const result = await invoke<ExecResultData>('pool_execute', {
-              poolId,
-              connId,
+          } catch (error) {
+            errorCount++;
+            const fallbackDurationSec = (performance.now() - statementTimerStart) / 1000;
+            const errorTab: ResultTab = {
+              id: `result_${Date.now()}_${statementIndex}`,
+              type: 'error',
+              title: t('resultPanel.errorResult'),
+              data: String(error),
               sql: statement,
-            });
-
-            const resultTab: ResultTab = {
-              id: `result_${Date.now()}_${i}`,
-              type: 'update',
-              title: t('resultPanel.updateResult'),
-              data: result,
-              sql: statement,
-              executionTimeSec: result.query_time_secs,
+              executionTimeSec: fallbackDurationSec,
               fetchTimeSec: 0,
               statementOrder,
               startedAt: startedAtIso,
               finishedAt: new Date().toISOString(),
-              statusText: 'OK',
+              statusText: String(error),
             };
-
-            setResultTabs(prev => [...prev, resultTab]);
-            if (!hasActivatedResultTab) {
-              setActiveResultTabId(resultTab.id);
-              hasActivatedResultTab = true;
-            }
-            totalSqlTimeSec += result.query_time_secs || 0;
-            successCount++;
+            pendingResultTabs.push(errorTab);
+            totalSqlTimeSec += fallbackDurationSec;
           }
 
-          const useDatabase = extractUseDatabaseFromStatement(statement);
-          if (useDatabase) {
-            setSelectedDatabase(useDatabase);
-            setActiveDatabase(useDatabase);
-            if (selectedConnection?.name) {
-              setLastUsedDatabaseForConnection(selectedConnection.name, useDatabase);
-            }
-          }
-        } catch (error) {
-          errorCount++;
-          const fallbackDurationSec = (performance.now() - statementTimerStart) / 1000;
-          const errorTab: ResultTab = {
-            id: `result_${Date.now()}_${i}`,
-            type: 'error',
-            title: t('resultPanel.errorResult'),
-            data: String(error),
-            sql: statement,
-            executionTimeSec: fallbackDurationSec,
-            fetchTimeSec: 0,
-            statementOrder,
-            startedAt: startedAtIso,
-            finishedAt: new Date().toISOString(),
-            statusText: String(error),
-          };
-          setResultTabs(prev => [...prev, errorTab]);
-          if (!hasActivatedResultTab) {
-            setActiveResultTabId(errorTab.id);
-            hasActivatedResultTab = true;
-          }
-          totalSqlTimeSec += fallbackDurationSec;
+          flushResultTabs();
+        }
+      }
+
+      flushResultTabs(true);
+
+      if (lastDetectedUseDatabase) {
+        setSelectedDatabase(lastDetectedUseDatabase);
+        setActiveDatabase(lastDetectedUseDatabase);
+        if (selectedConnection?.name) {
+          setLastUsedDatabaseForConnection(selectedConnection.name, lastDetectedUseDatabase);
         }
       }
 
@@ -708,6 +880,11 @@ export const QueryTab: React.FC<QueryTabProps> = ({
     } catch (error) {
       setStatusMessage(t('query.executionFailed'));
     } finally {
+      if (splitSessionId !== null) {
+        void invoke<boolean>('sql_split_statements_release', {
+          sessionId: splitSessionId,
+        }).catch(() => undefined);
+      }
       setIsExecuting(false);
     }
   }, [
@@ -715,10 +892,56 @@ export const QueryTab: React.FC<QueryTabProps> = ({
     poolId,
     connId,
     stripLeadingSqlComments,
+    fetchQueryPage,
+    isServerPageableSql,
     extractUseDatabaseFromStatement,
     selectedConnection,
     setActiveDatabase,
     setLastUsedDatabaseForConnection,
+  ]);
+
+  const requestQueryPage = useCallback(async (tabId: string, page: number, pageSize: number) => {
+    if (!isConnected || !poolId || !connId) {
+      setStatusMessage(t('error.noActiveConnection'));
+      return;
+    }
+
+    const targetTab = resultTabs.find((tab) => tab.id === tabId && tab.type === 'query');
+    if (!targetTab) return;
+
+    const queryData = targetTab.data as QueryResultData;
+    const sourceSql = queryData.source_sql || targetTab.sql;
+    if (!sourceSql || !isServerPageableSql(sourceSql)) return;
+
+    try {
+      setStatusMessage(t('status.executing'));
+      const nextPageData = await fetchQueryPage(sourceSql, page, pageSize, true);
+
+      setResultTabs((prev) => prev.map((tab) => {
+        if (tab.id !== tabId || tab.type !== 'query') return tab;
+
+        return {
+          ...tab,
+          title: t('resultPanel.queryResult', { count: nextPageData.rows.length }),
+          data: nextPageData,
+          executionTimeSec: nextPageData.query_time_secs,
+          fetchTimeSec: nextPageData.fetch_time_secs,
+          finishedAt: new Date().toISOString(),
+          statusText: 'OK',
+        };
+      }));
+      setStatusMessage(t('resultPanel.execSuccess'));
+    } catch (error) {
+      setStatusMessage(t('error.queryFailed', { message: String(error) }));
+    }
+  }, [
+    isConnected,
+    poolId,
+    connId,
+    resultTabs,
+    isServerPageableSql,
+    fetchQueryPage,
+    t,
   ]);
 
   // Execute explain
@@ -953,6 +1176,19 @@ export const QueryTab: React.FC<QueryTabProps> = ({
     }
   }, [selectedConnection, selectedDatabase, getLastUsedDatabaseForConnection, setActiveDatabase]);
 
+  useEffect(() => {
+    if (selectedConnection && selectedDatabase) {
+      setSQLCompletionContext({
+        profile: selectedConnection,
+        database: selectedDatabase,
+      });
+      return;
+    }
+
+    setSQLCompletionContext(null);
+    clearSQLCompletionMetadataCache();
+  }, [selectedConnection, selectedDatabase]);
+
   // Listen for execute SQL keyboard shortcut
   useEffect(() => {
     const handleExecuteSql = () => {
@@ -1072,6 +1308,7 @@ export const QueryTab: React.FC<QueryTabProps> = ({
               onTabChange={setActiveResultTabId}
               onTabClose={closeResultTab}
               onClearAll={clearResults}
+              onRequestQueryPage={requestQueryPage}
             />
           </div>
         )}

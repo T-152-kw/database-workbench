@@ -1,4 +1,5 @@
-import { check } from '@tauri-apps/plugin-updater';
+import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { relaunch } from '@tauri-apps/plugin-process';
 
 export interface UpdateInfo {
@@ -6,6 +7,8 @@ export interface UpdateInfo {
   version?: string;
   date?: string;
   body?: string;
+  preferredSource?: 'github' | 'gitee';
+  countryCode?: string;
 }
 
 export interface DownloadProgress {
@@ -14,29 +17,44 @@ export interface DownloadProgress {
   percentage: number;
 }
 
-export type DownloadEventHandler = (event: DownloadEvent) => void;
+interface BackendUpdateInfo {
+  available: boolean;
+  version?: string;
+  date?: string;
+  body?: string;
+  preferred_source: 'github' | 'gitee';
+  country_code?: string;
+}
 
-export interface DownloadEvent {
+interface BackendDownloadProgressEvent {
   event: 'Started' | 'Progress' | 'Finished';
-  data: {
-    contentLength?: number;
-    chunkLength?: number;
-  };
+  content_length?: number;
+  chunk_length?: number;
+  downloaded: number;
+  total?: number;
+  percentage?: number;
 }
 
 class UpdaterServiceClass {
   async checkForUpdate(): Promise<UpdateInfo | null> {
     try {
-      const update = await check();
-      if (update) {
+      const update = await invoke<BackendUpdateInfo>('updater_check_by_region');
+      if (update.available) {
         return {
           available: true,
           version: update.version,
           date: update.date,
           body: update.body,
+          preferredSource: update.preferred_source,
+          countryCode: update.country_code,
         };
       }
-      return { available: false };
+
+      return {
+        available: false,
+        preferredSource: update.preferred_source,
+        countryCode: update.country_code,
+      };
     } catch (error) {
       console.error('Failed to check for updates:', error);
       return null;
@@ -46,34 +64,43 @@ class UpdaterServiceClass {
   async downloadAndInstall(
     onProgress?: (progress: DownloadProgress) => void
   ): Promise<{ success: boolean; error?: string }> {
+    let unlisten: (() => void) | null = null;
+
     try {
-      const update = await check();
-      if (!update) {
-        return { success: false, error: 'No update available' };
+      unlisten = await listen<BackendDownloadProgressEvent>(
+        'updater-download-progress',
+        (event) => {
+          if (!onProgress) return;
+
+          const payload = event.payload;
+          const total = payload.total || payload.content_length || 0;
+          const downloaded = payload.downloaded || 0;
+
+          if (total > 0) {
+            onProgress({
+              downloaded,
+              total,
+              percentage:
+                payload.percentage ?? Math.min(100, Math.round((downloaded / total) * 100)),
+            });
+          }
+        }
+      );
+
+      await invoke('updater_download_and_install_by_region');
+
+      if (unlisten) {
+        unlisten();
+        unlisten = null;
       }
 
-      let downloaded = 0;
-      let contentLength = 0;
-
-      await update.downloadAndInstall((event) => {
-        switch (event.event) {
-          case 'Started':
-            contentLength = event.data.contentLength || 0;
-            break;
-          case 'Progress':
-            downloaded += event.data.chunkLength;
-            if (onProgress && contentLength > 0) {
-              onProgress({
-                downloaded,
-                total: contentLength,
-                percentage: Math.round((downloaded / contentLength) * 100),
-              });
-            }
-            break;
-          case 'Finished':
-            break;
-        }
-      });
+      if (onProgress) {
+        onProgress({
+          downloaded: 1,
+          total: 1,
+          percentage: 100,
+        });
+      }
 
       return { success: true };
     } catch (error) {
@@ -82,6 +109,10 @@ class UpdaterServiceClass {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+    } finally {
+      if (unlisten) {
+        unlisten();
+      }
     }
   }
 

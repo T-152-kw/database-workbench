@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Tabs, Tab, Button, Dialog, Classes } from '@blueprintjs/core';
-import { X, Search, FileCode, Table, Eye, Edit3, Users, User, FunctionSquare, GitBranch, BookText, Download, Upload } from 'lucide-react';
+import { X, Search, FileCode, Table, Eye, Edit3, Users, User, FunctionSquare, GitBranch, BookText } from 'lucide-react';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { useTabStore, useAppStore } from '../../stores';
@@ -9,8 +9,6 @@ import { QueryTab } from '../query';
 import {
   DatabaseObjectTab,
   ERDiagramTab,
-  BackupTab,
-  RestoreTab,
   TableDataTab,
   ViewDataTab,
   ViewDesignerTab,
@@ -23,7 +21,7 @@ import {
 } from '../tabs';
 import { ViewDefinitionDialog } from '../dialogs/ViewDefinitionDialog';
 import logoImage from '../../assets/Database Workbench.png';
-import type { Tab as TabType, ConnectionProfile } from '../../types';
+import type { Tab as TabType, ConnectionProfile, DesignerActionRequest } from '../../types';
 
 // 欢迎页面组件（背景板）
 const WelcomePage: React.FC<{ theme: string }> = ({ theme }) => {
@@ -230,10 +228,6 @@ export const TabContainer: React.FC = () => {
           return <span className={`${iconClass} tab-icon-function`}><FunctionSquare size={iconSize} /></span>;
         case 'dataDictionary':
           return <span className={`${iconClass} tab-icon-function`}><BookText size={iconSize} /></span>;
-        case 'backup':
-          return <span className={`${iconClass} tab-icon-query`}><Download size={iconSize} /></span>;
-        case 'restore':
-          return <span className={`${iconClass} tab-icon-query`}><Upload size={iconSize} /></span>;
         case 'tableData':
           return <span className={`${iconClass} tab-icon-table`}><Table size={iconSize} /></span>;
         case 'viewData':
@@ -412,30 +406,12 @@ export const TabContainer: React.FC = () => {
           />
         );
 
-      case 'backup':
-        return (
-          <BackupTab
-            tabId={tab.id}
-            connectionProfile={tab.connectionProfile!}
-            database={tab.database!}
-          />
-        );
-
       case 'dataDictionary':
         return (
           <DataDictionaryTab
             tabId={tab.id}
             connectionProfile={tab.connectionProfile!}
             database={tab.database!}
-          />
-        );
-
-      case 'restore':
-        return (
-          <RestoreTab
-            tabId={tab.id}
-            connectionProfile={tab.connectionProfile!}
-            initialDatabase={tab.database}
           />
         );
 
@@ -497,6 +473,7 @@ export const TabContainer: React.FC = () => {
             connectionProfile={tab.connectionProfile!}
             database={tab.database!}
             tableName={tab.table}
+            actionRequest={(tab.data as { designerAction?: DesignerActionRequest } | undefined)?.designerAction}
           />
         );
 

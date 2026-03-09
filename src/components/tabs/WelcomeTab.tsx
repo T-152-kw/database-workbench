@@ -1,8 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Icon } from '@blueprintjs/core';
 import { useTranslation } from 'react-i18next';
 import { useTabStore, useAppStore, useConnectionStore } from '../../stores';
 import { open } from '@tauri-apps/plugin-dialog';
+import { readTextFile } from '@tauri-apps/plugin-fs';
 import logoImage from '../../assets/Database Workbench.png';
 import '../../styles/welcome-tab.css';
 
@@ -24,7 +25,7 @@ export const WelcomeTab: React.FC = () => {
   const activeConnection = connections.find(c => c.profile.name === activeConnectionId);
 
   // 加载最近文件
-  useEffect(() => {
+  const loadRecentFiles = useCallback(() => {
     const saved = localStorage.getItem('dbw-recent-files');
     if (saved) {
       try {
@@ -35,6 +36,19 @@ export const WelcomeTab: React.FC = () => {
       }
     }
   }, []);
+
+  // 初始加载和监听更新
+  useEffect(() => {
+    loadRecentFiles();
+    // 监听最近文件更新事件
+    const handleRecentFilesUpdated = () => {
+      loadRecentFiles();
+    };
+    window.addEventListener('dbw:recent-files-updated', handleRecentFilesUpdated);
+    return () => {
+      window.removeEventListener('dbw:recent-files-updated', handleRecentFilesUpdated);
+    };
+  }, [loadRecentFiles]);
 
   // 新建连接
   const handleNewConnection = () => {
@@ -66,12 +80,14 @@ export const WelcomeTab: React.FC = () => {
         ],
       });
       if (selected && typeof selected === 'string') {
+        const content = await readTextFile(selected);
         const fileName = selected.split(/[/\\]/).pop() || t('welcomeTab.untitled');
 
         addTab({
           type: 'query',
           title: fileName,
           isModified: false,
+          sqlContent: content,
           sqlFilePath: selected,
           connectionId: activeConnection?.profile.name,
           connectionProfile: activeConnection?.profile,
@@ -101,18 +117,24 @@ export const WelcomeTab: React.FC = () => {
   };
 
   // 打开最近文件
-  const handleOpenRecentFile = (file: RecentFile) => {
-    addTab({
-      type: 'query',
-      title: file.name,
-      isModified: false,
-      sqlFilePath: file.path,
-      connectionId: activeConnection?.profile.name,
-      connectionProfile: activeConnection?.profile,
-      database: activeDatabase || undefined,
-    });
-    setStatusMessage(t('welcomeTab.status.openFile', { name: file.name }));
-    addToRecentFiles(file.path, file.name);
+  const handleOpenRecentFile = async (file: RecentFile) => {
+    try {
+      const content = await readTextFile(file.path);
+      addTab({
+        type: 'query',
+        title: file.name,
+        isModified: false,
+        sqlContent: content,
+        sqlFilePath: file.path,
+        connectionId: activeConnection?.profile.name,
+        connectionProfile: activeConnection?.profile,
+        database: activeDatabase || undefined,
+      });
+      setStatusMessage(t('welcomeTab.status.openFile', { name: file.name }));
+      addToRecentFiles(file.path, file.name);
+    } catch (error) {
+      setStatusMessage(t('welcomeTab.status.openFileFailed', { error: String(error) }));
+    }
   };
 
   // 清除最近文件

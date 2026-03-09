@@ -165,26 +165,39 @@ export type MetadataRecord = Record<string, string>;
 // ============ 备份类型 ============
 
 export interface BackupOptions {
+  includeStructure?: boolean;
   includeData: boolean;
   includeViews: boolean;
   includeRoutines: boolean;
+  includeTriggers?: boolean;
   addDropTable: boolean;
+  useTransaction?: boolean;
+  compressOutput?: boolean;
+  compressionLevel?: number;
+  insertBatchSize?: number;
 }
 
 export interface BackupRequest {
   conn: ConnectionProfile;
   schema: string;
-  mysqldumpPath: string;
   outputPath: string;
+  // Legacy field kept for compatibility with old tab UI.
+  mysqldumpPath?: string;
+  selectedTables?: string[];
+  selectedViews?: string[];
+  selectedRoutines?: string[];
   options: BackupOptions;
 }
 
 export interface RestoreRequest {
   conn: ConnectionProfile;
   targetSchema: string;
-  mysqlPath: string;
+  // Legacy field kept for compatibility with old tab UI.
+  mysqlPath?: string;
   inputPath: string;
   createSchema: boolean;
+  continueOnError?: boolean;
+  useTransaction?: boolean;
 }
 
 export interface IncrementalRequest {
@@ -240,8 +253,6 @@ export type TabType =
   | 'viewList' 
   | 'functionList' 
   | 'dataDictionary'
-  | 'backup'
-  | 'restore'
   | 'tableData' 
   | 'viewData'
   | 'designer' 
@@ -253,6 +264,18 @@ export type TabType =
   | 'welcome';
 
 export type ObjectType = 'TABLE' | 'VIEW' | 'FUNCTION';
+
+export type DesignerActionTarget = 'field' | 'index' | 'foreignKey' | 'check' | 'trigger';
+
+export type DesignerActionKind = 'new' | 'edit' | 'delete' | 'rename';
+
+export interface DesignerActionRequest {
+  target: DesignerActionTarget;
+  action: DesignerActionKind;
+  name?: string;
+  newName?: string;
+  nonce: number;
+}
 
 export interface Tab {
   id: string;
@@ -282,6 +305,14 @@ export interface QueryResultData {
   rows: unknown[][];
   query_time_secs?: number;
   fetch_time_secs?: number;
+  source_sql?: string;
+  pagination?: {
+    page: number;
+    page_size: number;
+    has_more: boolean;
+    total_rows?: number | null;
+    total_pages?: number | null;
+  };
 }
 
 export interface MultiQueryResultData {

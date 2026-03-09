@@ -16,7 +16,7 @@ import {
   OverlayToaster,
 } from '@blueprintjs/core';
 import { useTranslation } from 'react-i18next';
-import type { ConnectionProfile } from '../../types';
+import type { ConnectionProfile, DesignerActionRequest } from '../../types';
 import { metadataApi } from '../../hooks/useTauri';
 import { useAppStore, useTabStore } from '../../stores';
 import { registerSQLCompletionProvider, updateCompletionProviderState } from '../../utils/sqlCompletionProvider';
@@ -37,12 +37,14 @@ interface DesignerTabProps {
   connectionProfile: ConnectionProfile;
   database: string;
   tableName?: string;
+  actionRequest?: DesignerActionRequest;
 }
 
 interface FieldDefinition {
   id: string;
   name: string;
   type: string;
+  enumValues: string;
   length: string;
   decimals: string;
   nullable: boolean;
@@ -64,6 +66,7 @@ interface FieldDefinition {
 interface IndexDefinition {
   id: string;
   name: string;
+  originalName?: string;
   fields: string;
   type: 'NORMAL' | 'UNIQUE' | 'FULLTEXT' | 'SPATIAL';
   method: 'BTREE' | 'HASH';
@@ -76,6 +79,7 @@ interface IndexDefinition {
 interface ForeignKeyDefinition {
   id: string;
   name: string;
+  originalName?: string;
   fields: string;
   refSchema: string;
   refTable: string;
@@ -90,6 +94,7 @@ interface ForeignKeyDefinition {
 interface CheckDefinition {
   id: string;
   name: string;
+  originalName?: string;
   clause: string;
   notEnforced: boolean;
   isNew?: boolean;
@@ -100,6 +105,7 @@ interface CheckDefinition {
 interface TriggerDefinition {
   id: string;
   name: string;
+  originalName?: string;
   timing: 'BEFORE' | 'AFTER';
   insert: boolean;
   update: boolean;
@@ -197,6 +203,163 @@ const generateId = () => `id_${Date.now()}_${Math.random().toString(36).substr(2
 // 字符串类型列表
 const STRING_DATA_TYPES = ['CHAR', 'VARCHAR', 'TEXT', 'TINYTEXT', 'MEDIUMTEXT', 'LONGTEXT', 'BINARY', 'VARBINARY', 'BLOB', 'TINYBLOB', 'MEDIUMBLOB', 'LONGBLOB', 'ENUM', 'SET'];
 
+const INTEGER_DISPLAY_WIDTH_TYPES = new Set([
+  'TINYINT',
+  'SMALLINT',
+  'MEDIUMINT',
+  'INT',
+  'INTEGER',
+  'BIGINT',
+]);
+
+const TYPE_SUPPORTS_UNSIGNED = new Set([
+  'TINYINT',
+  'SMALLINT',
+  'MEDIUMINT',
+  'INT',
+  'INTEGER',
+  'BIGINT',
+  'DECIMAL',
+  'NUMERIC',
+  'FLOAT',
+  'DOUBLE',
+]);
+
+type TypeParameterMode = 'none' | 'single' | 'double';
+
+const getTypeParameterMode = (type: string): TypeParameterMode => {
+  const normalizedType = type.toUpperCase();
+
+  if (['DECIMAL', 'NUMERIC', 'FLOAT', 'DOUBLE'].includes(normalizedType)) {
+    return 'double';
+  }
+
+  if (
+    [
+      'TINYINT',
+      'SMALLINT',
+      'MEDIUMINT',
+      'INT',
+      'INTEGER',
+      'BIGINT',
+      'BIT',
+      'CHAR',
+      'VARCHAR',
+      'BINARY',
+      'VARBINARY',
+      'TEXT',
+      'BLOB',
+      'TIME',
+      'DATETIME',
+      'TIMESTAMP',
+    ].includes(normalizedType)
+  ) {
+    return 'single';
+  }
+
+  return 'none';
+};
+
+const sanitizeNumericInput = (input: string): string => input.replace(/[^0-9]/g, '');
+
+const parseColumnTypeArgs = (columnType: string | undefined): { length: string; decimals: string } => {
+  if (!columnType) return { length: '', decimals: '' };
+
+  const match = columnType.match(/\((\d+)(?:\s*,\s*(\d+))?\)/);
+  if (!match) {
+    return { length: '', decimals: '' };
+  }
+
+  return {
+    length: match[1] || '',
+    decimals: match[2] || '',
+  };
+};
+
+const parseEnumSetValues = (columnType: string | undefined, dataType: string): string => {
+  if (!columnType) return '';
+  const normalizedType = dataType.toUpperCase();
+  if (!['ENUM', 'SET'].includes(normalizedType)) return '';
+
+  const match = columnType.match(/^[a-zA-Z]+\((.*)\)$/);
+  if (!match || !match[1]) return '';
+  return match[1].trim();
+};
+
+const normalizeFieldForType = (field: FieldDefinition, nextType: string): FieldDefinition => {
+  const normalizedType = nextType.toUpperCase();
+  const mode = getTypeParameterMode(normalizedType);
+
+  const normalized: FieldDefinition = {
+    ...field,
+    type: normalizedType,
+  };
+
+  if (mode === 'none') {
+    normalized.length = '';
+    normalized.decimals = '';
+  } else if (mode === 'single') {
+    normalized.decimals = '';
+  }
+
+  if (!TYPE_SUPPORTS_UNSIGNED.has(normalizedType)) {
+    normalized.unsigned = false;
+  }
+
+  if (!INTEGER_DISPLAY_WIDTH_TYPES.has(normalizedType)) {
+    normalized.zerofill = false;
+  }
+
+  if (!isStringType(normalizedType)) {
+    normalized.charset = '';
+    normalized.collation = '';
+  }
+
+  if (['ENUM', 'SET'].includes(normalizedType) && !normalized.enumValues.trim()) {
+    normalized.enumValues = `'value1'`;
+  }
+
+  if (!['ENUM', 'SET'].includes(normalizedType)) {
+    normalized.enumValues = '';
+  }
+
+  return normalized;
+};
+
+const buildTypeDeclaration = (field: FieldDefinition): string => {
+  const normalizedType = field.type.toUpperCase();
+  if (['ENUM', 'SET'].includes(normalizedType)) {
+    const rawValues = field.enumValues.trim();
+    if (!rawValues) {
+      return normalizedType;
+    }
+    const compactValues = rawValues.startsWith('(') && rawValues.endsWith(')')
+      ? rawValues.slice(1, -1).trim()
+      : rawValues;
+    return `${normalizedType}(${compactValues})`;
+  }
+
+  const mode = getTypeParameterMode(normalizedType);
+  const length = field.length.trim();
+  const decimals = field.decimals.trim();
+
+  if (mode === 'double') {
+    if (length && decimals) {
+      return `${normalizedType}(${length},${decimals})`;
+    }
+    if (length) {
+      return `${normalizedType}(${length})`;
+    }
+    return normalizedType;
+  }
+
+  if (mode === 'single' && length) {
+    return `${normalizedType}(${length})`;
+  }
+
+  return normalizedType;
+};
+
 // 判断是否为字符串类型
 const isStringType = (type: string): boolean => {
   return STRING_DATA_TYPES.includes(type.toUpperCase());
@@ -207,6 +370,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
   connectionProfile,
   database,
   tableName,
+  actionRequest,
 }) => {
   const { t } = useTranslation();
   const [isLoading, setIsLoading] = useState(false);
@@ -230,6 +394,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
 
   const [generatedSql, setGeneratedSql] = useState('');
   const [hasChanges, setHasChanges] = useState(false);
+  const [isDataReady, setIsDataReady] = useState(false);
 
   // Get theme from app store for Monaco Editor
   const { theme: appTheme } = useAppStore();
@@ -253,6 +418,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
     const tableToLoad = targetTableName ?? currentTableName;
 
     setIsLoading(true);
+    setIsDataReady(false);
     setError(null);
 
     try {
@@ -268,27 +434,31 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
 
         setDdl(ddlResult);
 
-        const parsedFields: FieldDefinition[] = columnsResult.map((col, index) => ({
-          id: generateId(),
-          name: col.COLUMN_NAME || '',
-          type: (col.DATA_TYPE || '').toUpperCase(),
-          length: col.CHARACTER_MAXIMUM_LENGTH || col.NUMERIC_PRECISION || '',
-          decimals: col.NUMERIC_SCALE || '',
-          nullable: col.IS_NULLABLE === 'YES',
-          defaultValue: col.COLUMN_DEFAULT,
-          comment: col.COLUMN_COMMENT || '',
-          isPrimaryKey: col.COLUMN_KEY === 'PRI',
-          autoIncrement: col.EXTRA?.includes('auto_increment') || false,
-          unsigned: col.COLUMN_TYPE?.includes('unsigned') || false,
-          zerofill: false,
-          charset: col.CHARACTER_SET_NAME || '',
-          collation: col.COLLATION_NAME || '',
-          position: index + 1,
-          originalName: col.COLUMN_NAME,
-          isNew: false,
-          isModified: false,
-          isDeleted: false,
-        }));
+        const parsedFields: FieldDefinition[] = columnsResult.map((col, index) => {
+          const parsedArgs = parseColumnTypeArgs(col.COLUMN_TYPE);
+          const draftField: FieldDefinition = {
+            ...parsedArgs,
+            id: generateId(),
+            name: col.COLUMN_NAME || '',
+            type: (col.DATA_TYPE || '').toUpperCase(),
+            enumValues: parseEnumSetValues(col.COLUMN_TYPE, col.DATA_TYPE || ''),
+            nullable: col.IS_NULLABLE === 'YES',
+            defaultValue: col.COLUMN_DEFAULT,
+            comment: col.COLUMN_COMMENT || '',
+            isPrimaryKey: col.COLUMN_KEY === 'PRI',
+            autoIncrement: col.EXTRA?.includes('auto_increment') || false,
+            unsigned: col.COLUMN_TYPE?.includes('unsigned') || false,
+            zerofill: col.COLUMN_TYPE?.toLowerCase().includes('zerofill') || false,
+            charset: col.CHARACTER_SET_NAME || '',
+            collation: col.COLLATION_NAME || '',
+            position: index + 1,
+            originalName: col.COLUMN_NAME,
+            isNew: false,
+            isModified: false,
+            isDeleted: false,
+          };
+          return normalizeFieldForType(draftField, draftField.type);
+        });
         setFields(parsedFields);
 
         // Parse indexes - backend returns COLUMNS as comma-separated string
@@ -297,6 +467,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
           .map((idx) => ({
             id: generateId(),
             name: idx.INDEX_NAME || '',
+            originalName: idx.INDEX_NAME || '',
             fields: idx.COLUMNS || '',
             type: idx.NON_UNIQUE === '0' ? 'UNIQUE' : 'NORMAL',
             method: (idx.INDEX_TYPE as 'BTREE' | 'HASH') || 'BTREE',
@@ -316,6 +487,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
             fkMap.set(fkName, {
               id: generateId(),
               name: fkName,
+              originalName: fkName,
               fields: '',
               refSchema: fk.REFERENCED_TABLE_SCHEMA || '',
               refTable: fk.REFERENCED_TABLE_NAME || '',
@@ -339,6 +511,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
         const parsedChecks: CheckDefinition[] = checksResult.map((chk) => ({
           id: generateId(),
           name: chk.CONSTRAINT_NAME || '',
+          originalName: chk.CONSTRAINT_NAME || '',
           clause: chk.CHECK_CLAUSE || '',
           notEnforced: chk.ENFORCED === 'NO' || !chk.ENFORCED,
           isNew: false,
@@ -356,6 +529,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
             triggerMap.set(trgName, {
               id: generateId(),
               name: trgName,
+              originalName: trgName,
               timing: (trg.ACTION_TIMING || 'BEFORE') as TriggerDefinition['timing'],
               insert: false,
               update: false,
@@ -410,6 +584,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
           zerofill: false, 
           charset: '', 
           collation: '', 
+          enumValues: '',
           position: 1, 
           isNew: true, 
           isModified: false, 
@@ -420,6 +595,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
       setError(t('designerTab.errors.loadFailed', { error: err }));
     } finally {
       setIsLoading(false);
+      setIsDataReady(true);
     }
   }, [connectionProfile, database, currentTableName, t]);
 
@@ -438,63 +614,70 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
     setHasChanges(hasAnyChanges);
   }, [fields, indexes, foreignKeys, checks, triggers, isNewTable]);
 
+  const buildFieldSqlDefinition = useCallback((field: FieldDefinition): string => {
+    let def = `\`${field.name}\` ${buildTypeDeclaration(field)}`;
+
+    const normalizedType = field.type.toUpperCase();
+
+    if (field.unsigned && TYPE_SUPPORTS_UNSIGNED.has(normalizedType)) {
+      def += ' UNSIGNED';
+    }
+
+    if (field.zerofill && INTEGER_DISPLAY_WIDTH_TYPES.has(normalizedType) && field.length.trim()) {
+      def += ' ZEROFILL';
+    }
+
+    if (field.charset) {
+      def += ` CHARACTER SET ${field.charset}`;
+    }
+
+    if (field.collation) {
+      def += ` COLLATE ${field.collation}`;
+    }
+
+    if (!field.nullable) {
+      def += ' NOT NULL';
+    } else {
+      def += ' NULL';
+    }
+
+    if (field.defaultValue !== null && field.defaultValue !== undefined) {
+      const normalizedDefault = String(field.defaultValue).trim();
+      const isNumericLiteral = /^[-+]?\d+(?:\.\d+)?$/.test(normalizedDefault);
+      const isBooleanLiteral = /^(true|false)$/i.test(normalizedDefault);
+      const isCurrentTimestamp = /^CURRENT_TIMESTAMP(?:\(\d+\))?$/i.test(normalizedDefault);
+
+      if (!normalizedDefault) {
+        // Empty input means no default clause.
+      } else if (normalizedDefault.toUpperCase() === 'NULL') {
+        def += ' DEFAULT NULL';
+      } else if (isCurrentTimestamp) {
+        def += ` DEFAULT ${normalizedDefault.toUpperCase()}`;
+      } else if (isNumericLiteral && !isStringType(normalizedType)) {
+        def += ` DEFAULT ${normalizedDefault}`;
+      } else if (isBooleanLiteral && ['BOOL', 'BOOLEAN'].includes(normalizedType)) {
+        def += ` DEFAULT ${normalizedDefault.toUpperCase()}`;
+      } else {
+        def += ` DEFAULT '${normalizedDefault.replace(/'/g, "''")}'`;
+      }
+    }
+
+    if (field.autoIncrement) {
+      def += ' AUTO_INCREMENT';
+    }
+
+    if (field.comment) {
+      def += ` COMMENT '${field.comment.replace(/'/g, "''")}'`;
+    }
+
+    return def;
+  }, []);
+
   const generateCreateTableSql = useCallback((): string => {
     const activeFields = fields.filter(f => !f.isDeleted);
     if (activeFields.length === 0) return '';
 
-    const columnDefs = activeFields.map(field => {
-      let def = `  \`${field.name}\` ${field.type.toUpperCase()}`;
-      
-      if (field.length) {
-        if (field.decimals) {
-          def += `(${field.length},${field.decimals})`;
-        } else {
-          def += `(${field.length})`;
-        }
-      }
-      
-      if (field.unsigned) {
-        def += ' UNSIGNED';
-      }
-      
-      if (field.zerofill) {
-        def += ' ZEROFILL';
-      }
-      
-      if (field.charset) {
-        def += ` CHARACTER SET ${field.charset}`;
-      }
-      
-      if (field.collation) {
-        def += ` COLLATE ${field.collation}`;
-      }
-      
-      if (!field.nullable) {
-        def += ' NOT NULL';
-      } else {
-        def += ' NULL';
-      }
-      
-      if (field.defaultValue !== null && field.defaultValue !== undefined) {
-        if (field.defaultValue === 'NULL' || field.defaultValue === '') {
-          def += ' DEFAULT NULL';
-        } else if (field.defaultValue.toUpperCase() === 'CURRENT_TIMESTAMP') {
-          def += ' DEFAULT CURRENT_TIMESTAMP';
-        } else {
-          def += ` DEFAULT '${field.defaultValue}'`;
-        }
-      }
-      
-      if (field.autoIncrement) {
-        def += ' AUTO_INCREMENT';
-      }
-      
-      if (field.comment) {
-        def += ` COMMENT '${field.comment}'`;
-      }
-      
-      return def;
-    });
+    const columnDefs = activeFields.map(field => `  ${buildFieldSqlDefinition(field)}`);
 
     const primaryKeys = activeFields.filter(f => f.isPrimaryKey).map(f => `\`${f.name}\``);
     if (primaryKeys.length > 0) {
@@ -560,7 +743,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
     }
     
     return sql;
-  }, [fields, indexes, foreignKeys, checks, triggers, effectiveTableName, tableOptions]);
+  }, [buildFieldSqlDefinition, fields, indexes, foreignKeys, checks, triggers, effectiveTableName, tableOptions]);
 
   const generateAlterTableSql = useCallback((): string => {
     if (isNewTable) {
@@ -574,49 +757,23 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
     });
 
     fields.filter(f => f.isNew && !f.isDeleted).forEach(field => {
-      let def = `ADD COLUMN \`${field.name}\` ${field.type.toUpperCase()}`;
-      if (field.length) {
-        if (field.decimals) {
-          def += `(${field.length},${field.decimals})`;
-        } else {
-          def += `(${field.length})`;
-        }
-      }
-      if (field.unsigned) def += ' UNSIGNED';
-      if (field.charset) def += ` CHARACTER SET ${field.charset}`;
-      if (field.collation) def += ` COLLATE ${field.collation}`;
-      if (!field.nullable) def += ' NOT NULL';
-      if (field.defaultValue !== null && field.defaultValue !== undefined) {
-        def += ` DEFAULT '${field.defaultValue}'`;
-      }
-      if (field.autoIncrement) def += ' AUTO_INCREMENT';
-      if (field.comment) def += ` COMMENT '${field.comment}'`;
-      statements.push(`ALTER TABLE \`${tableName}\` ${def};`);
+      statements.push(`ALTER TABLE \`${tableName}\` ADD COLUMN ${buildFieldSqlDefinition(field)};`);
     });
 
     fields.filter(f => f.isModified && !f.isDeleted && !f.isNew).forEach(field => {
-      let def = `MODIFY COLUMN \`${field.name}\` ${field.type.toUpperCase()}`;
-      if (field.length) {
-        if (field.decimals) {
-          def += `(${field.length},${field.decimals})`;
-        } else {
-          def += `(${field.length})`;
-        }
+      const originalName = field.originalName || field.name;
+      const hasRename = originalName !== field.name;
+      if (hasRename) {
+        statements.push(
+          `ALTER TABLE \`${tableName}\` CHANGE COLUMN \`${originalName}\` ${buildFieldSqlDefinition(field)};`,
+        );
+      } else {
+        statements.push(`ALTER TABLE \`${tableName}\` MODIFY COLUMN ${buildFieldSqlDefinition(field)};`);
       }
-      if (field.unsigned) def += ' UNSIGNED';
-      if (field.charset) def += ` CHARACTER SET ${field.charset}`;
-      if (field.collation) def += ` COLLATE ${field.collation}`;
-      if (!field.nullable) def += ' NOT NULL';
-      if (field.defaultValue !== null && field.defaultValue !== undefined) {
-        def += ` DEFAULT '${field.defaultValue}'`;
-      }
-      if (field.autoIncrement) def += ' AUTO_INCREMENT';
-      if (field.comment) def += ` COMMENT '${field.comment}'`;
-      statements.push(`ALTER TABLE \`${tableName}\` ${def};`);
     });
 
     indexes.filter(i => i.isDeleted).forEach(idx => {
-      statements.push(`ALTER TABLE \`${tableName}\` DROP INDEX \`${idx.name}\`;`);
+      statements.push(`ALTER TABLE \`${tableName}\` DROP INDEX \`${idx.originalName || idx.name}\`;`);
     });
 
     indexes.filter(i => i.isNew && !i.isDeleted).forEach(idx => {
@@ -625,8 +782,16 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
       statements.push(`ALTER TABLE \`${tableName}\` ADD ${uniqueStr}INDEX \`${idx.name}\` (${columns}) USING ${idx.method};`);
     });
 
+    indexes.filter(i => i.isModified && !i.isDeleted && !i.isNew).forEach(idx => {
+      const originalName = idx.originalName || idx.name;
+      statements.push(`ALTER TABLE \`${tableName}\` DROP INDEX \`${originalName}\`;`);
+      const uniqueStr = idx.type === 'UNIQUE' ? 'UNIQUE ' : idx.type === 'FULLTEXT' ? 'FULLTEXT ' : idx.type === 'SPATIAL' ? 'SPATIAL ' : '';
+      const columns = idx.fields.split(',').map(c => `\`${c.trim()}\``).join(', ');
+      statements.push(`ALTER TABLE \`${tableName}\` ADD ${uniqueStr}INDEX \`${idx.name}\` (${columns}) USING ${idx.method};`);
+    });
+
     foreignKeys.filter(fk => fk.isDeleted).forEach(fk => {
-      statements.push(`ALTER TABLE \`${tableName}\` DROP FOREIGN KEY \`${fk.name}\`;`);
+      statements.push(`ALTER TABLE \`${tableName}\` DROP FOREIGN KEY \`${fk.originalName || fk.name}\`;`);
     });
 
     foreignKeys.filter(fk => fk.isNew && !fk.isDeleted).forEach(fk => {
@@ -635,8 +800,16 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
       statements.push(`ALTER TABLE \`${tableName}\` ADD CONSTRAINT \`${fk.name}\` FOREIGN KEY (${columns}) REFERENCES \`${fk.refTable}\` (${refColumns}) ON UPDATE ${fk.onUpdate} ON DELETE ${fk.onDelete};`);
     });
 
+    foreignKeys.filter(fk => fk.isModified && !fk.isDeleted && !fk.isNew).forEach(fk => {
+      const originalName = fk.originalName || fk.name;
+      statements.push(`ALTER TABLE \`${tableName}\` DROP FOREIGN KEY \`${originalName}\`;`);
+      const columns = fk.fields.split(',').map(c => `\`${c.trim()}\``).join(', ');
+      const refColumns = fk.refFields.split(',').map(c => `\`${c.trim()}\``).join(', ');
+      statements.push(`ALTER TABLE \`${tableName}\` ADD CONSTRAINT \`${fk.name}\` FOREIGN KEY (${columns}) REFERENCES \`${fk.refTable}\` (${refColumns}) ON UPDATE ${fk.onUpdate} ON DELETE ${fk.onDelete};`);
+    });
+
     checks.filter(c => c.isDeleted).forEach(chk => {
-      statements.push(`ALTER TABLE \`${tableName}\` DROP CHECK \`${chk.name}\`;`);
+      statements.push(`ALTER TABLE \`${tableName}\` DROP CHECK \`${chk.originalName || chk.name}\`;`);
     });
 
     checks.filter(c => c.isNew && !c.isDeleted).forEach(chk => {
@@ -644,9 +817,16 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
       statements.push(`ALTER TABLE \`${tableName}\` ADD CONSTRAINT \`${chk.name}\` CHECK (${chk.clause})${notEnforced};`);
     });
 
+    checks.filter(c => c.isModified && !c.isDeleted && !c.isNew).forEach(chk => {
+      const originalName = chk.originalName || chk.name;
+      statements.push(`ALTER TABLE \`${tableName}\` DROP CHECK \`${originalName}\`;`);
+      const notEnforced = chk.notEnforced ? ' NOT ENFORCED' : '';
+      statements.push(`ALTER TABLE \`${tableName}\` ADD CONSTRAINT \`${chk.name}\` CHECK (${chk.clause})${notEnforced};`);
+    });
+
     // Triggers are handled separately
     triggers.filter(t => t.isDeleted).forEach(trg => {
-      statements.push(`DROP TRIGGER IF EXISTS \`${trg.name}\`;`);
+      statements.push(`DROP TRIGGER IF EXISTS \`${trg.originalName || trg.name}\`;`);
     });
 
     triggers.filter(t => t.isModified && !t.isDeleted && !t.isNew).forEach(trg => {
@@ -655,7 +835,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
       if (trg.update) events.push('UPDATE');
       if (trg.delete) events.push('DELETE');
       if (events.length > 0) {
-        statements.push(`DROP TRIGGER IF EXISTS \`${trg.name}\`;`);
+        statements.push(`DROP TRIGGER IF EXISTS \`${trg.originalName || trg.name}\`;`);
         statements.push(`DELIMITER ;;`);
         statements.push(`CREATE TRIGGER \`${trg.name}\` ${trg.timing} ${events.join(' OR ')} ON \`${tableName}\` FOR EACH ROW ${trg.definition};;`);
         statements.push(`DELIMITER ;`);
@@ -675,7 +855,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
     });
 
     return statements.join('\n\n');
-  }, [fields, indexes, foreignKeys, checks, triggers, tableName, isNewTable, generateCreateTableSql]);
+  }, [buildFieldSqlDefinition, fields, indexes, foreignKeys, checks, triggers, tableName, isNewTable, generateCreateTableSql]);
 
   useEffect(() => {
     const sql = isNewTable ? generateCreateTableSql() : generateAlterTableSql();
@@ -686,7 +866,21 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
   const handleFieldChange = (id: string, key: keyof FieldDefinition, value: unknown) => {
     setFields(prev => prev.map(f => {
       if (f.id === id) {
-        const updated = { ...f, [key]: value };
+        let updated = { ...f, [key]: value };
+
+        if (key === 'type' && typeof value === 'string') {
+          updated = normalizeFieldForType(updated, value);
+        }
+
+        if ((key === 'length' || key === 'decimals') && typeof value === 'string') {
+          const sanitized = sanitizeNumericInput(value);
+          updated = { ...updated, [key]: sanitized };
+        }
+
+        if (key === 'length' && typeof updated.length === 'string' && !updated.length.trim()) {
+          updated.zerofill = false;
+        }
+
         if (!f.isNew) {
           updated.isModified = true;
         }
@@ -702,6 +896,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
       id: generateId(),
       name: '',
       type: 'VARCHAR',
+      enumValues: '',
       length: '255',
       decimals: '',
       nullable: true,
@@ -738,6 +933,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
       id: generateId(),
       name: '',
       type: 'VARCHAR',
+      enumValues: '',
       length: '255',
       decimals: '',
       nullable: true,
@@ -1027,6 +1223,262 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
     setSelectedTriggerId(null);
   };
 
+  const lastAppliedActionNonceRef = useRef<number | null>(null);
+
+  const findByName = <T extends { id: string; name: string; isDeleted?: boolean }>(
+    items: T[],
+    name?: string,
+  ): T | undefined => {
+    if (!name) return undefined;
+    return items.find((item) => !item.isDeleted && item.name === name);
+  };
+
+  useEffect(() => {
+    if (!actionRequest) return;
+    if (isLoading || !isDataReady) return;
+    if (lastAppliedActionNonceRef.current === actionRequest.nonce) return;
+
+    let applied = false;
+
+    const applyRename = (
+      targetName: string | undefined,
+      nextName: string | undefined,
+      update: (id: string, value: string) => void,
+      select: (id: string | null) => void,
+      candidates: Array<{ id: string; name: string; isDeleted?: boolean }>,
+    ) => {
+      if (!targetName || !nextName) return false;
+      const item = findByName(candidates, targetName);
+      if (!item) return false;
+      update(item.id, nextName);
+      select(item.id);
+      return true;
+    };
+
+    if (actionRequest.target === 'field') {
+      setSelectedTabId('fields');
+      if (actionRequest.action === 'new') {
+        handleAddField();
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+
+      const field = findByName(fields, actionRequest.name);
+      if (!field) return;
+
+      if (actionRequest.action === 'edit') {
+        setSelectedFieldId(field.id);
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+
+      if (actionRequest.action === 'delete') {
+        setFields((prev) =>
+          prev.map((item) =>
+            item.id === field.id
+              ? (item.isNew ? { ...item, isDeleted: true } : { ...item, isDeleted: true, isModified: true })
+              : item,
+          ),
+        );
+        setSelectedFieldId(field.id);
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+
+      if (actionRequest.action === 'rename') {
+        applied = applyRename(
+          actionRequest.name,
+          actionRequest.newName,
+          (id, value) => handleFieldChange(id, 'name', value),
+          setSelectedFieldId,
+          fields,
+        );
+      }
+      if (applied) {
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+      }
+      return;
+    }
+
+    if (actionRequest.target === 'index') {
+      setSelectedTabId('indexes');
+      if (actionRequest.action === 'new') {
+        handleAddIndex();
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+
+      const index = findByName(indexes, actionRequest.name);
+      if (!index) return;
+      if (actionRequest.action === 'edit') {
+        setSelectedIndexId(index.id);
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+      if (actionRequest.action === 'delete') {
+        setIndexes((prev) => prev.map((item) => (item.id === index.id ? { ...item, isDeleted: true, isModified: true } : item)));
+        setSelectedIndexId(index.id);
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+      if (actionRequest.action === 'rename') {
+        applied = applyRename(
+          actionRequest.name,
+          actionRequest.newName,
+          (id, value) => handleIndexChange(id, 'name', value),
+          setSelectedIndexId,
+          indexes,
+        );
+      }
+      if (applied) {
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+      }
+      return;
+    }
+
+    if (actionRequest.target === 'foreignKey') {
+      setSelectedTabId('foreignKeys');
+      if (actionRequest.action === 'new') {
+        handleAddForeignKey();
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+
+      const fk = findByName(foreignKeys, actionRequest.name);
+      if (!fk) return;
+      if (actionRequest.action === 'edit') {
+        setSelectedFkId(fk.id);
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+      if (actionRequest.action === 'delete') {
+        setForeignKeys((prev) => prev.map((item) => (item.id === fk.id ? { ...item, isDeleted: true, isModified: true } : item)));
+        setSelectedFkId(fk.id);
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+      if (actionRequest.action === 'rename') {
+        applied = applyRename(
+          actionRequest.name,
+          actionRequest.newName,
+          (id, value) => handleFkChange(id, 'name', value),
+          setSelectedFkId,
+          foreignKeys,
+        );
+      }
+      if (applied) {
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+      }
+      return;
+    }
+
+    if (actionRequest.target === 'check') {
+      setSelectedTabId('checks');
+      if (actionRequest.action === 'new') {
+        handleAddCheck();
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+
+      const chk = findByName(checks, actionRequest.name);
+      if (!chk) return;
+      if (actionRequest.action === 'edit') {
+        setSelectedCheckId(chk.id);
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+      if (actionRequest.action === 'delete') {
+        setChecks((prev) => prev.map((item) => (item.id === chk.id ? { ...item, isDeleted: true, isModified: true } : item)));
+        setSelectedCheckId(chk.id);
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+      if (actionRequest.action === 'rename') {
+        applied = applyRename(
+          actionRequest.name,
+          actionRequest.newName,
+          (id, value) => handleCheckChange(id, 'name', value),
+          setSelectedCheckId,
+          checks,
+        );
+      }
+      if (applied) {
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+      }
+      return;
+    }
+
+    if (actionRequest.target === 'trigger') {
+      setSelectedTabId('triggers');
+      if (actionRequest.action === 'new') {
+        handleAddTrigger();
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+
+      const trg = findByName(triggers, actionRequest.name);
+      if (!trg) return;
+      if (actionRequest.action === 'edit') {
+        setSelectedTriggerId(trg.id);
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+      if (actionRequest.action === 'delete') {
+        setTriggers((prev) => prev.map((item) => (item.id === trg.id ? { ...item, isDeleted: true, isModified: true } : item)));
+        setSelectedTriggerId(trg.id);
+        applied = true;
+        lastAppliedActionNonceRef.current = actionRequest.nonce;
+        return;
+      }
+      if (actionRequest.action === 'rename') {
+        applied = applyRename(
+          actionRequest.name,
+          actionRequest.newName,
+          (id, value) => handleTriggerChange(id, 'name', value),
+          setSelectedTriggerId,
+          triggers,
+        );
+      }
+    }
+
+    if (applied) {
+      lastAppliedActionNonceRef.current = actionRequest.nonce;
+    }
+  }, [
+    actionRequest,
+    checks,
+    fields,
+    foreignKeys,
+    handleAddCheck,
+    handleAddField,
+    handleAddForeignKey,
+    handleAddIndex,
+    handleAddTrigger,
+    handleCheckChange,
+    handleFieldChange,
+    handleFkChange,
+    handleIndexChange,
+    handleTriggerChange,
+    isDataReady,
+    indexes,
+    isLoading,
+    triggers,
+  ]);
+
   const handleSave = async () => {
     if (isNewTable && !effectiveTableName) {
       setError(t('designerTab.errors.noTableName'));
@@ -1065,6 +1517,9 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
   const renderFieldsTab = () => {
     const selectedField = fields.find(f => f.id === selectedFieldId);
     const showCharsetCollation = selectedField && isStringType(selectedField.type);
+    const showZerofillSection = selectedField ? INTEGER_DISPLAY_WIDTH_TYPES.has(selectedField.type.toUpperCase()) : false;
+    const zerofillEnabled = selectedField ? Boolean(selectedField.length.trim()) : false;
+    const showEnumValuesSection = selectedField ? ['ENUM', 'SET'].includes(selectedField.type.toUpperCase()) : false;
 
     return (
       <div className="designer-fields">
@@ -1095,7 +1550,12 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
               </tr>
             </thead>
             <tbody>
-              {fields.filter(f => !f.isDeleted).map((field, index) => (
+              {fields.filter(f => !f.isDeleted).map((field, index) => {
+                const typeMode = getTypeParameterMode(field.type);
+                const lengthDisabled = typeMode === 'none' || ['ENUM', 'SET'].includes(field.type.toUpperCase());
+                const decimalsDisabled = typeMode !== 'double' || ['ENUM', 'SET'].includes(field.type.toUpperCase());
+
+                return (
                 <tr 
                   key={field.id} 
                   className={`${field.isNew ? 'new-row' : ''} ${field.isModified ? 'modified-row' : ''} ${selectedFieldId === field.id ? 'selected-row' : ''}`}
@@ -1113,15 +1573,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
                   <td>
                     <HTMLSelect
                       value={field.type.toUpperCase()}
-                      onChange={(e) => {
-                        const newType = e.target.value;
-                        handleFieldChange(field.id, 'type', newType);
-                        // 如果新类型不是字符串类型，清空字符集和排序规则
-                        if (!isStringType(newType)) {
-                          handleFieldChange(field.id, 'charset', '');
-                          handleFieldChange(field.id, 'collation', '');
-                        }
-                      }}
+                      onChange={(e) => handleFieldChange(field.id, 'type', e.target.value)}
                       options={MYSQL_DATA_TYPES.map(t => ({ value: t, label: t }))}
                     />
                   </td>
@@ -1131,6 +1583,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
                       value={field.length}
                       onChange={(e) => handleFieldChange(field.id, 'length', e.target.value)}
                       placeholder={t('designerTab.fields.placeholders.length')}
+                      disabled={lengthDisabled}
                     />
                   </td>
                   <td>
@@ -1139,6 +1592,7 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
                       value={field.decimals}
                       onChange={(e) => handleFieldChange(field.id, 'decimals', e.target.value)}
                       placeholder={t('designerTab.fields.placeholders.decimals')}
+                      disabled={decimalsDisabled}
                     />
                   </td>
                   <td>
@@ -1173,10 +1627,44 @@ export const DesignerTab: React.FC<DesignerTabProps> = ({
                     />
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>
+        {showZerofillSection && selectedField && (
+          <div className="designer-field-charset-section">
+            <div className="designer-field-charset-title">{t('designerTab.fields.zeroFillTitle')}</div>
+            <div className="designer-field-charset-row">
+              <FormGroup label={t('designerTab.fields.zeroFill')} className="charset-form-group">
+                <Checkbox
+                  checked={selectedField.zerofill}
+                  disabled={!zerofillEnabled}
+                  label={t('designerTab.fields.zeroFillHint')}
+                  onChange={(event) => {
+                    const checked = (event.target as HTMLInputElement).checked;
+                    handleFieldChange(selectedField.id, 'zerofill', checked);
+                    if (checked) {
+                      handleFieldChange(selectedField.id, 'unsigned', true);
+                    }
+                  }}
+                />
+              </FormGroup>
+            </div>
+          </div>
+        )}
+        {showEnumValuesSection && selectedField && (
+          <div className="designer-field-charset-section">
+            <div className="designer-field-charset-title">{t('designerTab.fields.enumValuesTitle')}</div>
+            <FormGroup label={t('designerTab.fields.enumValues')}>
+              <InputGroup
+                value={selectedField.enumValues}
+                onChange={(event) => handleFieldChange(selectedField.id, 'enumValues', event.target.value)}
+                placeholder={t('designerTab.fields.placeholders.enumValues')}
+              />
+            </FormGroup>
+          </div>
+        )}
         {/* 字符串类型字段的字符集和排序规则选择区域 */}
         {showCharsetCollation && selectedField && (
           <div className="designer-field-charset-section">

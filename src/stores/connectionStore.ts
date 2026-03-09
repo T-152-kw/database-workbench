@@ -61,12 +61,22 @@ export const useConnectionStore = create<ConnectionStore>()(
         if (conn?.poolId) {
           await invoke('pool_close', { poolId: conn.poolId });
         }
+        const remainingConnections = state.connections.filter((c) => c.profile.name !== id);
+        const fallbackConnection = remainingConnections[0];
         const nextLastUsed = { ...state.lastUsedDatabaseByConnection };
         delete nextLastUsed[id];
+        const nextActiveConnectionId =
+          state.activeConnectionId === id
+            ? (fallbackConnection?.profile.name || null)
+            : state.activeConnectionId;
+        const nextActiveDatabase =
+          state.activeConnectionId === id
+            ? (nextActiveConnectionId ? (nextLastUsed[nextActiveConnectionId] || null) : null)
+            : state.activeDatabase;
         set((state) => ({
           connections: state.connections.filter((c) => c.profile.name !== id),
-          activeConnectionId: state.activeConnectionId === id ? null : state.activeConnectionId,
-          activeDatabase: state.activeConnectionId === id ? null : state.activeDatabase,
+          activeConnectionId: nextActiveConnectionId,
+          activeDatabase: nextActiveDatabase,
           lastUsedDatabaseByConnection: nextLastUsed,
         }));
       },
