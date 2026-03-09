@@ -36,7 +36,3 @@ release/
 
 # 操作系统文件
 Thumbs.db
-
-# 特殊文件
-latest.json
-LICENSE
