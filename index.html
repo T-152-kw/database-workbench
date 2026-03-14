@@ -4,7 +4,35 @@
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Tauri + React + Typescript</title>
+    <title>Database Workbench</title>
+    <!-- Prevent transparent flash by applying theme background immediately -->
+    <script>
+      (function() {
+        try {
+          // Prevent transparent flash by applying theme background immediately
+          var state = localStorage.getItem('app-storage');
+          var isDark = false; // Default logic or use system preferred
+          if (state) {
+            var st = JSON.parse(state);
+            if (st.state && st.state.theme === 'dark') isDark = true;
+          } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) {
+            isDark = true;
+          }
+
+          if (isDark) {
+            document.documentElement.classList.add('bp5-dark', 'bp6-dark');
+            document.documentElement.style.backgroundColor = '#2f343c';
+            document.documentElement.style.color = '#f5f8fa';
+          } else {
+            document.documentElement.classList.add('bp5-light', 'bp6-light');
+            document.documentElement.style.backgroundColor = '#ffffff';
+            document.documentElement.style.color = '#1c2127';
+          }
+        } catch (e) {
+          document.documentElement.style.backgroundColor = '#ffffff';
+        }
+      })();
+    </script>
   </head>
 
   <body>

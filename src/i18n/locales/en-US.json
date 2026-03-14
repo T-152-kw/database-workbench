@@ -80,7 +80,14 @@
       "backup": "Backup Database...",
       "restore": "Restore Database...",
       "importConnections": "Import Connections...",
-      "exportConnections": "Export Connections..."
+      "exportConnections": "Export Connections...",
+      "noConnectionsToExport": "No connection profiles available to export",
+      "selectAtLeastOneConnection": "Please select at least one connection profile",
+      "exportConnectionsSelectTitle": "Select Connection Profiles to Export",
+      "exportConnectionsSelectDescription": "Choose the connection profiles to export:",
+      "exportConnectionsSaved": "Exported {{count}} connections to {{filePath}}",
+      "importConnectionsOverwritePrompt": "Connection \"{{name}}\" already exists with different settings. Overwrite existing profile?",
+      "importConnectionsSummary": "Import completed: created {{created}}, updated {{updated}}, skipped {{skipped}}"
     },
     "window": {
       "title": "Window",
@@ -281,7 +288,34 @@
       "sqlPlaceholder": "Enter SQL query...",
       "connectionPlaceholder": "Enter connection configuration...",
       "objectPlaceholder": "Enter database object path...",
-      "importFailed": "Import failed"
+      "importFailed": "Import failed",
+      "sqlFileLabel": "SQL File",
+      "sqlFilePlaceholder": "Optional: path to import SQL file",
+      "selectFile": "Select",
+      "connectionJsonLabel": "Connection JSON",
+      "connectionJsonPlaceholder": "Choose the exported connection JSON file path",
+      "connectionProfileNameLabel": "Profile Name (Optional)",
+      "connectionProfileNamePlaceholder": "Specify profile name when JSON contains multiple connections",
+      "objectConnectionNameLabel": "Connection Name",
+      "objectConnectionNamePlaceholder": "e.g. MySQL84",
+      "selectConnectionName": "Select a connection",
+      "objectDatabaseLabel": "Database",
+      "objectDatabasePlaceholder": "e.g. world",
+      "selectDatabase": "Select a database",
+      "objectTypeLabel": "Object Type",
+      "objectTypeTable": "TABLE",
+      "objectTypeView": "VIEW",
+      "objectTypeFunction": "FUNCTION",
+      "objectNameLabel": "Object Name",
+      "objectNamePlaceholder": "e.g. city",
+      "selectObjectName": "Select an object",
+      "openModeLabel": "Open Mode",
+      "openModeList": "List",
+      "openModeData": "Data",
+      "openModeDesigner": "Designer",
+      "objectPathLabel": "Object Path",
+      "objectConnectionConfigPathLabel": "Connection Config File (Optional)",
+      "objectConnectionConfigPathPlaceholder": "Used to create the connection if it does not exist"
     },
     "properties": {
       "title": "Properties",
@@ -1545,5 +1579,13 @@
     "downloadFailed": "Failed to download update",
     "restartFailed": "Failed to restart",
     "unknownError": "Unknown error"
+  },
+  "notification": {
+    "title": "Notifications",
+    "empty": "No new notifications",
+    "clearAll": "Clear all",
+    "justNow": "Just now",
+    "minutesAgo": "{{count}} minutes ago",
+    "hoursAgo": "{{count}} hours ago"
   }
 }

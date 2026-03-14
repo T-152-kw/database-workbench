@@ -136,6 +136,20 @@
   background-size: 20px 20px;
 }
 
+/* Dark theme for ER diagram canvas background */
+html.bp6-dark .er-diagram-canvas .react-flow__renderer,
+html.bp5-dark .er-diagram-canvas .react-flow__renderer,
+.bp6-dark .er-diagram-canvas .react-flow__renderer,
+.bp5-dark .er-diagram-canvas .react-flow__renderer {
+  background-image: radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.15) 1px, transparent 0);
+  background-color: #111827;
+}
+
+.main-layout.bp5-dark .er-diagram-canvas .react-flow__renderer {
+  background-image: radial-gradient(circle at 1px 1px, rgba(148, 163, 184, 0.15) 1px, transparent 0);
+  background-color: #111827;
+}
+
 .er-diagram-minimap {
   width: 220px;
   height: 138px;

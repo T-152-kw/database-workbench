@@ -454,16 +454,28 @@
 
 .result-message-block {
   padding: 4px 0;
+  box-sizing: border-box;
+  overflow: hidden;
 }
 
 .result-message-sql {
   margin: 0;
   color: #0f172a;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .result-message-line {
   margin: 0;
   color: #1f2937;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.result-message-virtual-spacer {
+  width: 100%;
 }
 
 .result-message-divider {
@@ -535,6 +547,9 @@
   top: 0;
   z-index: 1;
   font-weight: 600;
+}
+.result-summary-row-error td {
+  color: #c26a00;
 }
 
 .result-summary-sql-cell {
@@ -1010,6 +1025,9 @@
 
 [data-theme="dark"] .result-summary-table th {
   background: #1f2937;
+}
+[data-theme="dark"] .result-summary-row-error td {
+  color: #f4a746;
 }
 
 [data-theme="dark"] .result-summary-table th,

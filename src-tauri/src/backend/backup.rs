@@ -293,7 +293,7 @@ fn run_sql_backup(req: &BackupRequest) -> Result<String, String> {
 
         if include_data {
             for table in &tables {
-                dump_table_data(conn, &mut writer, table, insert_batch_size)?;
+                dump_table_data(conn, &mut writer, &req.schema, table, insert_batch_size)?;
             }
         }
 
@@ -784,9 +784,14 @@ fn derive_charset_from_collation(collation: &str) -> Option<String> {
 fn dump_table_data(
     conn: &mut mysql::Conn,
     writer: &mut dyn Write,
+    schema: &str,
     table_name: &str,
     batch_size: usize,
 ) -> Result<(), String> {
+    write_table_records_comment(writer, table_name)?;
+
+    let numeric_column_flags = fetch_numeric_column_flags(conn, schema, table_name)?;
+
     let sql = format!("SELECT * FROM `{}`", escape_identifier(table_name));
     let mut rows = conn
         .query_iter(sql)
@@ -801,18 +806,20 @@ fn dump_table_data(
         .join(", ");
 
     let mut values_batch: Vec<String> = Vec::with_capacity(batch_size);
-    let mut has_any_row = false;
 
     for row in rows.by_ref() {
         let row = row.map_err(|e| format!("Read row failed for {}: {e}", table_name))?;
         let values = row
             .unwrap()
             .into_iter()
-            .map(|v| to_sql_literal(&v))
+            .enumerate()
+            .map(|(idx, v)| {
+                let is_numeric = numeric_column_flags.get(idx).copied().unwrap_or(false);
+                to_sql_literal(&v, is_numeric)
+            })
             .collect::<Vec<_>>()
             .join(", ");
         values_batch.push(format!("({})", values));
-        has_any_row = true;
 
         if values_batch.len() >= batch_size {
             flush_insert_batch(writer, table_name, &column_list, &values_batch)?;
@@ -824,13 +831,66 @@ fn dump_table_data(
         flush_insert_batch(writer, table_name, &column_list, &values_batch)?;
     }
 
-    if has_any_row {
-        writer
-            .write_all(b"\n")
-            .map_err(|e| format!("Write data separator failed: {e}"))?;
-    }
+    writer
+        .write_all(b"\n")
+        .map_err(|e| format!("Write data separator failed: {e}"))?;
 
     Ok(())
+}
+
+fn write_table_records_comment(writer: &mut dyn Write, table_name: &str) -> Result<(), String> {
+    let block = format!(
+        "--\n-- Records of table `{}`\n--\n",
+        escape_identifier(table_name)
+    );
+    writer
+        .write_all(block.as_bytes())
+        .map_err(|e| format!("Write table records comment failed: {e}"))
+}
+
+fn fetch_numeric_column_flags(
+    conn: &mut mysql::Conn,
+    schema: &str,
+    table_name: &str,
+) -> Result<Vec<bool>, String> {
+    let sql = "SELECT DATA_TYPE FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = :schema AND TABLE_NAME = :table_name ORDER BY ORDINAL_POSITION";
+    let rows: Vec<String> = conn
+        .exec_map(
+            sql,
+            params! {
+                "schema" => schema,
+                "table_name" => table_name,
+            },
+            |data_type: String| data_type,
+        )
+        .map_err(|e| format!("Read column types failed for {}: {e}", table_name))?;
+
+    Ok(rows
+        .into_iter()
+        .map(|data_type| is_numeric_mysql_type(&data_type))
+        .collect())
+}
+
+fn is_numeric_mysql_type(data_type: &str) -> bool {
+    matches!(
+        data_type.trim().to_ascii_lowercase().as_str(),
+        "tinyint"
+            | "smallint"
+            | "mediumint"
+            | "int"
+            | "integer"
+            | "bigint"
+            | "decimal"
+            | "dec"
+            | "numeric"
+            | "fixed"
+            | "float"
+            | "double"
+            | "real"
+            | "bit"
+            | "bool"
+            | "boolean"
+    )
 }
 
 fn flush_insert_batch(
@@ -1072,12 +1132,16 @@ fn row_get_string(row: &mysql::Row, keys: &[&str]) -> Option<String> {
     None
 }
 
-fn to_sql_literal(value: &Value) -> String {
+fn to_sql_literal(value: &Value, treat_bytes_as_numeric: bool) -> String {
     match value {
         Value::NULL => "NULL".to_string(),
         Value::Bytes(bytes) => {
             let s = String::from_utf8_lossy(bytes);
-            format!("'{}'", escape_sql_string(&s))
+            if treat_bytes_as_numeric && is_numeric_literal(s.trim()) {
+                s.trim().to_string()
+            } else {
+                format!("'{}'", escape_sql_string(&s))
+            }
         }
         Value::Int(v) => v.to_string(),
         Value::UInt(v) => v.to_string(),
@@ -1123,6 +1187,70 @@ fn to_sql_literal(value: &Value) -> String {
             }
         }
     }
+}
+
+fn is_numeric_literal(input: &str) -> bool {
+    if input.is_empty() {
+        return false;
+    }
+
+    let bytes = input.as_bytes();
+    let mut i = 0usize;
+
+    if matches!(bytes.first(), Some(b'+') | Some(b'-')) {
+        i += 1;
+    }
+
+    let mut digits_before_exp = 0usize;
+    let mut seen_dot = false;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'0'..=b'9' => {
+                digits_before_exp += 1;
+                i += 1;
+            }
+            b'.' if !seen_dot => {
+                seen_dot = true;
+                i += 1;
+            }
+            b'e' | b'E' => break,
+            _ => return false,
+        }
+    }
+
+    if digits_before_exp == 0 {
+        return false;
+    }
+
+    if i == bytes.len() {
+        return true;
+    }
+
+    i += 1;
+    if i >= bytes.len() {
+        return false;
+    }
+
+    if matches!(bytes.get(i), Some(b'+') | Some(b'-')) {
+        i += 1;
+    }
+
+    if i >= bytes.len() {
+        return false;
+    }
+
+    let mut exp_digits = 0usize;
+    while i < bytes.len() {
+        match bytes[i] {
+            b'0'..=b'9' => {
+                exp_digits += 1;
+                i += 1;
+            }
+            _ => return false,
+        }
+    }
+
+    exp_digits > 0
 }
 
 fn escape_sql_string(raw: &str) -> String {

@@ -10,7 +10,6 @@ import {
 import {
   useReactTable,
   getCoreRowModel,
-  getPaginationRowModel,
   getSortedRowModel,
   type SortingState,
   flexRender,
@@ -19,6 +18,8 @@ import {
 
 interface ResultPanelProps {
   tabs: ResultTab[];
+  metaTabs?: ResultTab[];
+  executionWallTimeSec?: number;
   activeTabId: string | null;
   onTabChange: (tabId: string) => void;
   onTabClose: (tabId: string) => void;
@@ -43,6 +44,23 @@ interface CsvExportInfo {
   exported_at: string;
   row_count: number;
 }
+
+interface VirtualWindowRange {
+  start: number;
+  end: number;
+  topPadding: number;
+  bottomPadding: number;
+}
+
+interface SummaryRowItem {
+  tab: ResultTab;
+  infoMessage: string;
+}
+
+const MESSAGE_VIRTUAL_ROW_HEIGHT = 84;
+const MESSAGE_VIRTUAL_OVERSCAN = 10;
+const SUMMARY_VIRTUAL_ROW_HEIGHT = 36;
+const SUMMARY_VIRTUAL_OVERSCAN = 12;
 
 const formatSeconds = (seconds?: number): string => {
   if (seconds === undefined || Number.isNaN(seconds)) {
@@ -90,6 +108,80 @@ const copyTextToClipboard = async (text: string): Promise<void> => {
   textarea.select();
   document.execCommand('copy');
   document.body.removeChild(textarea);
+};
+
+const useVirtualWindow = (
+  enabled: boolean,
+  rowCount: number,
+  rowHeight: number,
+  overscan: number,
+): {
+  containerRef: React.RefObject<HTMLDivElement>;
+  onScroll: (event: React.UIEvent<HTMLDivElement>) => void;
+  range: VirtualWindowRange;
+} => {
+  const containerRef = React.useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = React.useState(0);
+  const [viewportHeight, setViewportHeight] = React.useState(420);
+
+  React.useEffect(() => {
+    if (!enabled) {
+      setScrollTop(0);
+      return;
+    }
+
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const applyHeight = () => {
+      setViewportHeight(container.clientHeight || 420);
+    };
+
+    applyHeight();
+    const observer = new ResizeObserver(applyHeight);
+    observer.observe(container);
+
+    return () => observer.disconnect();
+  }, [enabled]);
+
+  const onScroll = React.useCallback((event: React.UIEvent<HTMLDivElement>) => {
+    if (!enabled) {
+      return;
+    }
+    setScrollTop((event.currentTarget as HTMLDivElement).scrollTop);
+  }, [enabled]);
+
+  const range = React.useMemo<VirtualWindowRange>(() => {
+    if (!enabled) {
+      return {
+        start: 0,
+        end: rowCount,
+        topPadding: 0,
+        bottomPadding: 0,
+      };
+    }
+
+    const start = Math.max(0, Math.floor(scrollTop / rowHeight) - overscan);
+    const visibleCount = Math.ceil(viewportHeight / rowHeight) + overscan * 2;
+    const end = Math.min(rowCount, start + visibleCount);
+    const topPadding = start * rowHeight;
+    const bottomPadding = Math.max(0, (rowCount - end) * rowHeight);
+
+    return {
+      start,
+      end,
+      topPadding,
+      bottomPadding,
+    };
+  }, [enabled, overscan, rowCount, rowHeight, scrollTop, viewportHeight]);
+
+  return {
+    containerRef,
+    onScroll,
+    range,
+  };
 };
 
 // Column resize handle component - matching DatabaseObjectTab style
@@ -158,6 +250,11 @@ const QueryResultTable: React.FC<{
   const [selectedRowIndex, setSelectedRowIndex] = React.useState<number | null>(null);
   const [contextMenu, setContextMenu] = React.useState<ResultContextMenuState | null>(null);
   const [columnWidths, setColumnWidths] = React.useState<Record<string, number>>({});
+  const wrapperRef = React.useRef<HTMLDivElement>(null);
+  const [scrollTop, setScrollTop] = React.useState(0);
+  const [viewportHeight, setViewportHeight] = React.useState(420);
+  const VIRTUAL_ROW_HEIGHT = 30;
+  const VIRTUAL_OVERSCAN = 12;
   const serverPaginationData = data.pagination;
   const serverPagination = Boolean(serverPaginationData);
   const serverOffset = serverPaginationData
@@ -199,14 +296,61 @@ const QueryResultTable: React.FC<{
     },
     onSortingChange: setSorting,
     getCoreRowModel: getCoreRowModel(),
-    getPaginationRowModel: serverPagination ? undefined : getPaginationRowModel(),
     getSortedRowModel: getSortedRowModel(),
-    initialState: {
-      pagination: {
-        pageSize: 100,
-      },
-    },
   });
+
+  const visibleRows = table.getRowModel().rows;
+  const virtualEnabled = !serverPagination && visibleRows.length > 200;
+
+  React.useEffect(() => {
+    if (!virtualEnabled) {
+      return;
+    }
+
+    const el = wrapperRef.current;
+    if (!el) {
+      return;
+    }
+
+    const applyHeight = () => {
+      setViewportHeight(el.clientHeight || 420);
+    };
+
+    applyHeight();
+    const observer = new ResizeObserver(applyHeight);
+    observer.observe(el);
+
+    return () => observer.disconnect();
+  }, [virtualEnabled]);
+
+  const virtualRange = React.useMemo(() => {
+    if (!virtualEnabled) {
+      return {
+        start: 0,
+        end: visibleRows.length,
+        topPadding: 0,
+        bottomPadding: 0,
+      };
+    }
+
+    const start = Math.max(0, Math.floor(scrollTop / VIRTUAL_ROW_HEIGHT) - VIRTUAL_OVERSCAN);
+    const count = Math.ceil(viewportHeight / VIRTUAL_ROW_HEIGHT) + VIRTUAL_OVERSCAN * 2;
+    const end = Math.min(visibleRows.length, start + count);
+    const topPadding = start * VIRTUAL_ROW_HEIGHT;
+    const bottomPadding = Math.max(0, (visibleRows.length - end) * VIRTUAL_ROW_HEIGHT);
+
+    return {
+      start,
+      end,
+      topPadding,
+      bottomPadding,
+    };
+  }, [virtualEnabled, visibleRows.length, scrollTop, viewportHeight]);
+
+  const renderedRows = React.useMemo(
+    () => visibleRows.slice(virtualRange.start, virtualRange.end),
+    [visibleRows, virtualRange.start, virtualRange.end],
+  );
 
   const handleServerPageChange = React.useCallback((page: number, pageSize?: number) => {
     if (!serverPaginationData || !onRequestPage) return;
@@ -297,7 +441,11 @@ const QueryResultTable: React.FC<{
 
   return (
     <div className="result-table-container result-table-java-like">
-      <div className="result-table-wrapper">
+      <div
+        ref={wrapperRef}
+        className="result-table-wrapper"
+        onScroll={(event) => setScrollTop((event.currentTarget as HTMLDivElement).scrollTop)}
+      >
         <table className="result-table">
           <thead>
             {table.getHeaderGroups().map((headerGroup) => (
@@ -337,18 +485,25 @@ const QueryResultTable: React.FC<{
             ))}
           </thead>
           <tbody>
-            {table.getRowModel().rows.length === 0 ? (
+            {visibleRows.length === 0 ? (
               <tr>
                 <td colSpan={table.getAllColumns().length} className="result-table-empty-row">
                   {t('resultPanel.noData')}
                 </td>
               </tr>
             ) : (
-              table.getRowModel().rows.map((row) => (
+              <>
+                {virtualRange.topPadding > 0 && (
+                  <tr>
+                    <td colSpan={table.getAllColumns().length} style={{ height: `${virtualRange.topPadding}px`, padding: 0, border: 'none' }} />
+                  </tr>
+                )}
+                {renderedRows.map((row) => (
                 <tr
                   key={row.id}
                   className={`result-table-row ${selectedRowIndex === row.index ? 'selected' : ''}`}
                   onClick={() => setSelectedRowIndex(row.index)}
+                  style={virtualEnabled ? { height: `${VIRTUAL_ROW_HEIGHT}px` } : undefined}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td
@@ -365,7 +520,13 @@ const QueryResultTable: React.FC<{
                     </td>
                   ))}
                 </tr>
-              ))
+                ))}
+                {virtualRange.bottomPadding > 0 && (
+                  <tr>
+                    <td colSpan={table.getAllColumns().length} style={{ height: `${virtualRange.bottomPadding}px`, padding: 0, border: 'none' }} />
+                  </tr>
+                )}
+              </>
             )}
           </tbody>
         </table>
@@ -388,7 +549,7 @@ const QueryResultTable: React.FC<{
       {/* Pagination */}
       <div className="result-table-pagination">
         <div className="pagination-info">
-          {!serverPagination && t('resultPanel.showingRows', { shown: table.getRowModel().rows.length, total: data.rows.length })}
+          {!serverPagination && t('resultPanel.showingRows', { shown: visibleRows.length, total: data.rows.length })}
           {serverPagination && t('resultPanel.showingRows', {
             shown: data.rows.length,
             total: data.pagination?.total_rows ?? (data.pagination?.has_more ? `${data.rows.length}+` : `${data.rows.length}`),
@@ -397,41 +558,9 @@ const QueryResultTable: React.FC<{
         <div className="pagination-controls">
           {!serverPagination && (
             <>
-              <Button
-                small
-                minimal
-                disabled={!table.getCanPreviousPage()}
-                onClick={() => table.setPageIndex(0)}
-              >
-                {'<<'}
-              </Button>
-              <Button
-                small
-                minimal
-                disabled={!table.getCanPreviousPage()}
-                onClick={() => table.previousPage()}
-              >
-                {'<'}
-              </Button>
               <span className="pagination-page">
-                {t('resultPanel.page', { current: table.getState().pagination.pageIndex + 1, total: table.getPageCount() })}
+                {virtualEnabled ? 'Virtual Scroll' : 'Client Mode'}
               </span>
-              <Button
-                small
-                minimal
-                disabled={!table.getCanNextPage()}
-                onClick={() => table.nextPage()}
-              >
-                {'>'}
-              </Button>
-              <Button
-                small
-                minimal
-                disabled={!table.getCanNextPage()}
-                onClick={() => table.setPageIndex(table.getPageCount() - 1)}
-              >
-                {'>>'}
-              </Button>
             </>
           )}
           {serverPagination && serverPaginationData && (
@@ -537,59 +666,106 @@ const getSummaryInfoMessage = (tab: ResultTab, t: (key: string, opts?: Record<st
 
 const MessageView: React.FC<{ tabs: ResultTab[] }> = ({ tabs }) => {
   const { t } = useTranslation();
+  const virtualEnabled = tabs.length > 220;
+  const {
+    containerRef,
+    onScroll,
+    range,
+  } = useVirtualWindow(virtualEnabled, tabs.length, MESSAGE_VIRTUAL_ROW_HEIGHT, MESSAGE_VIRTUAL_OVERSCAN);
+
+  const renderedTabs = React.useMemo(
+    () => tabs.slice(range.start, range.end),
+    [tabs, range.start, range.end],
+  );
 
   return (
-    <div className="result-message-view">
-      {tabs.map((tab, index) => (
-        <div key={tab.id} className="result-message-block">
-          <p className="result-message-sql">{normalizeSqlForMessage(tab.sql) || tab.title}</p>
-          <p className="result-message-line">&gt; {tab.type === 'error' ? tab.statusText || t('resultPanel.execFailed') : 'OK'}</p>
-          <p className="result-message-line">
-            &gt; {t('resultPanel.queryTime', { time: formatSeconds(tab.executionTimeSec) })}
-          </p>
-          {index < tabs.length - 1 && <div className="result-message-divider" />}
-        </div>
-      ))}
+    <div ref={containerRef} className="result-message-view" onScroll={onScroll}>
+      {range.topPadding > 0 && <div className="result-message-virtual-spacer" style={{ height: `${range.topPadding}px` }} />}
+      {renderedTabs.map((tab, index) => {
+        const actualIndex = range.start + index;
+
+        return (
+          <div key={tab.id} className="result-message-block" style={virtualEnabled ? { height: `${MESSAGE_VIRTUAL_ROW_HEIGHT}px` } : undefined}>
+            <p className="result-message-sql" title={tab.sql}>{normalizeSqlForMessage(tab.sql) || tab.title}</p>
+            <p className="result-message-line">&gt; {tab.type === 'error' ? tab.statusText || t('resultPanel.execFailed') : 'OK'}</p>
+            <p className="result-message-line">
+              &gt; {t('resultPanel.queryTime', { time: formatSeconds(tab.executionTimeSec) })}
+            </p>
+            {actualIndex < tabs.length - 1 && <div className="result-message-divider" />}
+          </div>
+        );
+      })}
+      {range.bottomPadding > 0 && <div className="result-message-virtual-spacer" style={{ height: `${range.bottomPadding}px` }} />}
     </div>
   );
 };
 
 const SummaryView: React.FC<{
   tabs: ResultTab[];
+  executionWallTimeSec?: number;
   onlyErrors: boolean;
   onToggleOnlyErrors: (checked: boolean) => void;
   onOpenQueryResult: (tabId: string) => void;
-}> = ({ tabs, onlyErrors, onToggleOnlyErrors, onOpenQueryResult }) => {
+}> = ({ tabs, executionWallTimeSec, onlyErrors, onToggleOnlyErrors, onOpenQueryResult }) => {
   const { t } = useTranslation();
   const [detailState, setDetailState] = React.useState<SummaryDetailState | null>(null);
 
-  const sortedTabs = React.useMemo(
-    () => [...tabs].sort((a, b) => (a.statementOrder || 0) - (b.statementOrder || 0) || a.id.localeCompare(b.id)),
-    [tabs],
-  );
+  const summaryStats = React.useMemo(() => {
+    const processed = tabs.length;
+    const success = tabs.filter((tab) => tab.type !== 'error').length;
+    const error = processed - success;
+    const startAt = tabs[0]?.startedAt;
+    const endAt = tabs[tabs.length - 1]?.finishedAt;
+    const runtimeSec = tabs
+      .reduce((acc, tab) => acc + (tab.executionTimeSec || 0) + (tab.fetchTimeSec || 0), 0)
+      .toFixed(3);
+    const runtimeDisplay = typeof executionWallTimeSec === 'number'
+      ? executionWallTimeSec.toFixed(3)
+      : runtimeSec;
 
-  const processed = sortedTabs.length;
-  const success = sortedTabs.filter((tab) => tab.type !== 'error').length;
-  const error = processed - success;
-  const startAt = sortedTabs[0]?.startedAt;
-  const endAt = sortedTabs[sortedTabs.length - 1]?.finishedAt;
-  const runtimeSec = sortedTabs
-    .reduce((acc, tab) => acc + (tab.executionTimeSec || 0) + (tab.fetchTimeSec || 0), 0)
-    .toFixed(3);
-  const tableRows = onlyErrors
-    ? sortedTabs.filter((tab) => tab.type === 'error')
-    : sortedTabs;
+    return {
+      processed,
+      success,
+      error,
+      startAt,
+      endAt,
+      runtimeSec: runtimeDisplay,
+    };
+  }, [tabs, executionWallTimeSec]);
+
+  const tableRows = React.useMemo<SummaryRowItem[]>(() => {
+    const sourceTabs = onlyErrors
+      ? tabs.filter((tab) => tab.type === 'error')
+      : tabs;
+
+    return sourceTabs.map((tab) => ({
+      tab,
+      infoMessage: getSummaryInfoMessage(tab, t),
+    }));
+  }, [onlyErrors, tabs, t]);
+
+  const summaryVirtualEnabled = tableRows.length > 220;
+  const {
+    containerRef,
+    onScroll,
+    range,
+  } = useVirtualWindow(summaryVirtualEnabled, tableRows.length, SUMMARY_VIRTUAL_ROW_HEIGHT, SUMMARY_VIRTUAL_OVERSCAN);
+
+  const renderedRows = React.useMemo(
+    () => tableRows.slice(range.start, range.end),
+    [tableRows, range.start, range.end],
+  );
 
   return (
     <div className="result-summary-view">
       <div className="result-summary-top">
         <div className="result-summary-grid">
-          <div>{t('resultPanel.processed', { count: processed })}</div>
-          <div>{t('resultPanel.startTime', { time: formatDateTime(startAt) })}</div>
-          <div>{t('resultPanel.successCount', { count: success })}</div>
-          <div>{t('resultPanel.endTime', { time: formatDateTime(endAt) })}</div>
-          <div>{t('resultPanel.errorCount', { count: error })}</div>
-          <div>{t('resultPanel.runtime', { time: runtimeSec })}</div>
+          <div>{t('resultPanel.processed', { count: summaryStats.processed })}</div>
+          <div>{t('resultPanel.startTime', { time: formatDateTime(summaryStats.startAt) })}</div>
+          <div>{t('resultPanel.successCount', { count: summaryStats.success })}</div>
+          <div>{t('resultPanel.endTime', { time: formatDateTime(summaryStats.endAt) })}</div>
+          <div>{t('resultPanel.errorCount', { count: summaryStats.error })}</div>
+          <div>{t('resultPanel.runtime', { time: summaryStats.runtimeSec })}</div>
         </div>
         <label className="result-summary-only-errors">
           <input
@@ -601,7 +777,7 @@ const SummaryView: React.FC<{
         </label>
       </div>
 
-      <div className="result-summary-table-wrap">
+      <div ref={containerRef} className="result-summary-table-wrap" onScroll={onScroll}>
         <table className="result-summary-table">
           <thead>
             <tr>
@@ -612,8 +788,17 @@ const SummaryView: React.FC<{
             </tr>
           </thead>
           <tbody>
-            {tableRows.map((tab) => (
-              <tr key={`summary_${tab.id}`}>
+            {range.topPadding > 0 && (
+              <tr>
+                <td colSpan={4} style={{ height: `${range.topPadding}px`, padding: 0, border: 'none' }} />
+              </tr>
+            )}
+            {renderedRows.map(({ tab, infoMessage }) => (
+              <tr
+                key={`summary_${tab.id}`}
+                className={tab.type === 'error' ? 'result-summary-row-error' : undefined}
+                style={summaryVirtualEnabled ? { height: `${SUMMARY_VIRTUAL_ROW_HEIGHT}px` } : undefined}
+              >
                 <td
                   className="result-summary-sql-cell"
                   onDoubleClick={() => {
@@ -641,15 +826,15 @@ const SummaryView: React.FC<{
                 </td>
                 <td className="result-summary-message-cell">
                   <div className="result-summary-info-wrap">
-                    <span className="result-summary-info-text" title={getSummaryInfoMessage(tab, t)}>
-                      {getSummaryInfoMessage(tab, t)}
+                    <span className="result-summary-info-text" title={infoMessage}>
+                      {infoMessage}
                     </span>
                     <button
                       className="result-summary-info-more"
                       type="button"
                       onClick={(event) => {
                         event.stopPropagation();
-                        setDetailState({ content: getSummaryInfoMessage(tab, t), kind: 'info' });
+                        setDetailState({ content: infoMessage, kind: 'info' });
                       }}
                       aria-label={t('resultPanel.viewDetail')}
                     >
@@ -661,6 +846,11 @@ const SummaryView: React.FC<{
                 <td>{formatSeconds(tab.fetchTimeSec)}s</td>
               </tr>
             ))}
+            {range.bottomPadding > 0 && (
+              <tr>
+                <td colSpan={4} style={{ height: `${range.bottomPadding}px`, padding: 0, border: 'none' }} />
+              </tr>
+            )}
             {tableRows.length === 0 && (
               <tr>
                 <td colSpan={4}>{t('resultPanel.noData')}</td>
@@ -695,6 +885,8 @@ const SummaryView: React.FC<{
 
 export const ResultPanel: React.FC<ResultPanelProps> = ({
   tabs,
+  metaTabs,
+  executionWallTimeSec,
   activeTabId,
   onTabChange,
   onTabClose,
@@ -707,11 +899,16 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
   const [pinMetaView, setPinMetaView] = React.useState(false);
   const [summaryOnlyErrors, setSummaryOnlyErrors] = React.useState(false);
 
+  const executionTabs = React.useMemo(
+    () => (metaTabs && metaTabs.length > 0 ? metaTabs : tabs),
+    [metaTabs, tabs],
+  );
+
   void onTabClose;
 
   const sortedTabs = React.useMemo(
-    () => [...tabs].sort((a, b) => (a.statementOrder || 0) - (b.statementOrder || 0) || a.id.localeCompare(b.id)),
-    [tabs],
+    () => [...executionTabs].sort((a, b) => (a.statementOrder || 0) - (b.statementOrder || 0) || a.id.localeCompare(b.id)),
+    [executionTabs],
   );
 
   const resultViews = React.useMemo(
@@ -721,7 +918,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
   const hasQueryResults = resultViews.length > 0;
 
   React.useEffect(() => {
-    if (tabs.length === 0) {
+    if (executionTabs.length === 0) {
       setActiveViewId('');
       setPinMetaView(false);
       return;
@@ -743,7 +940,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
         setActiveViewId('summary');
       }
     }
-  }, [tabs, activeTabId, resultViews, activeViewId, pinMetaView, hasQueryResults]);
+  }, [executionTabs, activeTabId, resultViews, activeViewId, pinMetaView, hasQueryResults]);
 
   const activeTab = React.useMemo(
     () => resultViews.find((tab) => tab.id === activeViewId) ?? null,
@@ -817,8 +1014,8 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
       <div className="result-panel-toolbar">
         <div className="result-panel-title">
           <span>{t('resultPanel.title')}</span>
-          {tabs.length > 0 && (
-            <span className="result-panel-count">({tabs.length})</span>
+          {executionTabs.length > 0 && (
+            <span className="result-panel-count">({executionTabs.length})</span>
           )}
           {exportNotice && (
             <span className="result-panel-count">{exportNotice}</span>
@@ -838,7 +1035,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
             small
             minimal
             onClick={onClearAll}
-            disabled={tabs.length === 0}
+            disabled={executionTabs.length === 0}
             className="result-panel-clear-btn"
           >
             <ClearResultsIcon size={14} />
@@ -847,7 +1044,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
         </div>
       </div>
 
-      {tabs.length === 0 ? (
+      {executionTabs.length === 0 ? (
         <div className="result-panel-empty">
           <p>{t('resultPanel.emptyHint')}</p>
         </div>
@@ -882,6 +1079,7 @@ export const ResultPanel: React.FC<ResultPanelProps> = ({
             {activeViewId === 'summary' && (
               <SummaryView
                 tabs={sortedTabs}
+                executionWallTimeSec={executionWallTimeSec}
                 onlyErrors={summaryOnlyErrors}
                 onToggleOnlyErrors={setSummaryOnlyErrors}
                 onOpenQueryResult={handleSwitchView}

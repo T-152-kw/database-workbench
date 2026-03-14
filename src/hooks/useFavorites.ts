@@ -1,6 +1,12 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { favoritesApi } from './useTauri';
 import type { FavoriteItem, FavoriteType } from '../types/api';
+
+const FAVORITES_UPDATED_EVENT = 'dbw:favorites-updated';
+
+const notifyFavoritesUpdated = () => {
+  window.dispatchEvent(new CustomEvent(FAVORITES_UPDATED_EVENT));
+};
 
 export interface UseFavoritesReturn {
   favorites: FavoriteItem[];
@@ -36,6 +42,16 @@ export function useFavorites(): UseFavoritesReturn {
       setLoading(false);
     }
   }, []);
+
+  useEffect(() => {
+    const handleFavoritesUpdated = () => {
+      void getAll();
+    };
+    window.addEventListener(FAVORITES_UPDATED_EVENT, handleFavoritesUpdated);
+    return () => {
+      window.removeEventListener(FAVORITES_UPDATED_EVENT, handleFavoritesUpdated);
+    };
+  }, [getAll]);
 
   const getByType = useCallback(async (type: FavoriteType) => {
     setLoading(true);
@@ -79,6 +95,7 @@ export function useFavorites(): UseFavoritesReturn {
     try {
       const result = await favoritesApi.add(item);
       setFavorites(prev => [...prev, result]);
+      notifyFavoritesUpdated();
       return result;
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to add favorite');
@@ -94,6 +111,7 @@ export function useFavorites(): UseFavoritesReturn {
     try {
       await favoritesApi.update(item);
       setFavorites(prev => prev.map(fav => fav.id === item.id ? item : fav));
+      notifyFavoritesUpdated();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update favorite');
       throw err;
@@ -108,6 +126,7 @@ export function useFavorites(): UseFavoritesReturn {
     try {
       await favoritesApi.remove(id);
       setFavorites(prev => prev.filter(fav => fav.id !== id));
+      notifyFavoritesUpdated();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to remove favorite');
       throw err;
@@ -125,6 +144,7 @@ export function useFavorites(): UseFavoritesReturn {
           ? { ...fav, lastUsedTime: Date.now(), usageCount: fav.usageCount + 1 }
           : fav
       ));
+      notifyFavoritesUpdated();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to record usage');
     }
@@ -136,6 +156,7 @@ export function useFavorites(): UseFavoritesReturn {
     try {
       await favoritesApi.clear();
       setFavorites([]);
+      notifyFavoritesUpdated();
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to clear favorites');
       throw err;

@@ -24,6 +24,7 @@ import ReactFlow, {
 import dagre from 'dagre';
 import { toPng, toJpeg } from 'html-to-image';
 import { jsPDF } from 'jspdf';
+import SongtiSCBlack from 'jspdf-font/fonts/SongtiSCBlack.js';
 import { save } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 import type { ConnectionProfile } from '../../types';
@@ -83,6 +84,22 @@ const EDGE_OBSTACLE_PADDING = 12;
 const EDGE_CORRIDOR_MARGIN = 280;
 const MIN_COMFORTABLE_ZOOM = 0.72;
 const EDGE_CORNER_RADIUS = 10;
+const PDF_CJK_FONT_FAMILY = 'SongtiSCBlack';
+const PDF_CJK_FONT_FILE = `${PDF_CJK_FONT_FAMILY}-normal.ttf`;
+
+const registerPdfCjkFont = (pdf: jsPDF): void => {
+  try {
+    pdf.addFileToVFS(PDF_CJK_FONT_FILE, SongtiSCBlack);
+  } catch {
+    // ignore duplicate registration on same document instance
+  }
+  try {
+    pdf.addFont(PDF_CJK_FONT_FILE, PDF_CJK_FONT_FAMILY, 'normal');
+  } catch {
+    // ignore duplicate registration on same document instance
+  }
+  pdf.setFont(PDF_CJK_FONT_FAMILY, 'normal');
+};
 
 const getColumnHandleKey = (columnName: string): string => encodeURIComponent(columnName);
 const getSourceHandleIdBySide = (columnName: string, side: 'left' | 'right'): string =>
@@ -342,6 +359,102 @@ const getEdgeLabel = (rel: Pick<RelationshipData, 'sourceTable' | 'sourceColumn'
 
 const getEdgeId = (rel: Pick<RelationshipData, 'sourceTable' | 'sourceColumn' | 'targetTable' | 'targetColumn' | 'constraintName'>): string =>
   `${rel.sourceTable}.${getColumnHandleKey(rel.sourceColumn)}->${rel.targetTable}.${getColumnHandleKey(rel.targetColumn)}::${rel.constraintName || 'fk'}`;
+
+const getHandleSide = (handleId: string | null | undefined, fallback: 'left' | 'right'): 'left' | 'right' => {
+  if (!handleId) {
+    return fallback;
+  }
+  if (handleId.startsWith('srcL-') || handleId.startsWith('dstL-')) {
+    return 'left';
+  }
+  if (handleId.startsWith('srcR-') || handleId.startsWith('dstR-')) {
+    return 'right';
+  }
+  return fallback;
+};
+
+const decodeHandleColumn = (handleId: string | null | undefined): string | null => {
+  if (!handleId) {
+    return null;
+  }
+  const splitIndex = handleId.indexOf('-');
+  if (splitIndex < 0 || splitIndex === handleId.length - 1) {
+    return null;
+  }
+  try {
+    return decodeURIComponent(handleId.slice(splitIndex + 1));
+  } catch {
+    return null;
+  }
+};
+
+const getColumnAnchorPoint = (
+  node: Node<TableNodeData>,
+  side: 'left' | 'right',
+  columnName: string,
+): Point => {
+  const width = node.width || NODE_MIN_WIDTH;
+  const x = side === 'left' ? node.position.x : node.position.x + width;
+  const fallbackY = node.position.y + NODE_HEADER_HEIGHT + NODE_ROW_HEIGHT * 0.5;
+  const columns = node.data?.columns || [];
+  const rowIndex = columns.findIndex((col) => col.name === columnName);
+  const y = rowIndex >= 0
+    ? node.position.y + NODE_HEADER_HEIGHT + rowIndex * NODE_ROW_HEIGHT + NODE_ROW_HEIGHT * 0.5
+    : fallbackY;
+  return { x, y };
+};
+
+interface ExportWorldRect {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}
+
+const clampPdfScale = (
+  world: ExportWorldRect,
+  margin: number,
+  maxPdfSide: number,
+): { pageWidth: number; pageHeight: number; scale: number } => {
+  const maxContentSide = Math.max(1, maxPdfSide - margin * 2);
+  const worldMaxSide = Math.max(world.width, world.height, 1);
+  const scale = Math.min(1, maxContentSide / worldMaxSide);
+  return {
+    pageWidth: Math.max(120, Math.floor(world.width * scale + margin * 2)),
+    pageHeight: Math.max(120, Math.floor(world.height * scale + margin * 2)),
+    scale,
+  };
+};
+
+const drawArrowHead = (
+  pdf: jsPDF,
+  from: Point,
+  to: Point,
+  color: [number, number, number],
+): void => {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy);
+  if (len < 0.1) {
+    return;
+  }
+
+  const ux = dx / len;
+  const uy = dy / len;
+  const size = 7;
+  const baseX = to.x - ux * size;
+  const baseY = to.y - uy * size;
+  const nx = -uy;
+  const ny = ux;
+  const spread = 3.5;
+  const leftX = baseX + nx * spread;
+  const leftY = baseY + ny * spread;
+  const rightX = baseX - nx * spread;
+  const rightY = baseY - ny * spread;
+
+  pdf.setFillColor(...color);
+  pdf.triangle(to.x, to.y, leftX, leftY, rightX, rightY, 'F');
+};
 
 const layoutGraph = (
   baseNodes: Array<Node<TableNodeData>>,
@@ -973,13 +1086,14 @@ export const ERDiagramTab: React.FC<ERDiagramTabProps> = ({
     // 保存当前视口状态
     const instance = flowInstanceRef.current;
     const currentViewport = instance.getViewport();
+    let viewportAdjusted = false;
 
     try {
       const timestamp = new Date().toISOString().replace(/[:T]/g, '-').slice(0, 19);
       const defaultFileName = `${database}_ERDiagram_${timestamp}`;
 
       // 如果是全景模式，调整视口以包含所有节点
-      if (exportMode === 'full' && exportFormat !== 'sql') {
+      if (exportMode === 'full' && (exportFormat === 'png' || exportFormat === 'jpg')) {
         const bounds = getNodesBounds(baseNodes);
         if (bounds.width > 0 && bounds.height > 0) {
           // 添加边距
@@ -988,6 +1102,7 @@ export const ERDiagramTab: React.FC<ERDiagramTabProps> = ({
             { x: bounds.x - padding, y: bounds.y - padding, width: bounds.width + padding * 2, height: bounds.height + padding * 2 },
             { duration: 0 }
           );
+          viewportAdjusted = true;
           // 等待视口调整完成
           await new Promise(resolve => requestAnimationFrame(resolve));
         }
@@ -995,6 +1110,8 @@ export const ERDiagramTab: React.FC<ERDiagramTabProps> = ({
 
       // 再次等待渲染完成
       await new Promise(resolve => requestAnimationFrame(resolve));
+
+      const wrapperRect = reactFlowWrapperRef.current.getBoundingClientRect();
 
       switch (exportFormat) {
         case 'png':
@@ -1036,38 +1153,182 @@ export const ERDiagramTab: React.FC<ERDiagramTabProps> = ({
           break;
         }
         case 'pdf': {
-          // 性能优化：降低像素比
-          const pixelRatio = exportMode === 'full' ? 1.5 : 2;
+          const wrapperWidth = Math.max(1, wrapperRect.width);
+          const wrapperHeight = Math.max(1, wrapperRect.height);
 
-          const dataUrl = await toPng(reactFlowWrapperRef.current, {
-            quality: 0.92,
-            backgroundColor: '#ffffff',
-            pixelRatio,
-            cacheBust: true,
+          const fullBounds = getNodesBounds(baseNodes);
+          const exportPadding = 80;
+          const viewport = currentViewport;
+          const currentWorld: ExportWorldRect = {
+            x: -viewport.x / viewport.zoom,
+            y: -viewport.y / viewport.zoom,
+            width: wrapperWidth / viewport.zoom,
+            height: wrapperHeight / viewport.zoom,
+          };
+
+          const worldBounds: ExportWorldRect = exportMode === 'full'
+            ? {
+                x: fullBounds.x - exportPadding,
+                y: fullBounds.y - exportPadding,
+                width: fullBounds.width + exportPadding * 2,
+                height: fullBounds.height + exportPadding * 2,
+              }
+            : currentWorld;
+
+          const margin = 24;
+          const maxPdfSide = 12000;
+          const { pageWidth, pageHeight, scale } = clampPdfScale(worldBounds, margin, maxPdfSide);
+          const toPdfPoint = (point: Point): Point => ({
+            x: (point.x - worldBounds.x) * scale + margin,
+            y: (point.y - worldBounds.y) * scale + margin,
           });
-
-          const img = new Image();
-          img.src = dataUrl;
-          await new Promise((resolve) => { img.onload = resolve; });
-
-          // 限制PDF尺寸
-          const maxPdfSize = 3000;
-          let pdfWidth = img.width;
-          let pdfHeight = img.height;
-
-          if (pdfWidth > maxPdfSize || pdfHeight > maxPdfSize) {
-            const ratio = Math.min(maxPdfSize / pdfWidth, maxPdfSize / pdfHeight);
-            pdfWidth *= ratio;
-            pdfHeight *= ratio;
-          }
 
           const pdf = new jsPDF({
-            orientation: pdfWidth > pdfHeight ? 'landscape' : 'portrait',
+            orientation: pageWidth > pageHeight ? 'landscape' : 'portrait',
             unit: 'px',
-            format: [pdfWidth, pdfHeight],
+            format: [pageWidth, pageHeight],
+            compress: true,
+          });
+          registerPdfCjkFont(pdf);
+
+          pdf.setFillColor(255, 255, 255);
+          pdf.rect(0, 0, pageWidth, pageHeight, 'F');
+
+          const nodeMap = new Map<string, Node<TableNodeData>>();
+          baseNodes.forEach((node) => {
+            nodeMap.set(node.id, node);
           });
 
-          pdf.addImage(dataUrl, 'PNG', 0, 0, pdfWidth, pdfHeight);
+          const obstacleRects = baseNodes.map((node) => expandedRect({
+            x: node.position.x,
+            y: node.position.y,
+            width: node.width || NODE_MIN_WIDTH,
+            height: node.height || (NODE_HEADER_HEIGHT + 80),
+          }, EDGE_OBSTACLE_PADDING));
+
+          const relationMap = new Map<string, RelationshipData>();
+          relationships.forEach((rel) => {
+            relationMap.set(rel.edgeId, rel);
+          });
+
+          // 先绘制关系线，避免覆盖表格文本
+          renderedEdges.forEach((edge) => {
+            const sourceNode = nodeMap.get(edge.source);
+            const targetNode = nodeMap.get(edge.target);
+            const rel = relationMap.get(edge.id);
+            if (!sourceNode || !targetNode || !rel) {
+              return;
+            }
+
+            const sourceSide = getHandleSide(edge.sourceHandle, 'right');
+            const targetSide = getHandleSide(edge.targetHandle, sourceSide === 'right' ? 'left' : 'right');
+            const sourceColumn = decodeHandleColumn(edge.sourceHandle) || rel.sourceColumn;
+            const targetColumn = decodeHandleColumn(edge.targetHandle) || rel.targetColumn;
+            const sourceAnchor = getColumnAnchorPoint(sourceNode, sourceSide, sourceColumn);
+            const targetAnchor = getColumnAnchorPoint(targetNode, targetSide, targetColumn);
+
+            const edgeObstacles = obstacleRects.filter((rect) => {
+              const sourceRect = sourceNode.position;
+              const targetRect = targetNode.position;
+              const sourceW = sourceNode.width || NODE_MIN_WIDTH;
+              const sourceH = sourceNode.height || (NODE_HEADER_HEIGHT + 80);
+              const targetW = targetNode.width || NODE_MIN_WIDTH;
+              const targetH = targetNode.height || (NODE_HEADER_HEIGHT + 80);
+              const isSourceRect = Math.abs(rect.x - (sourceRect.x - EDGE_OBSTACLE_PADDING)) < 0.1
+                && Math.abs(rect.y - (sourceRect.y - EDGE_OBSTACLE_PADDING)) < 0.1
+                && Math.abs(rect.width - (sourceW + EDGE_OBSTACLE_PADDING * 2)) < 0.1
+                && Math.abs(rect.height - (sourceH + EDGE_OBSTACLE_PADDING * 2)) < 0.1;
+              const isTargetRect = Math.abs(rect.x - (targetRect.x - EDGE_OBSTACLE_PADDING)) < 0.1
+                && Math.abs(rect.y - (targetRect.y - EDGE_OBSTACLE_PADDING)) < 0.1
+                && Math.abs(rect.width - (targetW + EDGE_OBSTACLE_PADDING * 2)) < 0.1
+                && Math.abs(rect.height - (targetH + EDGE_OBSTACLE_PADDING * 2)) < 0.1;
+              return !isSourceRect && !isTargetRect;
+            });
+
+            const routeBias = (edge.data as RelationEdgeData | undefined)?.routeBias || 0;
+            const points = chooseOrthogonalPath(
+              edge.id,
+              sourceAnchor,
+              targetAnchor,
+              sourceSide === 'left' ? Position.Left : Position.Right,
+              targetSide === 'left' ? Position.Left : Position.Right,
+              edgeObstacles,
+              routeBias,
+            );
+            if (points.length < 2) {
+              return;
+            }
+
+            const strokeTuple: [number, number, number] = [138, 151, 171];
+            pdf.setDrawColor(...strokeTuple);
+            pdf.setLineWidth(1.2 * scale);
+
+            for (let i = 0; i < points.length - 1; i += 1) {
+              const from = toPdfPoint(points[i]);
+              const to = toPdfPoint(points[i + 1]);
+              pdf.line(from.x, from.y, to.x, to.y);
+            }
+
+            const tip = toPdfPoint(points[points.length - 1]);
+            const beforeTip = toPdfPoint(points[points.length - 2]);
+            drawArrowHead(pdf, beforeTip, tip, strokeTuple);
+
+            const labelPoint = toPdfPoint(getPointAtHalfLength(points));
+            pdf.setTextColor(64, 75, 92);
+            pdf.setFontSize(Math.max(8, 9 * scale));
+            pdf.text(rel.label, labelPoint.x, labelPoint.y - 4, { align: 'center', baseline: 'bottom' });
+          });
+
+          // 再绘制表格节点
+          baseNodes.forEach((node) => {
+            const nodeWidth = node.width || NODE_MIN_WIDTH;
+            const nodeHeight = node.height || (NODE_HEADER_HEIGHT + 80);
+            const topLeft = toPdfPoint({ x: node.position.x, y: node.position.y });
+            const w = nodeWidth * scale;
+            const h = nodeHeight * scale;
+            const headerHeight = NODE_HEADER_HEIGHT * scale;
+
+            pdf.setFillColor(255, 255, 255);
+            pdf.setDrawColor(180, 191, 206);
+            pdf.setLineWidth(1 * scale);
+            pdf.roundedRect(topLeft.x, topLeft.y, w, h, Math.max(3, 8 * scale), Math.max(3, 8 * scale), 'FD');
+
+            pdf.setFillColor(242, 247, 255);
+            pdf.rect(topLeft.x, topLeft.y, w, headerHeight, 'F');
+            pdf.setDrawColor(180, 191, 206);
+            pdf.line(topLeft.x, topLeft.y + headerHeight, topLeft.x + w, topLeft.y + headerHeight);
+
+            pdf.setTextColor(31, 41, 55);
+            pdf.setFontSize(Math.max(9, 12 * scale));
+            pdf.text(node.data.tableName, topLeft.x + 10 * scale, topLeft.y + headerHeight * 0.65, { baseline: 'middle' });
+
+            const leftPadding = topLeft.x + 10 * scale;
+            const typeColumnX = topLeft.x + w - 10 * scale;
+            const rowHeight = NODE_ROW_HEIGHT * scale;
+            const maxTextWidth = Math.max(40, w - 22 * scale);
+
+            node.data.columns.forEach((column, index) => {
+              const rowTop = topLeft.y + headerHeight + index * rowHeight;
+              if (index > 0) {
+                pdf.setDrawColor(231, 237, 246);
+                pdf.setLineWidth(0.6 * scale);
+                pdf.line(topLeft.x, rowTop, topLeft.x + w, rowTop);
+              }
+
+              pdf.setTextColor(43, 55, 75);
+              pdf.setFontSize(Math.max(7, 9 * scale));
+              const namePrefix = column.keyType === 'PRI' ? '[PK] ' : '';
+              const leftText = `${namePrefix}${column.name}`;
+              const rightText = column.type;
+              const leftClipped = pdf.splitTextToSize(leftText, maxTextWidth * 0.58)[0] || leftText;
+              const rightClipped = pdf.splitTextToSize(rightText, maxTextWidth * 0.38)[0] || rightText;
+              const textY = rowTop + rowHeight * 0.62;
+              pdf.text(leftClipped, leftPadding, textY, { baseline: 'middle' });
+
+              pdf.setTextColor(92, 104, 128);
+              pdf.text(rightClipped, typeColumnX, textY, { align: 'right', baseline: 'middle' });
+            });
+          });
 
           const selectedPath = await save({
             title: t('erDiagram.export.title', { format: 'PDF' }),
@@ -1115,7 +1376,7 @@ export const ERDiagramTab: React.FC<ERDiagramTabProps> = ({
       await showExportFailedNotice(String(error));
     } finally {
       // 恢复原始视口（如果是全景模式）
-      if (exportMode === 'full' && exportFormat !== 'sql') {
+      if (viewportAdjusted) {
         instance.setViewport(currentViewport);
       }
 
@@ -1123,7 +1384,7 @@ export const ERDiagramTab: React.FC<ERDiagramTabProps> = ({
       document.body.classList.remove('exporting-er-diagram');
       setIsExporting(false);
     }
-  }, [exportFormat, exportMode, database, connectionProfile, baseNodes, t]);
+  }, [exportFormat, exportMode, database, connectionProfile, baseNodes, renderedEdges, relationships, t]);
 
   return (
     <div className="er-diagram-tab">

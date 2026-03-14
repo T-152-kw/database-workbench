@@ -14,9 +14,20 @@ import {
   HTMLSelect,
   Divider,
 } from '@blueprintjs/core';
+import { open } from '@tauri-apps/plugin-dialog';
+import { readTextFile } from '@tauri-apps/plugin-fs';
 import { useTranslation } from 'react-i18next';
+import { tauriApi } from '../../hooks';
 import { useFavorites } from '../../hooks/useFavorites';
+import { useConnectionStore } from '../../stores';
 import type { FavoriteItem, FavoriteType } from '../../types/api';
+import {
+  buildDatabaseObjectPath,
+  parseDatabaseObjectPath,
+  parseFavoritePayload,
+  type DatabaseObjectOpenMode,
+  type DatabaseObjectType,
+} from '../../utils';
 import '../../styles/favorites-dialog.css';
 
 interface FavoritesDialogProps {
@@ -33,12 +44,13 @@ export const FavoritesDialog: React.FC<FavoritesDialogProps> = ({
   onUseFavorite,
 }) => {
   const { t } = useTranslation();
-  const { favorites, loading, error, getAll, add, update, remove, recordUsage } = useFavorites();
+  const { favorites, loading, error, getAll, add, update, remove } = useFavorites();
 
   const [searchKeyword, setSearchKeyword] = useState('');
   const [typeFilter, setTypeFilter] = useState<string>('ALL');
   const [editingItem, setEditingItem] = useState<FavoriteItem | null>(null);
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [addDefaultType, setAddDefaultType] = useState<FavoriteType>('SQL_QUERY');
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   const TYPE_OPTIONS = [
@@ -114,6 +126,7 @@ export const FavoritesDialog: React.FC<FavoritesDialogProps> = ({
 
   const handleAdd = () => {
     setEditingItem(null);
+    setAddDefaultType(typeFilter === 'ALL' ? 'SQL_QUERY' : (typeFilter as FavoriteType));
     setIsAddDialogOpen(true);
   };
 
@@ -134,8 +147,7 @@ export const FavoritesDialog: React.FC<FavoritesDialogProps> = ({
     }
   };
 
-  const handleRowClick = async (item: FavoriteItem) => {
-    await recordUsage(item.id!);
+  const handleRowClick = (item: FavoriteItem) => {
     onUseFavorite?.(item);
     onClose();
   };
@@ -323,6 +335,7 @@ export const FavoritesDialog: React.FC<FavoritesDialogProps> = ({
           setEditingItem(null);
         }}
         editItem={editingItem}
+        defaultType={addDefaultType}
       />
     </>
   );
@@ -333,6 +346,7 @@ interface FavoriteEditDialogProps {
   onClose: () => void;
   onSave: (item: Omit<FavoriteItem, 'id'>) => Promise<void>;
   editItem: FavoriteItem | null;
+  defaultType?: FavoriteType;
 }
 
 const FavoriteEditDialog: React.FC<FavoriteEditDialogProps> = ({
@@ -340,30 +354,294 @@ const FavoriteEditDialog: React.FC<FavoriteEditDialogProps> = ({
   onClose,
   onSave,
   editItem,
+  defaultType = 'SQL_QUERY',
 }) => {
   const { t } = useTranslation();
+  const { connections, activeConnectionId } = useConnectionStore();
   const [name, setName] = useState('');
   const [description, setDescription] = useState('');
   const [type, setType] = useState<FavoriteType>('SQL_QUERY');
-  const [content, setContent] = useState('');
+  const [sqlText, setSqlText] = useState('');
+  const [sqlFilePath, setSqlFilePath] = useState('');
+  const [connectionFilePath, setConnectionFilePath] = useState('');
+  const [connectionProfileName, setConnectionProfileName] = useState('');
+  const [objectConnectionName, setObjectConnectionName] = useState('');
+  const [objectDatabase, setObjectDatabase] = useState('');
+  const [objectType, setObjectType] = useState<DatabaseObjectType>('TABLE');
+  const [objectName, setObjectName] = useState('');
+  const [objectOpenMode, setObjectOpenMode] = useState<DatabaseObjectOpenMode>('DATA');
+  const [databaseOptions, setDatabaseOptions] = useState<string[]>([]);
+  const [objectOptions, setObjectOptions] = useState<string[]>([]);
+  const [loadingDatabases, setLoadingDatabases] = useState(false);
+  const [loadingObjects, setLoadingObjects] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
 
   useEffect(() => {
+    const resetFields = () => {
+      setSqlText('');
+      setSqlFilePath('');
+      setConnectionFilePath('');
+      setConnectionProfileName('');
+      setObjectConnectionName('');
+      setObjectDatabase('');
+      setObjectType('TABLE');
+      setObjectName('');
+      setObjectOpenMode('DATA');
+      setDatabaseOptions([]);
+      setObjectOptions([]);
+    };
+
     if (editItem) {
       setName(editItem.name);
       setDescription(editItem.description || '');
       setType(editItem.type);
-      setContent(editItem.content || '');
+      resetFields();
+
+      const payload = parseFavoritePayload(editItem);
+      if (payload?.kind === 'SQL_QUERY') {
+        setSqlText(payload.sql || '');
+        setSqlFilePath(payload.sourceFilePath || '');
+      } else if (payload?.kind === 'CONNECTION_PROFILE') {
+        setConnectionFilePath(payload.filePath || '');
+        setConnectionProfileName(payload.profileName || '');
+      } else if (payload?.kind === 'DATABASE_OBJECT') {
+        const parsedPath = parseDatabaseObjectPath(payload.path);
+        setObjectConnectionName(payload.connectionName || parsedPath.connectionName || '');
+        setObjectDatabase(payload.database || parsedPath.database || '');
+        setObjectType(payload.objectType || parsedPath.objectType || 'TABLE');
+        setObjectName(payload.objectName || parsedPath.objectName || '');
+        setObjectOpenMode(payload.openMode || 'DATA');
+      } else {
+        if (editItem.type === 'SQL_QUERY') {
+          setSqlText(editItem.content || '');
+        }
+      }
     } else {
       setName('');
       setDescription('');
-      setType('SQL_QUERY');
-      setContent('');
+      setType(defaultType);
+      resetFields();
     }
-  }, [editItem, isOpen]);
+  }, [defaultType, editItem, isOpen]);
+
+  useEffect(() => {
+    if (type !== 'DATABASE_OBJECT' || objectConnectionName.trim()) {
+      return;
+    }
+
+    if (activeConnectionId) {
+      setObjectConnectionName(activeConnectionId);
+      return;
+    }
+
+    const firstConnection = connections[0]?.profile.name;
+    if (firstConnection) {
+      setObjectConnectionName(firstConnection);
+    }
+  }, [type, objectConnectionName, activeConnectionId, connections]);
+
+  useEffect(() => {
+    if (type !== 'DATABASE_OBJECT') {
+      return;
+    }
+
+    const selectedConnectionName = objectConnectionName.trim();
+    if (!selectedConnectionName) {
+      setDatabaseOptions([]);
+      setObjectDatabase('');
+      setObjectOptions([]);
+      setObjectName('');
+      return;
+    }
+
+    const selectedConnection = connections.find((conn) => conn.profile.name === selectedConnectionName)?.profile;
+    if (!selectedConnection) {
+      setDatabaseOptions([]);
+      setObjectDatabase('');
+      setObjectOptions([]);
+      setObjectName('');
+      return;
+    }
+
+    let cancelled = false;
+    const loadDatabases = async () => {
+      setLoadingDatabases(true);
+      try {
+        const databases = await tauriApi.metadata.listDatabases(selectedConnection);
+        if (cancelled) {
+          return;
+        }
+        setDatabaseOptions(databases);
+        if (!databases.includes(objectDatabase)) {
+          setObjectDatabase('');
+          setObjectOptions([]);
+          setObjectName('');
+        }
+      } catch {
+        if (!cancelled) {
+          setDatabaseOptions([]);
+          setObjectDatabase('');
+          setObjectOptions([]);
+          setObjectName('');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingDatabases(false);
+        }
+      }
+    };
+
+    void loadDatabases();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [type, objectConnectionName, objectDatabase, connections]);
+
+  useEffect(() => {
+    if (type !== 'DATABASE_OBJECT') {
+      return;
+    }
+
+    const selectedConnection = connections.find((conn) => conn.profile.name === objectConnectionName.trim())?.profile;
+    const selectedDatabase = objectDatabase.trim();
+    if (!selectedConnection || !selectedDatabase) {
+      setObjectOptions([]);
+      setObjectName('');
+      return;
+    }
+
+    let cancelled = false;
+    const loadObjects = async () => {
+      setLoadingObjects(true);
+      try {
+        const objects = objectType === 'TABLE'
+          ? await tauriApi.metadata.listTables(selectedConnection, selectedDatabase)
+          : objectType === 'VIEW'
+            ? await tauriApi.metadata.listViews(selectedConnection, selectedDatabase)
+            : await tauriApi.metadata.listFunctions(selectedConnection, selectedDatabase);
+
+        if (cancelled) {
+          return;
+        }
+
+        setObjectOptions(objects);
+        if (!objects.includes(objectName)) {
+          setObjectName('');
+        }
+      } catch {
+        if (!cancelled) {
+          setObjectOptions([]);
+          setObjectName('');
+        }
+      } finally {
+        if (!cancelled) {
+          setLoadingObjects(false);
+        }
+      }
+    };
+
+    void loadObjects();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [type, objectConnectionName, objectDatabase, objectType, objectName, connections]);
+
+  const connectionNameOptions = useMemo(() => {
+    return connections
+      .map((conn) => conn.profile.name || '')
+      .filter((name): name is string => Boolean(name));
+  }, [connections]);
+
+  const generatedObjectPath = buildDatabaseObjectPath(
+    objectConnectionName,
+    objectDatabase,
+    objectType,
+    objectName,
+  );
+
+  const canSaveByType = (() => {
+    if (!name.trim()) {
+      return false;
+    }
+    if (type === 'SQL_QUERY') {
+      return sqlText.trim().length > 0;
+    }
+    if (type === 'CONNECTION_PROFILE') {
+      return connectionFilePath.trim().length > 0;
+    }
+    return (
+      objectConnectionName.trim().length > 0
+      && objectDatabase.trim().length > 0
+      && objectName.trim().length > 0
+    );
+  })();
+
+  const buildFavoriteContent = (): string => {
+    if (type === 'SQL_QUERY') {
+      return JSON.stringify({
+        version: 1,
+        kind: 'SQL_QUERY',
+        sql: sqlText,
+        sourceFilePath: sqlFilePath || undefined,
+      });
+    }
+
+    if (type === 'CONNECTION_PROFILE') {
+      return JSON.stringify({
+        version: 1,
+        kind: 'CONNECTION_PROFILE',
+        filePath: connectionFilePath,
+        profileName: connectionProfileName || undefined,
+      });
+    }
+
+    return JSON.stringify({
+      version: 1,
+      kind: 'DATABASE_OBJECT',
+      path: generatedObjectPath,
+      connectionName: objectConnectionName,
+      database: objectDatabase,
+      objectType,
+      objectName,
+      openMode: objectOpenMode,
+    });
+  };
+
+  const pickSqlFile = async () => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: 'SQL', extensions: ['sql'] }],
+    });
+    if (!selected || typeof selected !== 'string') {
+      return;
+    }
+
+    try {
+      const content = await readTextFile(selected);
+      setSqlText(content);
+      setSqlFilePath(selected);
+    } catch {
+      // keep dialog responsive; user can still paste manually
+    }
+  };
+
+  const pickConnectionJsonFile = async () => {
+    const selected = await open({
+      multiple: false,
+      filters: [{ name: 'JSON', extensions: ['json'] }],
+    });
+    if (!selected || typeof selected !== 'string') {
+      return;
+    }
+    setConnectionFilePath(selected);
+  };
 
   const handleSave = async () => {
-    if (!name.trim()) return;
+    if (!canSaveByType) {
+      return;
+    }
 
     setIsSaving(true);
     try {
@@ -371,26 +649,13 @@ const FavoriteEditDialog: React.FC<FavoriteEditDialogProps> = ({
         name: name.trim(),
         description: description.trim() || undefined,
         type,
-        content: content.trim() || undefined,
+        content: buildFavoriteContent(),
         createdTime: editItem?.createdTime || Date.now(),
         lastUsedTime: editItem?.lastUsedTime || Date.now(),
         usageCount: editItem?.usageCount || 0,
       });
     } finally {
       setIsSaving(false);
-    }
-  };
-
-  const getContentPlaceholder = () => {
-    switch (type) {
-      case 'SQL_QUERY':
-        return t('dialog.favorites.sqlPlaceholder');
-      case 'CONNECTION_PROFILE':
-        return t('dialog.favorites.connectionPlaceholder');
-      case 'DATABASE_OBJECT':
-        return t('dialog.favorites.objectPlaceholder');
-      default:
-        return '';
     }
   };
 
@@ -447,26 +712,181 @@ const FavoriteEditDialog: React.FC<FavoriteEditDialogProps> = ({
             />
           </div>
 
-          <div className="favorite-form-row">
-            <label className="favorite-form-label">
-              <Icon icon="document" size={14} />
-              {t('dialog.favorites.contentLabel')}
-            </label>
-            <textarea
-              placeholder={getContentPlaceholder()}
-              value={content}
-              onChange={(e) => setContent(e.target.value)}
-              className="favorite-form-textarea"
-              rows={6}
-            />
-          </div>
+          {type === 'SQL_QUERY' && (
+            <>
+              <div className="favorite-form-row">
+                <label className="favorite-form-label">
+                  <Icon icon="document-open" size={14} />
+                  {t('dialog.favorites.sqlFileLabel')}
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <InputGroup
+                    placeholder={t('dialog.favorites.sqlFilePlaceholder')}
+                    value={sqlFilePath}
+                    onChange={(e) => setSqlFilePath(e.target.value)}
+                    className="favorite-form-input"
+                  />
+                  <Button icon="folder-open" onClick={() => { void pickSqlFile(); }}>
+                    {t('dialog.favorites.selectFile')}
+                  </Button>
+                </div>
+              </div>
+              <div className="favorite-form-row">
+                <label className="favorite-form-label">
+                  <Icon icon="code" size={14} />
+                  {t('dialog.favorites.contentLabel')}
+                </label>
+                <textarea
+                  placeholder={t('dialog.favorites.sqlPlaceholder')}
+                  value={sqlText}
+                  onChange={(e) => setSqlText(e.target.value)}
+                  className="favorite-form-textarea"
+                  rows={8}
+                />
+              </div>
+            </>
+          )}
+
+          {type === 'CONNECTION_PROFILE' && (
+            <>
+              <div className="favorite-form-row">
+                <label className="favorite-form-label">
+                  <Icon icon="folder-open" size={14} />
+                  {t('dialog.favorites.connectionJsonLabel')}
+                </label>
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <InputGroup
+                    placeholder={t('dialog.favorites.connectionJsonPlaceholder')}
+                    value={connectionFilePath}
+                    onChange={(e) => setConnectionFilePath(e.target.value)}
+                    className="favorite-form-input"
+                  />
+                  <Button icon="folder-open" onClick={() => { void pickConnectionJsonFile(); }}>
+                    {t('dialog.favorites.selectFile')}
+                  </Button>
+                </div>
+              </div>
+              <div className="favorite-form-row">
+                <label className="favorite-form-label">
+                  <Icon icon="search-template" size={14} />
+                  {t('dialog.favorites.connectionProfileNameLabel')}
+                </label>
+                <InputGroup
+                  placeholder={t('dialog.favorites.connectionProfileNamePlaceholder')}
+                  value={connectionProfileName}
+                  onChange={(e) => setConnectionProfileName(e.target.value)}
+                  className="favorite-form-input"
+                />
+              </div>
+            </>
+          )}
+
+          {type === 'DATABASE_OBJECT' && (
+            <>
+              <div className="favorite-form-row">
+                <label className="favorite-form-label">
+                  <Icon icon="database" size={14} />
+                  {t('dialog.favorites.objectConnectionNameLabel')}
+                </label>
+                <HTMLSelect
+                  value={objectConnectionName}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setObjectConnectionName(value);
+                    setObjectDatabase('');
+                    setObjectName('');
+                  }}
+                  className="favorite-form-select"
+                >
+                  <option value="">{t('dialog.favorites.selectConnectionName')}</option>
+                  {connectionNameOptions.map((connName) => (
+                    <option key={connName} value={connName}>{connName}</option>
+                  ))}
+                </HTMLSelect>
+              </div>
+              <div className="favorite-form-row">
+                <label className="favorite-form-label">
+                  <Icon icon="folder-open" size={14} />
+                  {t('dialog.favorites.objectDatabaseLabel')}
+                </label>
+                <HTMLSelect
+                  value={objectDatabase}
+                  onChange={(e) => {
+                    setObjectDatabase(e.target.value);
+                    setObjectName('');
+                  }}
+                  className="favorite-form-select"
+                  disabled={!objectConnectionName || loadingDatabases}
+                >
+                  <option value="">{loadingDatabases ? t('common.loading') : t('dialog.favorites.selectDatabase')}</option>
+                  {databaseOptions.map((databaseName) => (
+                    <option key={databaseName} value={databaseName}>{databaseName}</option>
+                  ))}
+                </HTMLSelect>
+              </div>
+              <div className="favorite-form-row">
+                <label className="favorite-form-label">
+                  <Icon icon="cube" size={14} />
+                  {t('dialog.favorites.objectTypeLabel')}
+                </label>
+                <HTMLSelect
+                  value={objectType}
+                  onChange={(e) => setObjectType(e.target.value as DatabaseObjectType)}
+                  className="favorite-form-select"
+                >
+                  <option value="TABLE">{t('dialog.favorites.objectTypeTable')}</option>
+                  <option value="VIEW">{t('dialog.favorites.objectTypeView')}</option>
+                  <option value="FUNCTION">{t('dialog.favorites.objectTypeFunction')}</option>
+                </HTMLSelect>
+              </div>
+              <div className="favorite-form-row">
+                <label className="favorite-form-label">
+                  <Icon icon="tag" size={14} />
+                  {t('dialog.favorites.objectNameLabel')}
+                </label>
+                <HTMLSelect
+                  value={objectName}
+                  onChange={(e) => setObjectName(e.target.value)}
+                  className="favorite-form-select"
+                  disabled={!objectDatabase || loadingObjects}
+                >
+                  <option value="">{loadingObjects ? t('common.loading') : t('dialog.favorites.selectObjectName')}</option>
+                  {objectOptions.map((dbObjectName) => (
+                    <option key={dbObjectName} value={dbObjectName}>{dbObjectName}</option>
+                  ))}
+                </HTMLSelect>
+              </div>
+              <div className="favorite-form-row">
+                <label className="favorite-form-label">
+                  <Icon icon="application" size={14} />
+                  {t('dialog.favorites.openModeLabel')}
+                </label>
+                <HTMLSelect
+                  value={objectOpenMode}
+                  onChange={(e) => setObjectOpenMode(e.target.value as DatabaseObjectOpenMode)}
+                  className="favorite-form-select"
+                >
+                  <option value="LIST">{t('dialog.favorites.openModeList')}</option>
+                  <option value="DATA">{t('dialog.favorites.openModeData')}</option>
+                  <option value="DESIGNER">{t('dialog.favorites.openModeDesigner')}</option>
+                </HTMLSelect>
+              </div>
+              <div className="favorite-form-row">
+                <label className="favorite-form-label">
+                  <Icon icon="path-search" size={14} />
+                  {t('dialog.favorites.objectPathLabel')}
+                </label>
+                <InputGroup value={generatedObjectPath} readOnly className="favorite-form-input" />
+              </div>
+            </>
+          )}
         </div>
       </div>
 
       <div className={Classes.DIALOG_FOOTER}>
         <div className={Classes.DIALOG_FOOTER_ACTIONS}>
           <Button onClick={onClose}>{t('common.cancel')}</Button>
-          <Button intent={Intent.PRIMARY} onClick={handleSave} loading={isSaving} disabled={!name.trim()}>
+          <Button intent={Intent.PRIMARY} onClick={handleSave} loading={isSaving} disabled={!canSaveByType}>
             {editItem ? t('common.save') : t('common.create')}
           </Button>
         </div>

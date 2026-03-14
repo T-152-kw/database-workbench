@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef } from 'react';
 import { useTranslation } from 'react-i18next';
+import { getCurrentWindow } from '@tauri-apps/api/window';
 import { MainLayout } from './components';
 import { useKeyboardShortcuts } from './hooks';
 import { useTabStore, useAppStore } from './stores';
@@ -19,10 +20,24 @@ function App() {
   useKeyboardShortcuts();
   const { addTab, tabs } = useTabStore();
   const { setSidebarCollapsed, setStatusBarVisible, setUpdateAvailable } = useAppStore();
+  const theme = useAppStore(state => state.theme);
   const { t } = useTranslation();
   const [showUpdateDialog, setShowUpdateDialog] = useState(false);
   const [isManualCheck, setIsManualCheck] = useState(false);
   const hasAutoCreatedWelcomeRef = useRef(false);
+
+  // Sync theme to HTML element to ensure consistent scrollbar and dialog styles
+  useEffect(() => {
+    document.documentElement.classList.remove('bp5-light', 'bp5-dark', 'bp6-light', 'bp6-dark');
+    document.documentElement.classList.add(`bp5-${theme}`);
+    document.documentElement.classList.add(`bp6-${theme}`);
+  }, [theme]);
+
+  // Remove the programmatic show window logic
+  // to avoid blocking the software from rendering.
+  useEffect(() => {
+    getCurrentWindow().show().catch(console.error);
+  }, []);
 
   useEffect(() => {
     const handleContextMenu = (event: MouseEvent) => {

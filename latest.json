@@ -1,11 +1,11 @@
 {
-  "version": "0.1.5",
-  "notes": "修复多项问题，完善右键管理",
-  "pub_date": "2026-03-09T10:00:00Z",
+  "version": "0.1.6",
+  "notes": "一些修复和优化",
+  "pub_date": "2026-03-14T16:00:00Z",
   "platforms": {
     "windows-x86_64": {
-      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdHRVRkExTUNVdG1MaytlY2xGNmU1NldvRFBOQ1FsSUtPUTVXL1NJbng3aTdUbGJtWXRiR1ZHNytPKzRRU0RYRkhCUFNhcVJLVnVZdU8wdmZTcHJEVzVsWTNlWGhMOHdrPQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzczMDU0Nzg2CWZpbGU6RGF0YWJhc2UgV29ya2JlbmNoXzAuMS41X3g2NC1zZXR1cC5leGUKQmhtajVlVFB3TGJnSjZNLzZXNEJXSGYzM1E3NDN4Tkw2ZUJqQnNVR2VxeTUwK0R4MkczeWVmZytIU2JzdUxQL1BwOW81Y3VUcTVCRjJjWWNYT2ZrQ2c9PQo=",
-      "url": "https://gitee.com/nick4487617348/database-workbench/releases/download/v0.1.5/Database%20Workbench_0.1.5_x64-setup.exe"
+      "signature": "dW50cnVzdGVkIGNvbW1lbnQ6IHNpZ25hdHVyZSBmcm9tIHRhdXJpIHNlY3JldCBrZXkKUlVTdHRVRkExTUNVdGgvWGl0UGh2RzFGTTdydzdFYUpIdHpKaldHUGE3Z0hqNzc5NmZlMmo5a3pZUWNLMGIwK2lOdXc0NUJhYTNlYzR3QSt3eE9PakRoMmgzVUsxOUNUYmc0PQp0cnVzdGVkIGNvbW1lbnQ6IHRpbWVzdGFtcDoxNzczNDc1NjQzCWZpbGU6RGF0YWJhc2UgV29ya2JlbmNoXzAuMS42X3g2NC1zZXR1cC5leGUKZkVlQ3FmMXlCRWFqM0hnWU5HTllBTGE3RjJGRnpmeEt5c2FibTZob2pISDFSSGlaUGpYNW1DVWdqbGlYaXlOcUpwQkhCQTd1NCthMXhoc0dqcmF5RHc9PQo=",
+      "url": "https://gitee.com/nick4487617348/database-workbench/releases/download/v0.1.6/Database%20Workbench_0.1.6_x64-setup.exe"
     }
   }
 }

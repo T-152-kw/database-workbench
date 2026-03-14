@@ -80,6 +80,7 @@ static SQL_SPLIT_SESSIONS: OnceLock<Mutex<HashMap<u64, Vec<String>>>> = OnceLock
 static SQL_SPLIT_SESSION_COUNTER: AtomicU64 = AtomicU64::new(1);
 const SQL_SPLIT_PAGE_SIZE_DEFAULT: u64 = 120;
 const SQL_SPLIT_PAGE_SIZE_MAX: u64 = 1000;
+const SCRIPT_PROGRESS_EMIT_EVERY: u64 = 8;
 
 #[derive(Serialize)]
 struct SqlSplitSessionInfo {
@@ -95,6 +96,38 @@ struct SqlSplitStatementsPage {
     total: u64,
     total_pages: u64,
     has_more: bool,
+}
+
+#[derive(Serialize)]
+struct ScriptExecutePageEntry {
+    statement_index: u64,
+    sql: String,
+    result_type: String,
+    query_result: Option<pool::QueryResult>,
+    query_page_result: Option<pool::QueryPageResult>,
+    multi_query_result: Option<pool::MultiQueryResult>,
+    exec_result: Option<pool::ExecResult>,
+    error: Option<String>,
+}
+
+#[derive(Serialize)]
+struct ScriptExecutePageResult {
+    page: u64,
+    page_size: u64,
+    total: u64,
+    total_pages: u64,
+    has_more: bool,
+    entries: Vec<ScriptExecutePageEntry>,
+}
+
+#[derive(Serialize, Clone)]
+struct ScriptExecuteProgressEvent {
+    run_id: String,
+    processed: u64,
+    total: u64,
+    success: u64,
+    error: u64,
+    statement_index: u64,
 }
 
 fn sql_split_sessions() -> &'static Mutex<HashMap<u64, Vec<String>>> {
@@ -752,6 +785,381 @@ fn sql_split_statements_release(session_id: u64) -> bool {
     }
 }
 
+fn strip_leading_sql_comments(sql: &str) -> String {
+    let mut remaining = sql.to_string();
+
+    loop {
+        let trimmed_start = remaining.trim_start().to_string();
+        if trimmed_start.len() != remaining.len() {
+            remaining = trimmed_start;
+        }
+
+        if remaining.starts_with("--") || remaining.starts_with('#') {
+            if let Some(line_end) = remaining.find('\n') {
+                remaining = remaining[line_end + 1..].to_string();
+                continue;
+            }
+            return String::new();
+        }
+
+        if remaining.starts_with("/*") {
+            if let Some(end) = remaining.find("*/") {
+                remaining = remaining[end + 2..].to_string();
+                continue;
+            }
+            return String::new();
+        }
+
+        break;
+    }
+
+    remaining
+}
+
+fn is_query_sql(sql: &str) -> bool {
+    let trimmed = strip_leading_sql_comments(sql).trim().to_ascii_lowercase();
+    trimmed.starts_with("select")
+        || trimmed.starts_with("show")
+        || trimmed.starts_with("describe")
+        || trimmed.starts_with("desc")
+        || trimmed.starts_with("explain")
+        || trimmed.starts_with("with")
+}
+
+fn is_stored_procedure_call(sql: &str) -> bool {
+    strip_leading_sql_comments(sql)
+        .trim()
+        .to_ascii_lowercase()
+        .starts_with("call")
+}
+
+fn is_server_pageable_sql(sql: &str) -> bool {
+    let trimmed = strip_leading_sql_comments(sql).trim().to_ascii_lowercase();
+    trimmed.starts_with("select") || trimmed.starts_with("with")
+}
+
+fn pool_execute_statement_page_impl(
+    window: tauri::Window,
+    pool_id: u64,
+    conn_id: u64,
+    session_id: u64,
+    page: Option<u64>,
+    page_size: Option<u64>,
+    run_id: Option<String>,
+    success_offset: Option<u64>,
+    error_offset: Option<u64>,
+    stop_on_error: Option<bool>,
+) -> Result<ScriptExecutePageResult, String> {
+    let safe_page = page.unwrap_or(1).max(1);
+    let safe_page_size = page_size
+        .unwrap_or(SQL_SPLIT_PAGE_SIZE_DEFAULT)
+        .clamp(1, SQL_SPLIT_PAGE_SIZE_MAX);
+
+    let (total, page_sqls): (u64, Vec<String>) = {
+        let sessions = sql_split_sessions()
+            .lock()
+            .map_err(|_| "SQL split session lock failed".to_string())?;
+        let statements = sessions
+            .get(&session_id)
+            .ok_or_else(|| "SQL split session not found".to_string())?;
+
+        let total = statements.len() as u64;
+        let start = ((safe_page - 1) * safe_page_size) as usize;
+        let end = (start + safe_page_size as usize).min(statements.len());
+
+        let page_sqls = if start >= statements.len() {
+            Vec::new()
+        } else {
+            statements[start..end].to_vec()
+        };
+
+        (total, page_sqls)
+    };
+
+    let total_pages = if total == 0 {
+        0
+    } else {
+        total.div_ceil(safe_page_size)
+    };
+
+    let start = ((safe_page - 1) * safe_page_size) as usize;
+    let has_more = (start + page_sqls.len()) < total as usize;
+
+    if page_sqls.is_empty() {
+        return Ok(ScriptExecutePageResult {
+            page: safe_page,
+            page_size: safe_page_size,
+            total,
+            total_pages,
+            has_more,
+            entries: Vec::new(),
+        });
+    }
+
+    let mut entries: Vec<ScriptExecutePageEntry> = Vec::with_capacity(page_sqls.len());
+    let progress_run_id = run_id.unwrap_or_default();
+    let stop_on_error_enabled = stop_on_error.unwrap_or(false);
+    let mut processed_count = start as u64;
+    let mut success_count = success_offset.unwrap_or(0);
+    let mut error_count = error_offset.unwrap_or(0);
+    let mut last_emitted_processed = processed_count;
+    let mut stopped_on_error = false;
+
+    for (local_idx, sql_text) in page_sqls.iter().enumerate() {
+        let statement_index = (start + local_idx) as u64;
+        let sql = sql_text.trim().to_string();
+
+        if sql.is_empty() {
+            continue;
+        }
+
+        if is_stored_procedure_call(&sql) {
+            let mut branch_had_error = false;
+            match pool::query_multi(pool_id, conn_id, &sql) {
+                Ok(multi_result) => entries.push(ScriptExecutePageEntry {
+                    statement_index,
+                    sql,
+                    result_type: "multi_query".to_string(),
+                    query_result: None,
+                    query_page_result: None,
+                    multi_query_result: Some(multi_result),
+                    exec_result: None,
+                    error: None,
+                }),
+                Err(err) => entries.push(ScriptExecutePageEntry {
+                    statement_index,
+                    sql,
+                    result_type: "error".to_string(),
+                    query_result: None,
+                    query_page_result: None,
+                    multi_query_result: None,
+                    exec_result: None,
+                    error: Some(err),
+                }),
+            }
+
+            if let Some(last) = entries.last() {
+                if last.result_type == "error" {
+                    error_count += 1;
+                    branch_had_error = true;
+                } else {
+                    success_count += 1;
+                }
+            }
+            processed_count += 1;
+            if !progress_run_id.is_empty() {
+                let should_emit = processed_count == total
+                    || processed_count.saturating_sub(last_emitted_processed)
+                        >= SCRIPT_PROGRESS_EMIT_EVERY
+                    || local_idx + 1 == page_sqls.len();
+                if should_emit {
+                    last_emitted_processed = processed_count;
+                    let _ = window.emit(
+                        "sql-script-progress",
+                        ScriptExecuteProgressEvent {
+                            run_id: progress_run_id.clone(),
+                            processed: processed_count,
+                            total,
+                            success: success_count,
+                            error: error_count,
+                            statement_index,
+                        },
+                    );
+                }
+            }
+            if stop_on_error_enabled && branch_had_error {
+                stopped_on_error = true;
+                break;
+            }
+            continue;
+        }
+
+        if is_query_sql(&sql) {
+            let mut branch_had_error = false;
+            if is_server_pageable_sql(&sql) {
+                match pool::query_page(pool_id, conn_id, &sql, Some(1), Some(200), Some(false)) {
+                    Ok(query_page_result) => entries.push(ScriptExecutePageEntry {
+                        statement_index,
+                        sql,
+                        result_type: "query_page".to_string(),
+                        query_result: None,
+                        query_page_result: Some(query_page_result),
+                        multi_query_result: None,
+                        exec_result: None,
+                        error: None,
+                    }),
+                    Err(err) => entries.push(ScriptExecutePageEntry {
+                        statement_index,
+                        sql,
+                        result_type: "error".to_string(),
+                        query_result: None,
+                        query_page_result: None,
+                        multi_query_result: None,
+                        exec_result: None,
+                        error: Some(err),
+                    }),
+                }
+            } else {
+                match pool::query(pool_id, conn_id, &sql) {
+                    Ok(query_result) => entries.push(ScriptExecutePageEntry {
+                        statement_index,
+                        sql,
+                        result_type: "query".to_string(),
+                        query_result: Some(query_result),
+                        query_page_result: None,
+                        multi_query_result: None,
+                        exec_result: None,
+                        error: None,
+                    }),
+                    Err(err) => entries.push(ScriptExecutePageEntry {
+                        statement_index,
+                        sql,
+                        result_type: "error".to_string(),
+                        query_result: None,
+                        query_page_result: None,
+                        multi_query_result: None,
+                        exec_result: None,
+                        error: Some(err),
+                    }),
+                }
+            }
+
+            if let Some(last) = entries.last() {
+                if last.result_type == "error" {
+                    error_count += 1;
+                    branch_had_error = true;
+                } else {
+                    success_count += 1;
+                }
+            }
+            processed_count += 1;
+            if !progress_run_id.is_empty() {
+                let should_emit = processed_count == total
+                    || processed_count.saturating_sub(last_emitted_processed)
+                        >= SCRIPT_PROGRESS_EMIT_EVERY
+                    || local_idx + 1 == page_sqls.len();
+                if should_emit {
+                    last_emitted_processed = processed_count;
+                    let _ = window.emit(
+                        "sql-script-progress",
+                        ScriptExecuteProgressEvent {
+                            run_id: progress_run_id.clone(),
+                            processed: processed_count,
+                            total,
+                            success: success_count,
+                            error: error_count,
+                            statement_index,
+                        },
+                    );
+                }
+            }
+            if stop_on_error_enabled && branch_had_error {
+                stopped_on_error = true;
+                break;
+            }
+            continue;
+        }
+
+        let mut branch_had_error = false;
+        match pool::execute(pool_id, conn_id, &sql) {
+            Ok(exec_result) => entries.push(ScriptExecutePageEntry {
+                statement_index,
+                sql,
+                result_type: "update".to_string(),
+                query_result: None,
+                query_page_result: None,
+                multi_query_result: None,
+                exec_result: Some(exec_result),
+                error: None,
+            }),
+            Err(err) => entries.push(ScriptExecutePageEntry {
+                statement_index,
+                sql,
+                result_type: "error".to_string(),
+                query_result: None,
+                query_page_result: None,
+                multi_query_result: None,
+                exec_result: None,
+                error: Some(err),
+            }),
+        }
+
+        if let Some(last) = entries.last() {
+            if last.result_type == "error" {
+                error_count += 1;
+                branch_had_error = true;
+            } else {
+                success_count += 1;
+            }
+        }
+        processed_count += 1;
+        if !progress_run_id.is_empty() {
+            let should_emit = processed_count == total
+                || processed_count.saturating_sub(last_emitted_processed)
+                    >= SCRIPT_PROGRESS_EMIT_EVERY
+                || local_idx + 1 == page_sqls.len();
+            if should_emit {
+                last_emitted_processed = processed_count;
+                let _ = window.emit(
+                    "sql-script-progress",
+                    ScriptExecuteProgressEvent {
+                        run_id: progress_run_id.clone(),
+                        processed: processed_count,
+                        total,
+                        success: success_count,
+                        error: error_count,
+                        statement_index,
+                    },
+                );
+            }
+        }
+        if stop_on_error_enabled && branch_had_error {
+            stopped_on_error = true;
+            break;
+        }
+    }
+
+    Ok(ScriptExecutePageResult {
+        page: safe_page,
+        page_size: safe_page_size,
+        total,
+        total_pages,
+        has_more: has_more && !stopped_on_error,
+        entries,
+    })
+}
+
+#[tauri::command]
+async fn pool_execute_statement_page(
+    window: tauri::Window,
+    pool_id: u64,
+    conn_id: u64,
+    session_id: u64,
+    page: Option<u64>,
+    page_size: Option<u64>,
+    run_id: Option<String>,
+    success_offset: Option<u64>,
+    error_offset: Option<u64>,
+    stop_on_error: Option<bool>,
+) -> Result<ScriptExecutePageResult, String> {
+    tauri::async_runtime::spawn_blocking(move || {
+        pool_execute_statement_page_impl(
+            window,
+            pool_id,
+            conn_id,
+            session_id,
+            page,
+            page_size,
+            run_id,
+            success_offset,
+            error_offset,
+            stop_on_error,
+        )
+    })
+    .await
+    .map_err(|err| format!("failed to join page execution task: {err}"))?
+}
+
 #[tauri::command]
 fn json_parse_canonical(json: String) -> Result<String, String> {
     json_mod::parse_to_canonical_json(&json)
@@ -1158,6 +1566,7 @@ pub fn run() {
             pool_query,
             pool_query_page,
             pool_query_multi,
+            pool_execute_statement_page,
             pool_execute,
             pool_query_prepared,
             pool_query_prepared_multi,

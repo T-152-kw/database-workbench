@@ -5,6 +5,10 @@ import {
   Popover,
   Position,
   Divider,
+  Dialog,
+  Classes,
+  Button,
+  Checkbox,
 } from '@blueprintjs/core';
 import { open, save } from '@tauri-apps/plugin-dialog';
 import { readTextFile, writeTextFile } from '@tauri-apps/plugin-fs';
@@ -15,10 +19,16 @@ import { useTranslation } from 'react-i18next';
 import { getMenuConfig } from '../../utils/menuConfig';
 import type { MenuItem as MenuItemType } from '../../utils/menuConfig';
 import { useAppStore, useConnectionStore, useTabStore } from '../../stores';
-import { showToolbarRequirementNotice } from '../../utils';
+import {
+  parseFavoritePayload,
+  type DatabaseObjectOpenMode,
+  type DatabaseObjectType,
+  showToolbarRequirementNotice,
+} from '../../utils';
 import {
   FavoritesDialog,
   AddFavoriteDialog,
+  ConfirmDialog,
   AboutDialog,
   ShortcutsDialog,
   ConnectionDialog,
@@ -28,7 +38,7 @@ import {
   RestoreDialog,
 } from '../dialogs';
 import { useFavorites } from '../../hooks/useFavorites';
-import type { FavoriteItem } from '../../types/api';
+import type { ConnectionProfile, FavoriteItem } from '../../types/api';
 import './MenuBar.css';
 
 export const MenuBar: React.FC = () => {
@@ -54,7 +64,14 @@ export const MenuBar: React.FC = () => {
     connections,
     activeConnectionId,
     activeDatabase,
-    addConnection
+    addConnection,
+    updateConnection,
+    connect,
+    checkMaxConnections,
+    getConnectionState,
+    setActiveConnection,
+    setActiveDatabase,
+    getLastUsedDatabaseForConnection,
   } = useConnectionStore();
   const activeConnection = connections.find((c) => c.profile.name === activeConnectionId);
 
@@ -68,6 +85,20 @@ export const MenuBar: React.FC = () => {
   const [isPropertiesDialogOpen, setIsPropertiesDialogOpen] = useState(false);
   const [isBackupDialogOpen, setIsBackupDialogOpen] = useState(false);
   const [isRestoreDialogOpen, setIsRestoreDialogOpen] = useState(false);
+  const [isExportConnectionsDialogOpen, setIsExportConnectionsDialogOpen] = useState(false);
+  const [exportSelection, setExportSelection] = useState<Record<string, boolean>>({});
+  const [confirmDialogState, setConfirmDialogState] = useState<{
+    isOpen: boolean;
+    title: string;
+    message: string;
+    intent?: 'primary' | 'success' | 'warning' | 'danger';
+  }>({
+    isOpen: false,
+    title: '',
+    message: '',
+    intent: 'primary',
+  });
+  const confirmResolverRef = useRef<((confirmed: boolean) => void) | null>(null);
   const [recentFavorites, setRecentFavorites] = useState<FavoriteItem[]>([]);
 
   // 获取菜单配置
@@ -81,6 +112,45 @@ export const MenuBar: React.FC = () => {
     const sorted = [...favorites].sort((a, b) => b.lastUsedTime - a.lastUsedTime);
     setRecentFavorites(sorted.slice(0, 9));
   }, [favorites]);
+
+  const askForConfirm = useCallback(
+    ({ title, message, intent }: { title: string; message: string; intent?: 'primary' | 'success' | 'warning' | 'danger' }) => {
+      return new Promise<boolean>((resolve) => {
+        confirmResolverRef.current = resolve;
+        setConfirmDialogState({
+          isOpen: true,
+          title,
+          message,
+          intent: intent || 'primary',
+        });
+      });
+    },
+    [],
+  );
+
+  const closeConfirmDialog = useCallback(() => {
+    setConfirmDialogState((prev) => ({ ...prev, isOpen: false }));
+    if (confirmResolverRef.current) {
+      confirmResolverRef.current(false);
+      confirmResolverRef.current = null;
+    }
+  }, []);
+
+  const handleConfirmDialogConfirm = useCallback(() => {
+    if (confirmResolverRef.current) {
+      confirmResolverRef.current(true);
+      confirmResolverRef.current = null;
+    }
+    setConfirmDialogState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
+
+  const handleConfirmDialogCancel = useCallback(() => {
+    if (confirmResolverRef.current) {
+      confirmResolverRef.current(false);
+      confirmResolverRef.current = null;
+    }
+    setConfirmDialogState((prev) => ({ ...prev, isOpen: false }));
+  }, []);
 
   useEffect(() => {
     const onOpenBackup = () => {
@@ -380,36 +450,87 @@ export const MenuBar: React.FC = () => {
       });
       if (selected && typeof selected === 'string') {
         const content = await readTextFile(selected);
-        const importedConnections = JSON.parse(content);
+        const importedConnections = JSON.parse(content) as Array<{ profile?: ConnectionProfile }>;
         if (Array.isArray(importedConnections)) {
-          importedConnections.forEach((conn) => {
-            if (conn.profile) {
-              addConnection(conn.profile);
+          let created = 0;
+          let updated = 0;
+          let skipped = 0;
+          const existingByName = new Map(
+            useConnectionStore
+              .getState()
+              .connections
+              .map((conn) => [(conn.profile.name || '').trim(), conn.profile]),
+          );
+
+          for (const item of importedConnections) {
+            if (!item?.profile) {
+              skipped += 1;
+              continue;
             }
-          });
-          setStatusMessage(`${t('common.success')} ${importedConnections.length}`);
+
+            const importedProfile = item.profile;
+            const profileName = (importedProfile.name || '').trim();
+            if (!profileName) {
+              skipped += 1;
+              continue;
+            }
+
+            const existing = existingByName.get(profileName);
+            if (!existing) {
+              addConnection({ ...importedProfile, name: profileName });
+              existingByName.set(profileName, importedProfile);
+              created += 1;
+              continue;
+            }
+
+            const sameConfig =
+              JSON.stringify(normalizeConnectionProfile(existing))
+              === JSON.stringify(normalizeConnectionProfile({ ...importedProfile, name: profileName }));
+            if (sameConfig) {
+              skipped += 1;
+              continue;
+            }
+
+            const shouldOverwrite = await askForConfirm({
+              title: t('common.confirm'),
+              message: t('menu.tools.importConnectionsOverwritePrompt', { name: profileName }),
+              intent: 'warning',
+            });
+            if (shouldOverwrite) {
+              updateConnection(profileName, { ...importedProfile, name: profileName });
+              existingByName.set(profileName, importedProfile);
+              updated += 1;
+            } else {
+              skipped += 1;
+            }
+          }
+
+          setStatusMessage(t('menu.tools.importConnectionsSummary', { created, updated, skipped }));
         }
       }
     } catch (error) {
       setStatusMessage(`${t('error.loadFailed')}: ${error}`);
     }
     setActiveMenu(null);
-  }, [addConnection, setStatusMessage, t]);
+  }, [addConnection, askForConfirm, setStatusMessage, t, updateConnection]);
 
-  const handleExportConnections = useCallback(async () => {
-    try {
-      const filePath = await save({
-        filters: [{ name: 'JSON', extensions: ['json'] }],
-        defaultPath: 'connections.json'
-      });
-      if (filePath) {
-        const exportData = connections.map(c => ({ profile: c.profile }));
-        await writeTextFile(filePath, JSON.stringify(exportData, null, 2));
-        setStatusMessage(`${t('common.save')}: ${filePath}`);
-      }
-    } catch (error) {
-      setStatusMessage(`${t('error.saveFailed')}: ${error}`);
+  const handleExportConnections = useCallback(() => {
+    const selectable = connections
+      .map((conn) => conn.profile.name || '')
+      .filter((name): name is string => Boolean(name));
+
+    if (selectable.length === 0) {
+      setStatusMessage(t('menu.tools.noConnectionsToExport'));
+      setActiveMenu(null);
+      return;
     }
+
+    const nextSelection: Record<string, boolean> = {};
+    selectable.forEach((name) => {
+      nextSelection[name] = true;
+    });
+    setExportSelection(nextSelection);
+    setIsExportConnectionsDialogOpen(true);
     setActiveMenu(null);
   }, [connections, setStatusMessage, t]);
 
@@ -682,32 +803,395 @@ export const MenuBar: React.FC = () => {
     setActiveMenu(null);
   };
 
-  const handleUseFavorite = async (item: FavoriteItem) => {
-    await recordUsage(item.id!);
+  const normalizeConnectionProfile = (profile: ConnectionProfile) => ({
+    name: profile.name || '',
+    host: profile.host,
+    port: profile.port,
+    username: profile.username,
+    password: profile.password,
+    database: profile.database || '',
+    charset: profile.charset || '',
+    collation: profile.collation || '',
+    timeout: profile.timeout ?? 28800,
+    connectionTimeout: profile.connectionTimeout ?? 30,
+    autoReconnect: profile.autoReconnect ?? false,
+    ssl: profile.ssl ?? false,
+    sslMode: profile.sslMode || 'preferred',
+    sslCaPath: profile.sslCaPath || '',
+    sslCertPath: profile.sslCertPath || '',
+    sslKeyPath: profile.sslKeyPath || '',
+  });
 
-    switch (item.type) {
-      case 'SQL_QUERY':
-        if (!activeConnection?.profile) {
-          void showToolbarRequirementNotice(t('menu.favorites.use'), 'connection');
+  const findConnectionByName = (connectionName: string) => {
+    const target = connectionName.trim();
+    return useConnectionStore
+      .getState()
+      .connections
+      .find((conn) => (conn.profile.name || '').trim() === target);
+  };
+
+  const parseProfilesFromConnectionJson = (content: string): ConnectionProfile[] => {
+    const parsed = JSON.parse(content) as unknown;
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map((entry) => {
+        if (!entry || typeof entry !== 'object') {
+          return null;
+        }
+        const maybeProfile = (entry as { profile?: ConnectionProfile }).profile;
+        if (!maybeProfile || typeof maybeProfile !== 'object') {
+          return null;
+        }
+        return maybeProfile;
+      })
+      .filter((profile): profile is ConnectionProfile => Boolean(profile));
+  };
+
+  const loadProfileFromConnectionJson = async (
+    filePath: string,
+    preferredProfileName?: string,
+    fallbackProfileName?: string,
+  ): Promise<ConnectionProfile> => {
+    const content = await readTextFile(filePath);
+    const profiles = parseProfilesFromConnectionJson(content);
+    if (profiles.length === 0) {
+      throw new Error('连接配置文件中未找到有效 profile');
+    }
+
+    const candidateNames = [preferredProfileName, fallbackProfileName]
+      .map((value) => value?.trim())
+      .filter((value): value is string => Boolean(value));
+
+    for (const name of candidateNames) {
+      const matched = profiles.find((profile) => (profile.name || '').trim() === name);
+      if (matched) {
+        return matched;
+      }
+    }
+
+    const existingNames = new Set(
+      useConnectionStore
+        .getState()
+        .connections
+        .map((conn) => (conn.profile.name || '').trim())
+        .filter(Boolean),
+    );
+    const matchedByExisting = profiles.filter((profile) => existingNames.has((profile.name || '').trim()));
+    if (matchedByExisting.length === 1) {
+      return matchedByExisting[0];
+    }
+
+    if (profiles.length === 1) {
+      return profiles[0];
+    }
+
+    throw new Error('配置文件包含多个连接，请在收藏中指定连接名称');
+  };
+
+  const ensureConnectionOpened = async (connectionName: string): Promise<boolean> => {
+    const connectionState = findConnectionByName(connectionName) || getConnectionState(connectionName);
+    if (!connectionState) {
+      return false;
+    }
+
+    const actualName = connectionState.profile.name || connectionName;
+    setActiveConnection(actualName);
+
+    if (!connectionState.isConnected) {
+      const { allowed, current, max } = checkMaxConnections();
+      if (!allowed) {
+        setStatusMessage(t('metadataTree.maxConnectionsReached', { current, max }));
+        return false;
+      }
+
+      await connect(actualName);
+      const latest = findConnectionByName(actualName) || getConnectionState(actualName);
+      if (!latest?.isConnected) {
+        setStatusMessage(latest?.error || t('error.connectionFailed', { message: '连接打开失败' }));
+        return false;
+      }
+    }
+
+    window.dispatchEvent(new CustomEvent('dbw:open-connection-node', { detail: { connectionName: actualName } }));
+
+    return true;
+  };
+
+  const ensureProfileReadyAndOpen = async (incomingProfile: ConnectionProfile): Promise<ConnectionProfile | null> => {
+    const profileName = incomingProfile.name?.trim();
+    if (!profileName) {
+      setStatusMessage('连接配置缺少 name，无法打开。');
+      return null;
+    }
+
+    const normalizedIncoming = { ...incomingProfile, name: profileName };
+    const existing = findConnectionByName(profileName);
+
+    if (!existing) {
+      const shouldCreate = await askForConfirm({
+        title: t('common.confirm'),
+        message: `连接 "${profileName}" 不存在，是否先按收藏配置新建后再打开？`,
+        intent: 'warning',
+      });
+      if (!shouldCreate) {
+        return null;
+      }
+      addConnection(normalizedIncoming);
+      const created = findConnectionByName(profileName);
+      if (!created) {
+        setStatusMessage(`新建连接失败：${profileName}`);
+        return null;
+      }
+
+      const opened = await ensureConnectionOpened(profileName);
+      if (!opened) {
+        return null;
+      }
+      return findConnectionByName(profileName)?.profile || null;
+    }
+
+    const isSameConfig =
+      JSON.stringify(normalizeConnectionProfile(existing.profile))
+      === JSON.stringify(normalizeConnectionProfile(normalizedIncoming));
+
+    if (!isSameConfig) {
+      const shouldOverwrite = await askForConfirm({
+        title: t('common.confirm'),
+        message: `连接 "${profileName}" 已存在且配置不同，是否覆盖当前连接配置？\n选择“否”将直接打开当前连接。`,
+        intent: 'warning',
+      });
+
+      if (shouldOverwrite) {
+        updateConnection(profileName, normalizedIncoming);
+      }
+    }
+
+    const opened = await ensureConnectionOpened(profileName);
+    if (!opened) {
+      return null;
+    }
+    return findConnectionByName(profileName)?.profile || null;
+  };
+
+  const openDatabaseObjectFromFavorite = async (
+    objectType: DatabaseObjectType,
+    objectName: string,
+    openMode: DatabaseObjectOpenMode,
+    connectionProfile: ConnectionProfile,
+    database: string,
+  ) => {
+    setActiveDatabase(database);
+
+    if (openMode === 'LIST') {
+      addTab({
+        type: objectType === 'TABLE' ? 'tableList' : objectType === 'VIEW' ? 'viewList' : 'functionList',
+        title: `${objectType} - ${database}`,
+        connectionId: connectionProfile.name,
+        connectionProfile,
+        database,
+        objectType,
+      });
+      return;
+    }
+
+    if (objectType === 'TABLE') {
+      if (openMode === 'DESIGNER') {
+        addTab({
+          type: 'designer',
+          title: t('tabTitles.designer.edit', { tableName: objectName }),
+          connectionId: connectionProfile.name,
+          connectionProfile,
+          database,
+          table: objectName,
+        });
+        return;
+      }
+      addTab({
+        type: 'tableData',
+        title: t('tabTitles.tableData', { tableName: objectName, database, connectionName: connectionProfile.name }),
+        connectionId: connectionProfile.name,
+        connectionProfile,
+        database,
+        table: objectName,
+      });
+      return;
+    }
+
+    if (objectType === 'VIEW') {
+      if (openMode === 'DESIGNER') {
+        addTab({
+          type: 'viewDesigner',
+          title: t('tabTitles.viewDesigner', { viewName: objectName }),
+          connectionId: connectionProfile.name,
+          connectionProfile,
+          database,
+          objectName,
+        });
+        return;
+      }
+      addTab({
+        type: 'viewData',
+        title: t('tabTitles.viewData', { viewName: objectName, database, connectionName: connectionProfile.name }),
+        connectionId: connectionProfile.name,
+        connectionProfile,
+        database,
+        objectName,
+      });
+      return;
+    }
+
+    addTab({
+      type: 'functionDesigner',
+      title: t('tabTitles.functionDesigner.editFunction', { name: objectName }),
+      connectionId: connectionProfile.name,
+      connectionProfile,
+      database,
+      objectName,
+      data: { functionType: 'FUNCTION' },
+    });
+  };
+
+  const handleUseFavorite = async (item: FavoriteItem) => {
+    const payload = parseFavoritePayload(item);
+
+    if (item.type === 'SQL_QUERY') {
+      const sql = payload?.kind === 'SQL_QUERY' ? payload.sql : (item.content || '');
+      if (!sql.trim()) {
+        setStatusMessage('该 SQL 收藏没有可执行内容。');
+        return;
+      }
+
+      let targetProfile = activeConnection?.profile;
+      const targetConnectionName = payload?.kind === 'SQL_QUERY' ? payload.connectionName : undefined;
+      if (targetConnectionName) {
+        const opened = await ensureConnectionOpened(targetConnectionName);
+        if (!opened) {
           return;
         }
-        addTab({
-          type: 'query',
-          title: item.name,
-          connectionId: activeConnection.profile.name,
-          connectionProfile: activeConnection.profile,
-          database: activeDatabase || undefined,
-        });
-        setStatusMessage(`${t('menu.favorites.opened')}: ${item.name}`);
-        break;
-      case 'CONNECTION_PROFILE':
-        setStatusMessage(`${t('menu.favorites.connection')}: ${item.name}`);
-        break;
-      case 'DATABASE_OBJECT':
-        setStatusMessage(`${t('menu.favorites.object')}: ${item.name}`);
-        break;
+        targetProfile = useConnectionStore.getState().connections.find((conn) => conn.profile.name === targetConnectionName)?.profile;
+      }
+
+      if (!targetProfile) {
+        void showToolbarRequirementNotice(t('menu.favorites.use'), 'connection');
+        return;
+      }
+
+      addTab({
+        type: 'query',
+        title: item.name,
+        connectionId: targetProfile.name,
+        connectionProfile: targetProfile,
+        database: (payload?.kind === 'SQL_QUERY' ? payload.database : undefined) || activeDatabase || undefined,
+        sqlContent: sql,
+      });
+
+      if (item.id) {
+        await recordUsage(item.id);
+      }
+      setStatusMessage(`${t('menu.favorites.opened')}: ${item.name}`);
+      return;
+    }
+
+    if (item.type === 'CONNECTION_PROFILE') {
+      if (!payload || payload.kind !== 'CONNECTION_PROFILE') {
+        setStatusMessage('连接收藏内容无效，请重新编辑。');
+        return;
+      }
+
+      try {
+        const profile = await loadProfileFromConnectionJson(payload.filePath, payload.profileName, item.name);
+        const readyProfile = await ensureProfileReadyAndOpen(profile);
+        if (!readyProfile) {
+          return;
+        }
+
+        const preferredDatabase = readyProfile.database || getLastUsedDatabaseForConnection(readyProfile.name);
+        if (preferredDatabase) {
+          setActiveDatabase(preferredDatabase);
+        }
+        if (item.id) {
+          await recordUsage(item.id);
+        }
+        setStatusMessage(`${t('menu.favorites.connection')}: ${readyProfile.name}`);
+      } catch (error) {
+        setStatusMessage(`连接收藏打开失败: ${String(error)}`);
+      }
+      return;
+    }
+
+    if (!payload || payload.kind !== 'DATABASE_OBJECT') {
+      setStatusMessage('数据库对象收藏内容无效，请重新编辑。');
+      return;
+    }
+
+    const objectType = payload.objectType;
+    const objectName = payload.objectName;
+    const database = payload.database;
+    const connectionName = payload.connectionName;
+    const openMode = payload.openMode || 'DATA';
+
+    if (!objectType || !objectName || !database || !connectionName) {
+      setStatusMessage(`数据库对象路径无效：${payload.path}`);
+      return;
+    }
+
+    try {
+      const profile = findConnectionByName(connectionName)?.profile || null;
+
+      if (!profile?.name) {
+        setStatusMessage(`未找到连接：${connectionName}`);
+        return;
+      }
+
+      const opened = await ensureConnectionOpened(profile.name);
+      if (!opened) {
+        return;
+      }
+
+      await openDatabaseObjectFromFavorite(objectType, objectName, openMode, profile, database);
+      if (item.id) {
+        await recordUsage(item.id);
+      }
+      setStatusMessage(`${t('menu.favorites.object')}: ${item.name}`);
+    } catch (error) {
+      setStatusMessage(`数据库对象收藏打开失败: ${String(error)}`);
     }
   };
+
+  const handleConfirmExportConnections = useCallback(async () => {
+    const selectedNames = Object.entries(exportSelection)
+      .filter(([, checked]) => checked)
+      .map(([name]) => name);
+
+    if (selectedNames.length === 0) {
+      setStatusMessage(t('menu.tools.selectAtLeastOneConnection'));
+      return;
+    }
+
+    try {
+      const filePath = await save({
+        filters: [{ name: 'JSON', extensions: ['json'] }],
+        defaultPath: 'connections.json'
+      });
+      if (!filePath) {
+        return;
+      }
+
+      const selectedSet = new Set(selectedNames.map((name) => name.trim()));
+      const exportData = connections
+        .filter((conn) => selectedSet.has((conn.profile.name || '').trim()))
+        .map((conn) => ({ profile: conn.profile }));
+
+      await writeTextFile(filePath, JSON.stringify(exportData, null, 2));
+      setStatusMessage(t('menu.tools.exportConnectionsSaved', { count: exportData.length, filePath }));
+      setIsExportConnectionsDialogOpen(false);
+    } catch (error) {
+      setStatusMessage(`${t('error.saveFailed')}: ${error}`);
+    }
+  }, [connections, exportSelection, setStatusMessage, t]);
 
   const handleAddFavorite = async (item: Omit<FavoriteItem, 'id'>) => {
     try {
@@ -725,6 +1209,7 @@ export const MenuBar: React.FC = () => {
 
       const sqlFavorites = recentFavorites.filter(f => f.type === 'SQL_QUERY');
       const connectionFavorites = recentFavorites.filter(f => f.type === 'CONNECTION_PROFILE');
+      const objectFavorites = recentFavorites.filter(f => f.type === 'DATABASE_OBJECT');
 
       return (
         <>
@@ -764,6 +1249,21 @@ export const MenuBar: React.FC = () => {
             <>
               <MenuItem text={t('menu.favorites.connections')} disabled>
                 {connectionFavorites.map(fav => (
+                  <MenuItem
+                    key={fav.id}
+                    text={fav.name}
+                    onClick={() => handleUseFavorite(fav)}
+                  />
+                ))}
+              </MenuItem>
+              <Divider />
+            </>
+          )}
+
+          {objectFavorites.length > 0 && (
+            <>
+              <MenuItem text={t('menu.favorites.object')} disabled>
+                {objectFavorites.map(fav => (
                   <MenuItem
                     key={fav.id}
                     text={fav.name}
@@ -894,6 +1394,53 @@ export const MenuBar: React.FC = () => {
         onClose={() => setIsRestoreDialogOpen(false)}
         connectionProfile={activeConnection?.profile}
         initialDatabase={activeDatabase || undefined}
+      />
+
+      <Dialog
+        isOpen={isExportConnectionsDialogOpen}
+        onClose={() => setIsExportConnectionsDialogOpen(false)}
+        title={t('menu.tools.exportConnectionsSelectTitle')}
+        icon="export"
+      >
+        <div className={Classes.DIALOG_BODY}>
+          <p>{t('menu.tools.exportConnectionsSelectDescription')}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxHeight: 260, overflowY: 'auto' }}>
+            {connections
+              .map((conn) => conn.profile.name || '')
+              .filter((name): name is string => Boolean(name))
+              .map((name) => (
+                <Checkbox
+                  key={name}
+                  checked={!!exportSelection[name]}
+                  onChange={(event) => {
+                    const checked = (event.target as HTMLInputElement).checked;
+                    setExportSelection((prev) => ({ ...prev, [name]: checked }));
+                  }}
+                  label={name}
+                />
+              ))}
+          </div>
+        </div>
+        <div className={Classes.DIALOG_FOOTER}>
+          <div className={Classes.DIALOG_FOOTER_ACTIONS}>
+            <Button onClick={() => setIsExportConnectionsDialogOpen(false)}>{t('common.cancel')}</Button>
+            <Button intent="primary" onClick={() => { void handleConfirmExportConnections(); }}>
+              {t('menu.tools.exportConnections')}
+            </Button>
+          </div>
+        </div>
+      </Dialog>
+
+      <ConfirmDialog
+        isOpen={confirmDialogState.isOpen}
+        onClose={closeConfirmDialog}
+        onConfirm={handleConfirmDialogConfirm}
+        onCancel={handleConfirmDialogCancel}
+        title={confirmDialogState.title}
+        message={confirmDialogState.message}
+        intent={confirmDialogState.intent}
+        confirmText={t('common.yes')}
+        cancelText={t('common.no')}
       />
     </>
   );

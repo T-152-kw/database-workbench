@@ -188,6 +188,8 @@ export const ToolBar: React.FC = () => {
   const { connections, activeConnectionId, activeDatabase } = useConnectionStore();
   const [isConnectionDialogOpen, setIsConnectionDialogOpen] = useState(false);
   const activeConnection = connections.find((c) => c.profile.name === activeConnectionId);
+  // Keep the same connection-open semantics as Properties: connection store status is the base signal.
+  const isActiveConnectionOpen = Boolean(activeConnection?.isConnected);
 
   const handleGlobalRefresh = useCallback(() => {
     window.dispatchEvent(new CustomEvent('dbw:global-refresh', { detail: { source: 'toolbar' } }));
@@ -238,7 +240,11 @@ export const ToolBar: React.FC = () => {
       label: t('toolbar.table'),
       iconType: 'table',
       onClick: () => {
-        if (!activeConnection?.profile || !activeDatabase) {
+        if (!isActiveConnectionOpen || !activeConnection?.profile) {
+          void showToolbarRequirementNotice(t('database.tables'), 'connection');
+          return;
+        }
+        if (!activeDatabase) {
           void showToolbarRequirementNotice(t('database.tables'), 'database');
           return;
         }
@@ -257,7 +263,11 @@ export const ToolBar: React.FC = () => {
       label: t('toolbar.view'),
       iconType: 'view',
       onClick: () => {
-        if (!activeConnection?.profile || !activeDatabase) {
+        if (!isActiveConnectionOpen || !activeConnection?.profile) {
+          void showToolbarRequirementNotice(t('database.views'), 'connection');
+          return;
+        }
+        if (!activeDatabase) {
           void showToolbarRequirementNotice(t('database.views'), 'database');
           return;
         }
@@ -276,7 +286,11 @@ export const ToolBar: React.FC = () => {
       label: t('toolbar.function'),
       iconType: 'function',
       onClick: () => {
-        if (!activeConnection?.profile || !activeDatabase) {
+        if (!isActiveConnectionOpen || !activeConnection?.profile) {
+          void showToolbarRequirementNotice(t('database.functions'), 'connection');
+          return;
+        }
+        if (!activeDatabase) {
           void showToolbarRequirementNotice(t('database.functions'), 'database');
           return;
         }
@@ -295,7 +309,11 @@ export const ToolBar: React.FC = () => {
       label: t('toolbar.backup'),
       iconType: 'backup',
       onClick: () => {
-        if (!activeConnection?.profile || !activeDatabase) {
+        if (!isActiveConnectionOpen || !activeConnection?.profile) {
+          void showToolbarRequirementNotice(t('database.backup'), 'connection');
+          return;
+        }
+        if (!activeDatabase) {
           void showToolbarRequirementNotice(t('database.backup'), 'database');
           return;
         }
@@ -307,7 +325,7 @@ export const ToolBar: React.FC = () => {
       label: t('toolbar.restore'),
       iconType: 'restore',
       onClick: () => {
-        if (!activeConnection?.profile) {
+        if (!isActiveConnectionOpen || !activeConnection?.profile) {
           void showToolbarRequirementNotice(t('database.restore'), 'connection');
           return;
         }
@@ -326,7 +344,7 @@ export const ToolBar: React.FC = () => {
       label: t('toolbar.user'),
       iconType: 'user',
       onClick: () => {
-        if (!activeConnection?.profile) {
+        if (!isActiveConnectionOpen || !activeConnection?.profile) {
           void showToolbarRequirementNotice(t('database.users'), 'connection');
           return;
         }

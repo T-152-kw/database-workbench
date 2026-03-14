@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { listen } from '@tauri-apps/api/event';
 import { save } from '@tauri-apps/plugin-dialog';
 import { writeTextFile } from '@tauri-apps/plugin-fs';
 import { useTranslation } from 'react-i18next';
@@ -31,13 +32,33 @@ interface StatementSplitSessionData {
   total: number;
 }
 
-interface StatementSplitPageData {
-  statements: string[];
+interface ScriptExecutePageEntryData {
+  statement_index: number;
+  sql: string;
+  result_type: 'query' | 'query_page' | 'multi_query' | 'update' | 'error';
+  query_result?: QueryResultData;
+  query_page_result?: QueryPageResultData;
+  multi_query_result?: MultiQueryResultData;
+  exec_result?: ExecResultData;
+  error?: string;
+}
+
+interface ScriptExecutePageResultData {
   page: number;
   page_size: number;
   total: number;
   total_pages: number;
   has_more: boolean;
+  entries: ScriptExecutePageEntryData[];
+}
+
+interface ScriptExecuteProgressEventData {
+  run_id: string;
+  processed: number;
+  total: number;
+  success: number;
+  error: number;
+  statement_index: number;
 }
 
 // Chevron icons for collapse/expand
@@ -84,9 +105,9 @@ const SplitPaneResizer: React.FC<{
 const SPLITTER_HEIGHT = 8;
 const MIN_EDITOR_HEIGHT = 160;
 const MIN_RESULT_HEIGHT = 140;
-const DEFAULT_SQL_QUERY_PAGE_SIZE = 200;
-const DEFAULT_SQL_STATEMENT_PAGE_SIZE = 120;
-const RESULT_TAB_FLUSH_BATCH_SIZE = 16;
+const DEFAULT_SQL_STATEMENT_PAGE_SIZE = 256;
+const RESULT_TAB_FLUSH_BATCH_SIZE = 64;
+const MAX_VISIBLE_RESULT_TABS = 600;
 
 const clampEditorHeight = (containerHeight: number, targetHeight: number): number => {
   if (containerHeight <= 0) return MIN_EDITOR_HEIGHT;
@@ -99,6 +120,24 @@ const clampEditorHeight = (containerHeight: number, targetHeight: number): numbe
   const minEditorHeight = Math.min(MIN_EDITOR_HEIGHT, maxEditorHeight);
 
   return Math.min(maxEditorHeight, Math.max(minEditorHeight, targetHeight));
+};
+
+const isLikelySingleStatementSql = (sql: string): boolean => {
+  const normalized = sql.trim().replace(/;\s*$/, '');
+  if (!normalized) {
+    return false;
+  }
+  return !normalized.includes(';');
+};
+
+const isQuerySqlLike = (sql: string): boolean => {
+  const trimmed = sql.trim().toLowerCase();
+  return trimmed.startsWith('select')
+    || trimmed.startsWith('show')
+    || trimmed.startsWith('describe')
+    || trimmed.startsWith('desc')
+    || trimmed.startsWith('explain')
+    || trimmed.startsWith('with');
 };
 
 export const QueryTab: React.FC<QueryTabProps> = ({
@@ -127,6 +166,8 @@ export const QueryTab: React.FC<QueryTabProps> = ({
   // Editor ref
   const editorRef = useRef<QueryEditorRef>(null);
   const contentRef = useRef<HTMLDivElement>(null);
+  const lastProgressUpdateAtRef = useRef(0);
+  const pendingDqlTotalCountRef = useRef<Set<string>>(new Set());
   const dragStartYRef = useRef(0);
   const dragStartHeightRef = useRef(0);
 
@@ -158,7 +199,9 @@ export const QueryTab: React.FC<QueryTabProps> = ({
 
   // Result tabs state
   const [resultTabs, setResultTabs] = useState<ResultTab[]>([]);
+  const [metaResultTabs, setMetaResultTabs] = useState<ResultTab[]>([]);
   const [activeResultTabId, setActiveResultTabId] = useState<string | null>(null);
+  const [executionWallTimeSec, setExecutionWallTimeSec] = useState<number | null>(null);
   const [isResultPanelCollapsed, setIsResultPanelCollapsed] = useState(true); // Default collapsed
 
   // SQL content
@@ -552,33 +595,21 @@ export const QueryTab: React.FC<QueryTabProps> = ({
     setLastUsedDatabaseForConnection,
   ]);
 
-  // Check if SQL is a query
-  const isQuerySql = (sql: string): boolean => {
-    const trimmed = stripLeadingSqlComments(sql).trim().toLowerCase();
-    return trimmed.startsWith('select') ||
-           trimmed.startsWith('show') ||
-           trimmed.startsWith('describe') ||
-           trimmed.startsWith('desc') ||
-           trimmed.startsWith('explain') ||
-           trimmed.startsWith('with');
-  };
-
-  // Check if SQL is a stored procedure call
-  const isStoredProcedureCall = (sql: string): boolean => {
-    const trimmed = stripLeadingSqlComments(sql).trim().toLowerCase();
-    return trimmed.startsWith('call');
-  };
-
   const isServerPageableSql = useCallback((sql: string): boolean => {
     const trimmed = stripLeadingSqlComments(sql).trim().toLowerCase();
     return trimmed.startsWith('select') || trimmed.startsWith('with');
   }, [stripLeadingSqlComments]);
 
+  const isStoredProcedureCallLike = useCallback((sql: string): boolean => {
+    const trimmed = sql.trim().toLowerCase();
+    return trimmed.startsWith('call');
+  }, []);
+
   const fetchQueryPage = useCallback(async (
     sql: string,
     page: number,
     pageSize: number,
-    includeTotal = true,
+    includeTotal = false,
   ): Promise<QueryResultData> => {
     if (!poolId || !connId) {
       throw new Error(t('error.noActiveConnection'));
@@ -608,6 +639,65 @@ export const QueryTab: React.FC<QueryTabProps> = ({
       },
     };
   }, [poolId, connId, t]);
+
+  const hydrateQueryTotalForTab = useCallback((
+    tabId: string,
+    sql: string,
+    page: number,
+    pageSize: number,
+  ) => {
+    if (!poolId || !connId) {
+      return;
+    }
+    if (pendingDqlTotalCountRef.current.has(tabId)) {
+      return;
+    }
+
+    pendingDqlTotalCountRef.current.add(tabId);
+
+    void invoke<QueryPageResultData>('pool_query_page', {
+      poolId,
+      connId,
+      sql,
+      page,
+      pageSize,
+      includeTotal: true,
+    })
+      .then((countedResult) => {
+        React.startTransition(() => {
+          const patchTabData = (tab: ResultTab): ResultTab => {
+            if (tab.id !== tabId || tab.type !== 'query') {
+              return tab;
+            }
+
+            const data = tab.data as QueryResultData;
+            const pagination = data.pagination;
+            if (!pagination) {
+              return tab;
+            }
+
+            return {
+              ...tab,
+              data: {
+                ...data,
+                pagination: {
+                  ...pagination,
+                  total_rows: countedResult.total_rows ?? pagination.total_rows,
+                  total_pages: countedResult.total_pages ?? pagination.total_pages,
+                },
+              },
+            };
+          };
+
+          setResultTabs((prev) => prev.map(patchTabData));
+          setMetaResultTabs((prev) => prev.map(patchTabData));
+        });
+      })
+      .catch(() => undefined)
+      .finally(() => {
+        pendingDqlTotalCountRef.current.delete(tabId);
+      });
+  }, [poolId, connId]);
 
   // Execute SQL
   const executeSql = useCallback(async () => {
@@ -644,10 +734,104 @@ export const QueryTab: React.FC<QueryTabProps> = ({
 
     setIsExecuting(true);
     setStatusMessage(t('status.executing'));
+    setExecutionWallTimeSec(null);
 
     let splitSessionId: number | null = null;
+    let unlistenProgress: (() => void) | null = null;
+    const executionRunId = `run_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    let useScriptTransaction = false;
+    let transactionStarted = false;
+    let autoCommitRestored = false;
+    let encounteredExecutionError = false;
 
     try {
+      unlistenProgress = await listen<ScriptExecuteProgressEventData>('sql-script-progress', (event) => {
+        const payload = event.payload;
+        if (payload.run_id !== executionRunId) {
+          return;
+        }
+
+        const now = performance.now();
+        if (now - lastProgressUpdateAtRef.current < 80 && payload.processed < payload.total) {
+          return;
+        }
+        lastProgressUpdateAtRef.current = now;
+
+        setStatusMessage(
+          `${t('status.executing')} ${payload.processed}/${payload.total} (OK ${payload.success}, ERR ${payload.error})`
+        );
+      });
+
+      const normalizedSelectedSql = sql.trim().replace(/;\s*$/, '');
+      const strippedSelectedSql = stripLeadingSqlComments(normalizedSelectedSql).trim();
+      const canUseSingleQueryFastPath = isLikelySingleStatementSql(normalizedSelectedSql)
+        && isQuerySqlLike(strippedSelectedSql)
+        && !isStoredProcedureCallLike(strippedSelectedSql);
+
+      if (canUseSingleQueryFastPath) {
+        const wallStart = performance.now();
+        const startedAtIso = new Date().toISOString();
+
+        setResultTabs([]);
+        setMetaResultTabs([]);
+        setActiveResultTabId(null);
+        setIsResultPanelCollapsed(false);
+
+        let queryData: QueryResultData;
+        if (isServerPageableSql(strippedSelectedSql)) {
+          queryData = await fetchQueryPage(strippedSelectedSql, 1, 200, false);
+        } else {
+          const result = await invoke<QueryResultData>('pool_query', {
+            poolId,
+            connId,
+            sql: strippedSelectedSql,
+          });
+          queryData = {
+            ...result,
+            source_sql: strippedSelectedSql,
+          };
+        }
+
+        const queryTab: ResultTab = {
+          id: `result_${Date.now()}_0`,
+          type: 'query',
+          title: t('resultPanel.queryResult', { count: queryData.rows.length }),
+          data: queryData,
+          sql: strippedSelectedSql,
+          executionTimeSec: queryData.query_time_secs,
+          fetchTimeSec: queryData.fetch_time_secs,
+          statementOrder: 1,
+          startedAt: startedAtIso,
+          finishedAt: new Date().toISOString(),
+          statusText: 'OK',
+        };
+
+        React.startTransition(() => {
+          setResultTabs([queryTab]);
+          setMetaResultTabs([queryTab]);
+          setActiveResultTabId(queryTab.id);
+        });
+
+        if (queryData.pagination && (queryData.pagination.total_rows == null || queryData.pagination.total_pages == null)) {
+          void hydrateQueryTotalForTab(
+            queryTab.id,
+            strippedSelectedSql,
+            queryData.pagination.page,
+            queryData.pagination.page_size,
+          );
+        }
+
+        const wallDurationSec = (performance.now() - wallStart) / 1000;
+        setExecutionWallTimeSec(Number(wallDurationSec.toFixed(3)));
+        setStatusMessage(t('resultPanel.execComplete', {
+          success: 1,
+          error: 0,
+          time: wallDurationSec.toFixed(3),
+        }));
+
+        return;
+      }
+
       // Create a backend split session so statements can be consumed page by page.
       const splitSession = await invoke<StatementSplitSessionData>('sql_split_statements_create', {
         sql,
@@ -660,19 +844,48 @@ export const QueryTab: React.FC<QueryTabProps> = ({
         return;
       }
 
+      // For multi-statement scripts, temporarily switch to manual commit mode for faster batched execution.
+      useScriptTransaction = autoCommit && splitSession.total > 1;
+      if (useScriptTransaction) {
+        await invoke('pool_execute', {
+          poolId,
+          connId,
+          sql: 'SET autocommit=0',
+        });
+        await invoke('pool_execute', {
+          poolId,
+          connId,
+          sql: 'START TRANSACTION',
+        });
+        transactionStarted = true;
+      }
+
       // Clear previous results and expand result panel
       setResultTabs([]);
+      setMetaResultTabs([]);
       setActiveResultTabId(null);
       setIsResultPanelCollapsed(false); // Auto expand when executing SQL
 
+      const wallStart = performance.now();
       let successCount = 0;
       let errorCount = 0;
       let statementOrder = 0;
-      let totalSqlTimeSec = 0;
-      let statementGlobalIndex = 0;
       const pendingResultTabs: ResultTab[] = [];
+      const pendingMetaTabs: ResultTab[] = [];
       let hasActivatedResultTab = false;
+      let flushedResultTabCount = 0;
       let lastDetectedUseDatabase: string | undefined;
+
+      const canAppendResultTab = (tab: ResultTab): boolean => {
+        if (tab.type !== 'update') {
+          return true;
+        }
+        const totalVisible = flushedResultTabCount + pendingResultTabs.length;
+        if (totalVisible < MAX_VISIBLE_RESULT_TABS) {
+          return true;
+        }
+        return false;
+      };
 
       const flushResultTabs = (force = false) => {
         if (!force && pendingResultTabs.length < RESULT_TAB_FLUSH_BATCH_SIZE) {
@@ -683,54 +896,87 @@ export const QueryTab: React.FC<QueryTabProps> = ({
         }
 
         const batch = pendingResultTabs.splice(0, pendingResultTabs.length);
+        flushedResultTabCount += batch.length;
         if (!hasActivatedResultTab && batch.length > 0) {
           setActiveResultTabId(batch[0].id);
           hasActivatedResultTab = true;
         }
 
-        setResultTabs((prev) => [...prev, ...batch]);
+        React.startTransition(() => {
+          setResultTabs((prev) => [...prev, ...batch]);
+        });
+      };
+
+      const flushMetaTabs = (force = false) => {
+        if (!force && pendingMetaTabs.length < RESULT_TAB_FLUSH_BATCH_SIZE) {
+          return;
+        }
+        if (pendingMetaTabs.length === 0) {
+          return;
+        }
+
+        const batch = pendingMetaTabs.splice(0, pendingMetaTabs.length);
+        React.startTransition(() => {
+          setMetaResultTabs((prev) => [...prev, ...batch]);
+        });
       };
 
       let statementPage = 1;
       let hasMoreStatements = true;
 
       while (hasMoreStatements) {
-        const pagedStatements = await invoke<StatementSplitPageData>('sql_split_statements_page', {
+        const executedPage = await invoke<ScriptExecutePageResultData>('pool_execute_statement_page', {
+          poolId,
+          connId,
           sessionId: splitSessionId,
           page: statementPage,
           pageSize: DEFAULT_SQL_STATEMENT_PAGE_SIZE,
+          runId: executionRunId,
+          successOffset: successCount,
+          errorOffset: errorCount,
+          stopOnError: true,
         });
 
-        hasMoreStatements = pagedStatements.has_more;
+        hasMoreStatements = executedPage.has_more;
         statementPage += 1;
 
-        for (const statementText of pagedStatements.statements) {
-          const statement = statementText.trim();
+        for (const entry of executedPage.entries) {
+          const statement = entry.sql.trim();
           if (!statement) continue;
 
           const statementWithoutLeadingComments = stripLeadingSqlComments(statement).trim();
           if (!statementWithoutLeadingComments) continue;
 
-          const statementIndex = statementGlobalIndex;
-          statementGlobalIndex += 1;
+          const statementIndex = entry.statement_index;
 
           statementOrder += 1;
           const startedAtIso = new Date().toISOString();
-          const statementTimerStart = performance.now();
 
-          try {
-            if (isStoredProcedureCall(statement)) {
-              // Execute stored procedure with multiple result sets support
-              const result = await invoke<MultiQueryResultData>('pool_query_multi', {
-                poolId,
-                connId,
-                sql: statement,
-              });
-
-              // Create a result tab for each result set
+          if (entry.result_type === 'error') {
+            errorCount++;
+            encounteredExecutionError = true;
+            const errorTab: ResultTab = {
+              id: `result_${Date.now()}_${statementIndex}`,
+              type: 'error',
+              title: t('resultPanel.errorResult'),
+              data: entry.error || t('resultPanel.execFailed'),
+              sql: statement,
+              executionTimeSec: 0,
+              fetchTimeSec: 0,
+              statementOrder,
+              startedAt: startedAtIso,
+              finishedAt: new Date().toISOString(),
+              statusText: entry.error || t('resultPanel.execFailed'),
+            };
+            pendingMetaTabs.push(errorTab);
+            pendingResultTabs.push(errorTab);
+          } else if (entry.result_type === 'multi_query') {
+            const result = entry.multi_query_result;
+            if (!result) {
+              errorCount++;
+            } else {
               if (result.result_sets.length === 0) {
-                // No result sets, show as update result
-                const resultTab: ResultTab = {
+                const updateTab: ResultTab = {
                   id: `result_${Date.now()}_${statementIndex}`,
                   type: 'update',
                   title: t('resultPanel.updateResult'),
@@ -743,11 +989,12 @@ export const QueryTab: React.FC<QueryTabProps> = ({
                   finishedAt: new Date().toISOString(),
                   statusText: 'OK',
                 };
-                pendingResultTabs.push(resultTab);
-                totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
+                pendingMetaTabs.push(updateTab);
+                if (canAppendResultTab(updateTab)) {
+                  pendingResultTabs.push(updateTab);
+                }
               } else if (result.result_sets.length === 1) {
-                // Single result set
-                const resultTab: ResultTab = {
+                const queryTab: ResultTab = {
                   id: `result_${Date.now()}_${statementIndex}`,
                   type: 'query',
                   title: t('resultPanel.queryResult', { count: result.result_sets[0].rows.length }),
@@ -760,12 +1007,11 @@ export const QueryTab: React.FC<QueryTabProps> = ({
                   finishedAt: new Date().toISOString(),
                   statusText: 'OK',
                 };
-                pendingResultTabs.push(resultTab);
-                totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
+                pendingMetaTabs.push(queryTab);
+                pendingResultTabs.push(queryTab);
               } else {
-                // Multiple result sets - create a tab for each
                 result.result_sets.forEach((resultSet, setIndex) => {
-                  const resultTab: ResultTab = {
+                  const queryTab: ResultTab = {
                     id: `result_${Date.now()}_${statementIndex}_${setIndex}`,
                     type: 'query',
                     title: t('resultPanel.queryResultSet', { index: setIndex + 1, count: resultSet.rows.length }),
@@ -778,22 +1024,55 @@ export const QueryTab: React.FC<QueryTabProps> = ({
                     finishedAt: new Date().toISOString(),
                     statusText: 'OK',
                   };
-                  pendingResultTabs.push(resultTab);
+                  pendingMetaTabs.push(queryTab);
+                  pendingResultTabs.push(queryTab);
                 });
-                totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
               }
               successCount++;
-            } else if (isQuerySql(statement)) {
-              // Execute query
-              const result = isServerPageableSql(statement)
-                ? await fetchQueryPage(statement, 1, DEFAULT_SQL_QUERY_PAGE_SIZE, true)
-                : await invoke<QueryResultData>('pool_query', {
-                  poolId,
-                  connId,
-                  sql: statement,
-                });
+            }
+          } else if (entry.result_type === 'query_page') {
+            const result = entry.query_page_result;
+            if (!result) {
+              errorCount++;
+            } else {
+              const mappedQueryData: QueryResultData = {
+                columns: result.columns,
+                rows: result.rows,
+                query_time_secs: result.query_time_secs,
+                fetch_time_secs: result.fetch_time_secs,
+                source_sql: statement,
+                pagination: {
+                  page: result.page,
+                  page_size: result.page_size,
+                  has_more: result.has_more,
+                  total_rows: result.total_rows,
+                  total_pages: result.total_pages,
+                },
+              };
 
-              const resultTab: ResultTab = {
+              const queryTab: ResultTab = {
+                id: `result_${Date.now()}_${statementIndex}`,
+                type: 'query',
+                title: t('resultPanel.queryResult', { count: mappedQueryData.rows.length }),
+                data: mappedQueryData,
+                sql: statement,
+                executionTimeSec: mappedQueryData.query_time_secs,
+                fetchTimeSec: mappedQueryData.fetch_time_secs,
+                statementOrder,
+                startedAt: startedAtIso,
+                finishedAt: new Date().toISOString(),
+                statusText: 'OK',
+              };
+              pendingMetaTabs.push(queryTab);
+              pendingResultTabs.push(queryTab);
+              successCount++;
+            }
+          } else if (entry.result_type === 'query') {
+            const result = entry.query_result;
+            if (!result) {
+              errorCount++;
+            } else {
+              const queryTab: ResultTab = {
                 id: `result_${Date.now()}_${statementIndex}`,
                 type: 'query',
                 title: t('resultPanel.queryResult', { count: result.rows.length }),
@@ -806,19 +1085,16 @@ export const QueryTab: React.FC<QueryTabProps> = ({
                 finishedAt: new Date().toISOString(),
                 statusText: 'OK',
               };
-
-              pendingResultTabs.push(resultTab);
-              totalSqlTimeSec += (result.query_time_secs || 0) + (result.fetch_time_secs || 0);
+              pendingMetaTabs.push(queryTab);
+              pendingResultTabs.push(queryTab);
               successCount++;
+            }
+          } else if (entry.result_type === 'update') {
+            const result = entry.exec_result;
+            if (!result) {
+              errorCount++;
             } else {
-              // Execute update
-              const result = await invoke<ExecResultData>('pool_execute', {
-                poolId,
-                connId,
-                sql: statement,
-              });
-
-              const resultTab: ResultTab = {
+              const updateTab: ResultTab = {
                 id: `result_${Date.now()}_${statementIndex}`,
                 type: 'update',
                 title: t('resultPanel.updateResult'),
@@ -831,41 +1107,57 @@ export const QueryTab: React.FC<QueryTabProps> = ({
                 finishedAt: new Date().toISOString(),
                 statusText: 'OK',
               };
-
-              pendingResultTabs.push(resultTab);
-              totalSqlTimeSec += result.query_time_secs || 0;
+              pendingMetaTabs.push(updateTab);
+              if (canAppendResultTab(updateTab)) {
+                pendingResultTabs.push(updateTab);
+              }
               successCount++;
             }
+          }
 
-            const useDatabase = extractUseDatabaseFromStatement(statement);
-            if (useDatabase) {
-              lastDetectedUseDatabase = useDatabase;
-            }
-          } catch (error) {
-            errorCount++;
-            const fallbackDurationSec = (performance.now() - statementTimerStart) / 1000;
-            const errorTab: ResultTab = {
-              id: `result_${Date.now()}_${statementIndex}`,
-              type: 'error',
-              title: t('resultPanel.errorResult'),
-              data: String(error),
-              sql: statement,
-              executionTimeSec: fallbackDurationSec,
-              fetchTimeSec: 0,
-              statementOrder,
-              startedAt: startedAtIso,
-              finishedAt: new Date().toISOString(),
-              statusText: String(error),
-            };
-            pendingResultTabs.push(errorTab);
-            totalSqlTimeSec += fallbackDurationSec;
+          const useDatabase = extractUseDatabaseFromStatement(statement);
+          if (useDatabase) {
+            lastDetectedUseDatabase = useDatabase;
           }
 
           flushResultTabs();
+          flushMetaTabs();
+
+          if (encounteredExecutionError) {
+            break;
+          }
+        }
+
+        if (encounteredExecutionError) {
+          break;
         }
       }
 
       flushResultTabs(true);
+      flushMetaTabs(true);
+
+      if (transactionStarted) {
+        if (encounteredExecutionError) {
+          await invoke('pool_execute', {
+            poolId,
+            connId,
+            sql: 'ROLLBACK',
+          });
+        } else {
+          await invoke('pool_execute', {
+            poolId,
+            connId,
+            sql: 'COMMIT',
+          });
+        }
+
+        await invoke('pool_execute', {
+          poolId,
+          connId,
+          sql: 'SET autocommit=1',
+        });
+        autoCommitRestored = true;
+      }
 
       if (lastDetectedUseDatabase) {
         setSelectedDatabase(lastDetectedUseDatabase);
@@ -875,11 +1167,47 @@ export const QueryTab: React.FC<QueryTabProps> = ({
         }
       }
 
-      const durationSec = totalSqlTimeSec.toFixed(3);
-      setStatusMessage(t('resultPanel.execComplete', { success: successCount, error: errorCount, time: durationSec }));
+      const wallDurationSec = ((performance.now() - wallStart) / 1000).toFixed(3);
+      setExecutionWallTimeSec(Number(wallDurationSec));
+      const completionText = t('resultPanel.execComplete', {
+        success: successCount,
+        error: errorCount,
+        time: wallDurationSec,
+      });
+      if (encounteredExecutionError && transactionStarted) {
+        setStatusMessage(`${completionText} | ${t('queryToolbar.rollbackSuccess')}`);
+      } else {
+        setStatusMessage(completionText);
+      }
     } catch (error) {
+      if (transactionStarted) {
+        await invoke('pool_execute', {
+          poolId,
+          connId,
+          sql: 'ROLLBACK',
+        }).catch(() => undefined);
+
+        if (!autoCommitRestored) {
+          await invoke('pool_execute', {
+            poolId,
+            connId,
+            sql: 'SET autocommit=1',
+          }).catch(() => undefined);
+          autoCommitRestored = true;
+        }
+      }
       setStatusMessage(t('query.executionFailed'));
     } finally {
+      if (transactionStarted && !autoCommitRestored) {
+        void invoke('pool_execute', {
+          poolId,
+          connId,
+          sql: 'SET autocommit=1',
+        }).catch(() => undefined);
+      }
+      if (unlistenProgress) {
+        unlistenProgress();
+      }
       if (splitSessionId !== null) {
         void invoke<boolean>('sql_split_statements_release', {
           sessionId: splitSessionId,
@@ -892,10 +1220,13 @@ export const QueryTab: React.FC<QueryTabProps> = ({
     poolId,
     connId,
     stripLeadingSqlComments,
-    fetchQueryPage,
     isServerPageableSql,
+    isStoredProcedureCallLike,
+    fetchQueryPage,
     extractUseDatabaseFromStatement,
+    autoCommit,
     selectedConnection,
+    t,
     setActiveDatabase,
     setLastUsedDatabaseForConnection,
   ]);
@@ -915,21 +1246,46 @@ export const QueryTab: React.FC<QueryTabProps> = ({
 
     try {
       setStatusMessage(t('status.executing'));
-      const nextPageData = await fetchQueryPage(sourceSql, page, pageSize, true);
+      const nextPageData = await fetchQueryPage(sourceSql, page, pageSize, false);
 
-      setResultTabs((prev) => prev.map((tab) => {
-        if (tab.id !== tabId || tab.type !== 'query') return tab;
+      React.startTransition(() => {
+        setResultTabs((prev) => prev.map((tab) => {
+          if (tab.id !== tabId || tab.type !== 'query') return tab;
 
-        return {
-          ...tab,
-          title: t('resultPanel.queryResult', { count: nextPageData.rows.length }),
-          data: nextPageData,
-          executionTimeSec: nextPageData.query_time_secs,
-          fetchTimeSec: nextPageData.fetch_time_secs,
-          finishedAt: new Date().toISOString(),
-          statusText: 'OK',
-        };
-      }));
+          return {
+            ...tab,
+            title: t('resultPanel.queryResult', { count: nextPageData.rows.length }),
+            data: nextPageData,
+            executionTimeSec: nextPageData.query_time_secs,
+            fetchTimeSec: nextPageData.fetch_time_secs,
+            finishedAt: new Date().toISOString(),
+            statusText: 'OK',
+          };
+        }));
+        setMetaResultTabs((prev) => prev.map((tab) => {
+          if (tab.id !== tabId || tab.type !== 'query') return tab;
+
+          return {
+            ...tab,
+            title: t('resultPanel.queryResult', { count: nextPageData.rows.length }),
+            data: nextPageData,
+            executionTimeSec: nextPageData.query_time_secs,
+            fetchTimeSec: nextPageData.fetch_time_secs,
+            finishedAt: new Date().toISOString(),
+            statusText: 'OK',
+          };
+        }));
+      });
+
+      if (nextPageData.pagination && (nextPageData.pagination.total_rows == null || nextPageData.pagination.total_pages == null)) {
+        void hydrateQueryTotalForTab(
+          tabId,
+          sourceSql,
+          nextPageData.pagination.page,
+          nextPageData.pagination.page_size,
+        );
+      }
+
       setStatusMessage(t('resultPanel.execSuccess'));
     } catch (error) {
       setStatusMessage(t('error.queryFailed', { message: String(error) }));
@@ -941,6 +1297,7 @@ export const QueryTab: React.FC<QueryTabProps> = ({
     resultTabs,
     isServerPageableSql,
     fetchQueryPage,
+    hydrateQueryTotalForTab,
     t,
   ]);
 
@@ -979,6 +1336,7 @@ export const QueryTab: React.FC<QueryTabProps> = ({
       };
 
       setResultTabs(prev => [...prev, resultTab]);
+      setMetaResultTabs(prev => [...prev, resultTab]);
       setActiveResultTabId(resultTab.id);
       setStatusMessage(t('resultPanel.explainSuccess'));
     } catch (error) {
@@ -1101,7 +1459,9 @@ export const QueryTab: React.FC<QueryTabProps> = ({
   // Clear results
   const clearResults = useCallback(() => {
     setResultTabs([]);
+    setMetaResultTabs([]);
     setActiveResultTabId(null);
+    setExecutionWallTimeSec(null);
   }, []);
 
   // Close result tab
@@ -1304,6 +1664,8 @@ export const QueryTab: React.FC<QueryTabProps> = ({
           <div className="query-result-container">
             <ResultPanel
               tabs={resultTabs}
+              metaTabs={metaResultTabs}
+              executionWallTimeSec={executionWallTimeSec ?? undefined}
               activeTabId={activeResultTabId}
               onTabChange={setActiveResultTabId}
               onTabClose={closeResultTab}

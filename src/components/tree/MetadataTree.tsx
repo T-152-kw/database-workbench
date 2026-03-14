@@ -26,6 +26,7 @@ import { showEditConnectionNotice } from '../../utils';
 
 const SYSTEM_DATABASES = new Set(['mysql', 'information_schema', 'performance_schema', 'sys']);
 const GLOBAL_REFRESH_EVENT = 'dbw:global-refresh';
+const OPEN_CONNECTION_EVENT = 'dbw:open-connection-node';
 
 interface TreeNodeData {
   connection?: ConnectionProfile;
@@ -405,6 +406,49 @@ export const MetadataTree: React.FC<{ searchQuery: string }> = ({ searchQuery })
       });
     }
   }, [loadingNodes, connect, setStatusMessage, setActiveConnection, t]);
+
+  useEffect(() => {
+    const handleOpenConnection = (event: Event) => {
+      const detail = (event as CustomEvent<{ connectionName?: string }>).detail;
+      const connectionName = detail?.connectionName?.trim();
+      if (!connectionName) {
+        return;
+      }
+
+      const targetNode = nodesRef.current.find((node) => {
+        const nodeName = node.nodeData?.connection?.name?.trim();
+        return nodeName === connectionName;
+      });
+
+      if (!targetNode) {
+        return;
+      }
+
+      if (targetNode.childNodes && targetNode.childNodes.length > 0) {
+        setNodes((prev) => prev.map((node) => (
+          node.id === targetNode.id
+            ? {
+                ...node,
+                isExpanded: true,
+                hasCaret: true,
+                icon: <MySqlConnectionIcon active={true} size={16} />,
+              }
+            : node
+        )));
+        if (targetNode.nodeData?.connection?.name) {
+          setActiveConnection(targetNode.nodeData.connection.name);
+        }
+        return;
+      }
+
+      void connectConnection(targetNode);
+    };
+
+    window.addEventListener(OPEN_CONNECTION_EVENT, handleOpenConnection);
+    return () => {
+      window.removeEventListener(OPEN_CONNECTION_EVENT, handleOpenConnection);
+    };
+  }, [connectConnection, setActiveConnection]);
 
   const closeConnection = useCallback(async (node: TreeNode) => {
     if (!node.nodeData?.connection) return;

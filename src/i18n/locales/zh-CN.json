@@ -80,7 +80,14 @@
       "backup": "备份数据库...",
       "restore": "还原数据库...",
       "importConnections": "导入连接配置...",
-      "exportConnections": "导出连接配置..."
+      "exportConnections": "导出连接配置...",
+      "noConnectionsToExport": "当前没有可导出的连接配置",
+      "selectAtLeastOneConnection": "请至少选择一个连接配置",
+      "exportConnectionsSelectTitle": "选择要导出的连接配置",
+      "exportConnectionsSelectDescription": "请选择本次要导出的连接配置：",
+      "exportConnectionsSaved": "已导出 {{count}} 个连接到 {{filePath}}",
+      "importConnectionsOverwritePrompt": "连接 \"{{name}}\" 已存在且配置不同，是否覆盖现有配置？",
+      "importConnectionsSummary": "导入完成：新增 {{created}}，覆盖 {{updated}}，跳过 {{skipped}}"
     },
     "window": {
       "title": "窗口",
@@ -281,7 +288,34 @@
       "sqlPlaceholder": "输入 SQL 查询语句...",
       "connectionPlaceholder": "输入连接配置信息...",
       "objectPlaceholder": "输入数据库对象路径...",
-      "importFailed": "导入失败"
+      "importFailed": "导入失败",
+      "sqlFileLabel": "SQL 文件",
+      "sqlFilePlaceholder": "可选：导入 SQL 文件路径",
+      "selectFile": "选择",
+      "connectionJsonLabel": "连接配置 JSON",
+      "connectionJsonPlaceholder": "请选择导出的连接配置 JSON 文件路径",
+      "connectionProfileNameLabel": "配置名称（可选）",
+      "connectionProfileNamePlaceholder": "JSON 中存在多个连接时可指定连接名称",
+      "objectConnectionNameLabel": "连接名称",
+      "objectConnectionNamePlaceholder": "例如：MySQL84",
+      "selectConnectionName": "请选择连接名称",
+      "objectDatabaseLabel": "数据库",
+      "objectDatabasePlaceholder": "例如：world",
+      "selectDatabase": "请选择数据库",
+      "objectTypeLabel": "对象类型",
+      "objectTypeTable": "TABLE",
+      "objectTypeView": "VIEW",
+      "objectTypeFunction": "FUNCTION",
+      "objectNameLabel": "对象名称",
+      "objectNamePlaceholder": "例如：city",
+      "selectObjectName": "请选择对象名称",
+      "openModeLabel": "打开方式",
+      "openModeList": "列表",
+      "openModeData": "数据",
+      "openModeDesigner": "设计",
+      "objectPathLabel": "对象路径",
+      "objectConnectionConfigPathLabel": "连接配置文件（可选）",
+      "objectConnectionConfigPathPlaceholder": "当连接不存在时，可用于按配置创建连接"
     },
     "properties": {
       "title": "属性",
@@ -1545,5 +1579,13 @@
     "downloadFailed": "下载更新失败",
     "restartFailed": "重启失败",
     "unknownError": "未知错误"
+  },
+  "notification": {
+    "title": "通知",
+    "empty": "无新通知",
+    "clearAll": "一键清空",
+    "justNow": "刚刚",
+    "minutesAgo": "{{count}}分钟前",
+    "hoursAgo": "{{count}}小时前"
   }
 }

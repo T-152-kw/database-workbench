@@ -1610,12 +1610,7 @@ fn execute_query_page(
         (None, None)
     };
 
-    let paged_sql = format!(
-        "SELECT * FROM ({}) AS __dwb_page_subquery LIMIT {}, {}",
-        normalized_sql,
-        offset,
-        safe_page_size.saturating_add(1)
-    );
+    let paged_sql = build_paged_sql(&normalized_sql, offset, safe_page_size.saturating_add(1));
 
     let mut rows = conn
         .exec_iter(paged_sql, Params::Empty)
@@ -1667,6 +1662,29 @@ fn execute_query_page(
         query_time_secs,
         fetch_time_secs,
     })
+}
+
+fn build_paged_sql(normalized_sql: &str, offset: u64, fetch_size: u64) -> String {
+    let lowered = normalized_sql.to_ascii_lowercase();
+    let has_limit_token = lowered
+        .split_whitespace()
+        .any(|token| token == "limit");
+
+    let has_for_update = lowered.contains(" for update");
+    let has_into_outfile = lowered.contains(" into outfile");
+    let can_push_down_limit = lowered.starts_with("select")
+        && !has_limit_token
+        && !has_for_update
+        && !has_into_outfile;
+
+    if can_push_down_limit {
+        format!("{} LIMIT {}, {}", normalized_sql, offset, fetch_size)
+    } else {
+        format!(
+            "SELECT * FROM ({}) AS __dwb_page_subquery LIMIT {}, {}",
+            normalized_sql, offset, fetch_size
+        )
+    }
 }
 
 fn normalize_query_sql(sql: &str) -> Result<String, String> {

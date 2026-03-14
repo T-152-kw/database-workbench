@@ -18,6 +18,21 @@ html, body {
   line-height: 1.5;
   user-select: none;
   -webkit-user-select: none;
+  background-color: var(--page-bg, #ffffff);
+}
+
+html.bp5-dark, html.bp5-dark body,
+html.bp6-dark, html.bp6-dark body {
+  background-color: #2f343c;
+  color: #f5f8fa;
+  --page-bg: #2f343c;
+}
+
+html.bp5-light, html.bp5-light body,
+html.bp6-light, html.bp6-light body {
+  background-color: #ffffff;
+  color: #1c2127;
+  --page-bg: #ffffff;
 }
 
 #root {

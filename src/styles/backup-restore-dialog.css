@@ -121,3 +121,58 @@
     align-items: stretch;
   }
 }
+
+/* Dark theme styles for backup/restore dialog */
+html.bp6-dark .brd-subtitle,
+html.bp5-dark .brd-subtitle,
+.bp6-dark .brd-subtitle,
+.bp5-dark .brd-subtitle {
+  color: #9ca3af;
+}
+
+html.bp6-dark .brd-section,
+html.bp5-dark .brd-section,
+.bp6-dark .brd-section,
+.bp5-dark .brd-section {
+  border-color: #374151;
+  background: #1f2937;
+}
+
+html.bp6-dark .brd-section h3,
+html.bp5-dark .brd-section h3,
+.bp6-dark .brd-section h3,
+.bp5-dark .brd-section h3 {
+  color: #e5e7eb;
+}
+
+html.bp6-dark .brd-object-panel,
+html.bp5-dark .brd-object-panel,
+.bp6-dark .brd-object-panel,
+.bp5-dark .brd-object-panel {
+  border-color: #374151;
+  background: #111827;
+}
+
+html.bp6-dark .brd-object-title,
+html.bp5-dark .brd-object-title,
+.bp6-dark .brd-object-title,
+.bp5-dark .brd-object-title {
+  border-color: #374151;
+  color: #d1d5db;
+}
+
+html.bp6-dark .brd-log-box,
+html.bp5-dark .brd-log-box,
+.bp6-dark .brd-log-box,
+.bp5-dark .brd-log-box {
+  border-color: #374151;
+  background: #111827;
+  color: #d1d5db;
+}
+
+html.bp6-dark .brd-status,
+html.bp5-dark .brd-status,
+.bp6-dark .brd-status,
+.bp5-dark .brd-status {
+  color: #9ca3af;
+}
